@@ -1,9 +1,10 @@
-// El video completo: 9 escenas unidas con transiciones. Empieza y termina en
+// El video completo: 10 escenas unidas con transiciones. Empieza y termina en
 // negro (gancho y cierre), así se puede repetir en loop sin salto.
 import {linearTiming, TransitionSeries} from '@remotion/transitions';
 import React from 'react';
 import {AbsoluteFill} from 'remotion';
 import {Intro, Outro} from './scenes/Brand';
+import {Business} from './scenes/Business';
 import {Hook} from './scenes/Hook';
 import {Next} from './scenes/Lists';
 import {Call, Compare, Need, Pay, PAY_TAKEOVER_AT, Search} from './scenes/Steps';
@@ -20,13 +21,11 @@ const D = {
 	compare: 300,
 	pay: 362,
 	next: 240,
+	business: 230,
 	outro: 170,
 };
 const WIPE = 28;
 const ZOOM = 22;
-
-export const PITCH_DURATION =
-	Object.values(D).reduce((a, b) => a + b, 0) - 4 * WIPE - 4 * ZOOM;
 
 // Escenas en orden y la transición que sale de cada una.
 const ORDER: [keyof typeof D, number][] = [
@@ -37,9 +36,12 @@ const ORDER: [keyof typeof D, number][] = [
 	['call', ZOOM],
 	['compare', WIPE],
 	['pay', ZOOM],
-	['next', WIPE],
+	['next', ZOOM],
+	['business', WIPE],
 	['outro', 0],
 ];
+
+export const PITCH_DURATION = ORDER.reduce((sum, [key, out]) => sum + D[key] - out, 0);
 
 // Dónde frena la presentación en vivo (presenter/): al final de cada escena,
 // justo antes de su transición, y una vez más en el pago antes de "Pago confirmado".
@@ -91,6 +93,10 @@ export const Pitch: React.FC = () => (
 			{zoom}
 			<TransitionSeries.Sequence name="Lo que viene" durationInFrames={D.next}>
 				<Next dur={D.next} />
+			</TransitionSeries.Sequence>
+			{zoom}
+			<TransitionSeries.Sequence name="Modelo de negocio" durationInFrames={D.business}>
+				<Business dur={D.business} />
 			</TransitionSeries.Sequence>
 			{wipe}
 			<TransitionSeries.Sequence name="Cierre" durationInFrames={D.outro}>

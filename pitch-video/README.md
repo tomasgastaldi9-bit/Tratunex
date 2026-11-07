@@ -32,7 +32,7 @@ Es el mismo video, pero frena al final de cada escena y sigue cuando vos querés
 - **Inicio:** vuelve al principio (pantalla negra).
 - **Al final** se queda en el cierre: no vuelve a empezar sola ni con →.
 
-Son 10 paradas: gancho, marca, los 5 pasos (el pago frena una vez más antes de "Pago confirmado"), lo que viene y cierre.
+Son 11 paradas: gancho, marca, los 5 pasos (el pago frena una vez más antes de "Pago confirmado"), lo que viene, cómo ganamos plata (precio propuesto) y cierre.
 Necesita internet (la letra y los sonidos se bajan de Google Fonts y remotion.media).
 Para que no se trabe, en vivo se sirve la versión optimizada y se apagan el desenfoque y el empuje de cámara
 (`LIVE` en `src/theme.ts`). El MP4 conserva todos los efectos.
