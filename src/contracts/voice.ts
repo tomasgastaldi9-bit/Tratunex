@@ -7,6 +7,11 @@ import { CallResultV1Schema, NextActionSchema } from "./crm";
 const IdSchema = z.uuid();
 const UtcSchema = z.iso.datetime();
 const TextSchema = z.string().trim().min(1);
+// Mismo criterio que crm.ts: solo URLs http(s).
+const WebUrlSchema = z.url().refine(
+  (value) => /^https?:\/\//i.test(value),
+  "La URL debe usar http o https",
+);
 
 // ---------------------------------------------------------------------------
 // CallResultV1: lo que Voz entrega a recordCallResult del CRM (BRIEF §10).
