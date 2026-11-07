@@ -1,6 +1,7 @@
 import { z } from "zod";
 // Imports relativos: Vitest no resuelve el alias "@/" en imports de valores.
 import type { Result } from "../../../contracts/common";
+import { QuoteCanSupplySchema, QuoteCurrencySchema, YesNoUnknownSchema } from "../../../contracts/voice";
 
 // Cotizador por teléfono (QUO-01): el asistente de Vapi llama al proveedor en
 // nombre de la pyme, pide precio, stock, plazo y si cobra en ARGt, y no
@@ -82,62 +83,97 @@ export function quoteAssistantPrompt(brief: QuoteRequestBrief): string {
   ].join("\n");
 }
 
+// Cierre de la llamada. Vapi corta cuando el asistente dice una de las frases:
+// tienen varias palabras para que un "gracias" en medio de la charla no corte.
+export const QUOTE_END_CALL_MESSAGE = "¡Gracias por tu tiempo! Que tengas buen día.";
+export const QUOTE_END_CALL_PHRASES = ["que tengas buen día", "que tengas buena tarde"] as const;
+// Margen sobre los 3 minutos del prompt para que no corte antes de confirmar.
+export const QUOTE_MAX_DURATION_SECONDS = 300;
+
 // ---------------------------------------------------------------------------
 // 3. Lo que Vapi extrae al terminar (structured output).
 // ---------------------------------------------------------------------------
 export const QUOTE_OUTPUT_NAME = "tratunex_supplier_quote";
 
-export const QUOTE_CAN_SUPPLY = ["yes", "partial", "no", "unknown"] as const;
-export const QUOTE_CURRENCIES = ["ARS", "USD", "unknown"] as const;
-const YES_NO_UNKNOWN = ["yes", "no", "unknown"] as const;
+// Los valores permitidos son los del contrato de supplier_quotes (contracts/voice.ts).
+const QUOTE_CAN_SUPPLY = QuoteCanSupplySchema.options;
+const QUOTE_CURRENCIES = QuoteCurrencySchema.options;
+const YES_NO_UNKNOWN = YesNoUnknownSchema.options;
 
 export const quoteExtractionDescription = [
   "Extraé la cotización de una llamada a un proveedor. Reglas:",
   "- Si atendió un contestador, una máquina o nadie: spoke_with_person=false y can_supply=unknown.",
   "- Copiá números tal como los dijo el proveedor. No calcules, no redondees y no inventes datos.",
-  "- Si un dato no se dijo, omití el campo (no pongas 0 ni texto vacío).",
+  "- Si un dato no se dijo: -1 en números, unknown en opciones y texto vacío en textos. Nunca 0.",
 ].join("\n");
 
-// JSON Schema para configurar en Vapi. Sin tipos unión ni null: los campos que
-// pueden faltar son opcionales.
-export const quoteExtractionJsonSchema = {
-  type: "object",
-  properties: {
-    spoke_with_person: {
-      type: "boolean",
-      description: "true solo si habló una persona real. false si atendió un contestador, una máquina o nadie.",
-    },
-    can_supply: {
-      type: "string",
-      enum: [...QUOTE_CAN_SUPPLY],
-      description: "yes si puede entregar toda la cantidad; partial si solo una parte; no si no vende el producto o no puede; unknown si no quedó claro.",
-    },
-    unit_price: {
-      type: "number",
-      description: "Precio por unidad, solo el número (1500.5 para $1.500,50). Si dio precio por caja o paquete, omitir y explicarlo en notes.",
-    },
-    currency: { type: "string", enum: [...QUOTE_CURRENCIES], description: "Moneda del precio. ARS si dijo pesos." },
-    price_includes_vat: { type: "string", enum: [...YES_NO_UNKNOWN], description: "Si el precio incluye IVA." },
-    available_quantity: { type: "integer", minimum: 0, description: "Unidades disponibles que dijo." },
-    minimum_order_quantity: { type: "integer", minimum: 0, description: "Compra mínima en unidades." },
-    lead_time_days: {
-      type: "integer",
-      minimum: 0,
-      description: 'Días hasta la entrega, solo si los dijo como cantidad ("en 48 horas" = 2, "mañana" = 1). Omitir si dijo un día de la semana o una fecha.',
-    },
-    lead_time_text: { type: "string", description: 'El plazo de entrega tal como lo dijo ("el martes", "en 48 horas").' },
-    delivery_included: { type: "string", enum: [...YES_NO_UNKNOWN], description: "Si el envío está incluido en el precio." },
-    accepts_argt: { type: "string", enum: [...YES_NO_UNKNOWN], description: "Si acepta cobrar en ARGt." },
-    payment_terms: { type: "string", description: "Cómo prefiere cobrar: transferencia, contado, a 30 días, etc." },
-    do_not_contact_requested: { type: "boolean", description: "true solo si pidió explícitamente que no lo llamen más." },
-    notes: { type: "string", description: "Condiciones o aclaraciones importantes que no entran en los otros campos." },
-    summary: { type: "string", description: "Resumen en español de 2 a 4 líneas: quién atendió, qué ofreció y qué falta." },
+const quoteProperties = {
+  spoke_with_person: {
+    type: "boolean",
+    description: "true solo si habló una persona real; false si atendió un contestador, una máquina o nadie.",
   },
-  required: ["spoke_with_person", "can_supply", "accepts_argt", "do_not_contact_requested", "summary"],
+  can_supply: {
+    type: "string",
+    enum: [...QUOTE_CAN_SUPPLY],
+    description: "Respondé exactamente una de estas palabras: yes (puede entregar toda la cantidad), partial (solo una parte), no (no vende o no puede), unknown (no quedó claro).",
+  },
+  unit_price: {
+    type: "number",
+    description: "Precio por unidad, solo el número (1500.5 para $1.500,50). Si no lo dijo o dio precio por caja, -1.",
+  },
+  currency: {
+    type: "string",
+    enum: [...QUOTE_CURRENCIES],
+    description: "Exactamente una: ARS (si dijo pesos), USD o unknown si no lo dijo.",
+  },
+  price_includes_vat: {
+    type: "string",
+    enum: [...YES_NO_UNKNOWN],
+    description: "Exactamente una: yes, no o unknown si no lo dijo. Si el precio incluye IVA.",
+  },
+  available_quantity: { type: "integer", description: "Unidades disponibles, número entero. Si no lo dijo, -1." },
+  minimum_order_quantity: { type: "integer", description: "Compra mínima en unidades. Si no la dijo, -1." },
+  lead_time_days: {
+    type: "integer",
+    description: 'Días hasta la entrega si los dijo como cantidad ("en 48 horas" = 2, "mañana" = 1). Si no, -1.',
+  },
+  lead_time_text: {
+    type: "string",
+    description: 'El plazo de entrega tal como lo dijo ("el martes", "en 2 días"). Si no lo dijo, texto vacío.',
+  },
+  delivery_included: {
+    type: "string",
+    enum: [...YES_NO_UNKNOWN],
+    description: "Exactamente una: yes, no o unknown si no lo dijo. Si el envío está incluido.",
+  },
+  accepts_argt: {
+    type: "string",
+    enum: [...YES_NO_UNKNOWN],
+    description: "Exactamente una: yes, no o unknown. Si acepta cobrar en ARGt.",
+  },
+  payment_terms: {
+    type: "string",
+    description: "Cómo prefiere cobrar (transferencia, contado, a 30 días). Si no lo dijo, texto vacío.",
+  },
+  do_not_contact_requested: { type: "boolean", description: "true solo si pidió explícitamente que no lo llamen más." },
+  notes: {
+    type: "string",
+    description: "Condiciones o aclaraciones importantes que no entran en los otros campos. Si no hay, texto vacío.",
+  },
+  summary: { type: "string", description: "Resumen en español de 2 a 4 líneas: quién atendió, qué ofreció y qué falta." },
 } as const;
 
-// Un dato opcional mal formado (un 0, un texto vacío) se descarta en vez de
-// tirar toda la cotización: el comparador lo muestra como "sin dato".
+// JSON Schema para Vapi. OpenAI (modo estricto) exige que todos los campos sean
+// obligatorios: un dato que no se dijo viaja como -1, unknown o texto vacío, y
+// QuoteCallExtractionSchema lo convierte en "sin dato". Sin tipos unión ni null.
+export const quoteExtractionJsonSchema = {
+  type: "object",
+  properties: quoteProperties,
+  required: Object.keys(quoteProperties) as (keyof typeof quoteProperties)[],
+};
+
+// Un dato opcional que falta (-1, texto vacío) o viene mal formado (un 0) se
+// descarta en vez de tirar toda la cotización: el comparador muestra "sin dato".
 function optionalNumber(schema: z.ZodNumber) {
   return schema.optional().catch(undefined);
 }
@@ -148,22 +184,22 @@ function optionalText(max: number) {
     .optional()
     .catch(undefined);
 }
-function optionalEnum<const T extends readonly [string, ...string[]]>(values: T) {
-  return z.enum(values).optional().catch(undefined);
+function optionalEnum<T extends z.ZodEnum>(schema: T) {
+  return schema.optional().catch(undefined);
 }
 
 export const QuoteCallExtractionSchema = z.object({
   spoke_with_person: z.boolean(),
-  can_supply: z.enum(QUOTE_CAN_SUPPLY),
+  can_supply: QuoteCanSupplySchema,
   unit_price: optionalNumber(z.number().positive()),
-  currency: optionalEnum(QUOTE_CURRENCIES),
-  price_includes_vat: optionalEnum(YES_NO_UNKNOWN),
+  currency: optionalEnum(QuoteCurrencySchema),
+  price_includes_vat: optionalEnum(YesNoUnknownSchema),
   available_quantity: optionalNumber(z.number().int().nonnegative()),
   minimum_order_quantity: optionalNumber(z.number().int().nonnegative()),
   lead_time_days: optionalNumber(z.number().int().nonnegative().max(365)),
   lead_time_text: optionalText(200),
-  delivery_included: optionalEnum(YES_NO_UNKNOWN),
-  accepts_argt: z.enum(YES_NO_UNKNOWN),
+  delivery_included: optionalEnum(YesNoUnknownSchema),
+  accepts_argt: YesNoUnknownSchema,
   payment_terms: optionalText(300),
   do_not_contact_requested: z.boolean(),
   notes: optionalText(1000),
