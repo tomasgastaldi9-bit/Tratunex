@@ -1,52 +1,20 @@
 import { z } from "zod";
+// Import relativo: Vitest no resuelve el alias "@/" en imports de valores.
+import { CallResultV1Schema, NextActionSchema } from "./crm";
 
 // Contratos de Voz (Bautista, TRA-43). Ctx, ActionCtx y Result<T> vienen de
 // contracts/common.ts; estos schemas describen inputs y payloads de data.
 const IdSchema = z.uuid();
 const UtcSchema = z.iso.datetime();
 const TextSchema = z.string().trim().min(1);
-const ExternalEventIdSchema = z.string().min(1).refine(
-  (value) => value === value.trim(),
-  "El ID externo debe conservarse sin espacios agregados",
-);
-const WebUrlSchema = z.url().refine(
-  (value) => /^https?:\/\//i.test(value),
-  "La URL debe usar http o https",
-);
 
 // ---------------------------------------------------------------------------
 // CallResultV1: lo que Voz entrega a recordCallResult del CRM (BRIEF §10).
-//
-// TEMPORAL: espejo exacto de CallResultV1Schema en src/contracts/crm.ts, que
-// Nano publica en TRA-53 (todavía sin mergear). Voz puede importar contratos
-// del CRM, pero no al revés, así que el dueño final es crm.ts. Cuando ese
-// archivo llegue a main, reemplazar este bloque por un import desde
-// "@/contracts/crm" y mantener solo normalizedCallResultV1Schema.
+// El dueño del esquema es el CRM (src/contracts/crm.ts, Nano): Voz importa del
+// CRM y no al revés. Se reexporta para que los módulos de Voz tengan un solo
+// punto de entrada.
 // ---------------------------------------------------------------------------
-export const NextActionSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("callback"), due_at: UtcSchema, reason: TextSchema }),
-  z.object({ type: z.literal("human_review"), due_at: UtcSchema.nullable(), reason: TextSchema }),
-]);
-
-export const CallResultV1Schema = z.object({
-  schema_version: z.literal("1"),
-  event_id: ExternalEventIdSchema,
-  occurred_at: UtcSchema,
-  company_id: IdSchema,
-  call_id: IdSchema,
-  contact_id: IdSchema,
-  deal_id: IdSchema.nullable(),
-  agent_version: z.number().int().positive(),
-  technical_status: z.enum(["completed", "failed"]),
-  answered_by: z.enum(["human", "voicemail", "unknown"]),
-  is_potential_client: z.enum(["yes", "no", "unknown"]),
-  outcome: z.enum(["interested", "not_interested", "callback_requested", "wants_to_buy", "not_assessed"]),
-  do_not_contact_requested: z.boolean(),
-  score: z.number().min(0).max(100).nullable(),
-  summary: TextSchema,
-  transcript_url: WebUrlSchema.nullable(),
-  next_action: NextActionSchema.nullable(),
-});
+export { CallResultV1Schema, NextActionSchema };
 
 // Garantías extra que Voz cumple al normalizar el reporte de Vapi, antes de
 // entregarlo al CRM. Sin conversación con una persona no hay evaluación

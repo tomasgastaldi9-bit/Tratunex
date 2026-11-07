@@ -4,7 +4,7 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 
 ## Qué publica
 
-- `src/contracts/voice.ts`: `CallDTO`, `StartCallInput`, `DispatchDueCallsInput`, sus payloads y `CallResultV1`.
+- `src/contracts/voice.ts`: `CallDTO`, `StartCallInput`, `DispatchDueCallsInput`, sus payloads y `CallResultV1` (reexportado desde `crm.ts`).
 - `src/features/voice/server/public.ts` (solo servidor):
   - `startCall(actionCtx, { contact_id, deal_id?, objective?, source_task_id? })` → `Result<{ call: CallDTO }>`
   - `dispatchDueCalls(ctx, { limit })` → `Result<{ processed, pending, failed }>`; lo llama el cron (`/api/jobs/tick`).
@@ -22,9 +22,9 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 - `company_id`, actor y `action_id` llegan en el contexto del servidor, nunca en el input.
 - `NormalizedCallResultV1Schema`: sin conversación con una persona (buzón, desconocido o fallo técnico) el resultado es `not_assessed`, sin score, sin calificación y sin pedido de no contacto.
 
-## Pendiente de coordinación
+## Contrato compartido con el CRM
 
-`CallResultV1Schema` es un espejo temporal del que publica Nano en `src/contracts/crm.ts` (TRA-53). Cuando llegue a `main`, Voz lo importa desde ahí y borra su copia.
+`CallResultV1Schema` y `NextActionSchema` vienen de `src/contracts/crm.ts` (Nano); `voice.ts` los reexporta y agrega `NormalizedCallResultV1Schema`.
 
 ## Pruebas
 
