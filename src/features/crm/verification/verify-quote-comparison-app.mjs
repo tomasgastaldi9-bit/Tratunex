@@ -57,7 +57,7 @@ try {
   const recommendedText = await recommended.innerText();
   check("precios y totales conservan ARS exactos", recommendedText.includes("ARS 12,5") && recommendedText.includes("ARS 50"));
   check("política manual se muestra sin ejecutar pago", recommendedText.includes("Requiere aprobación"));
-  check("ejemplos persistidos se rotulan", await rows.filter({ has: page.getByText("Datos de prueba", { exact: true }) }).count() === 2);
+  check("ejemplos persistidos se rotulan", await rows.filter({ has: page.getByText("Ejemplo (datos de prueba)", { exact: true }) }).count() === 2);
   const unknown = rows.filter({ hasText: "Datos de prueba: Ejemplo sin confirmar" });
   const unknownText = await unknown.innerText();
   check("precio y stock desconocidos siguen pendientes", unknownText.includes("Precio pendiente") && unknownText.includes("sin confirmar") && !unknownText.includes("USD 0"));
@@ -85,7 +85,7 @@ try {
   await page.getByText("Revisá la solicitud de compra", { exact: true }).waitFor();
   check("ID inválido presenta error explícito", true);
   await page.goto(`${baseUrl}/orders/quotes/example`);
-  await page.getByText("Datos de prueba · comparación ilustrativa, sin IA ejecutada", { exact: true }).waitFor();
+  await page.getByText("comparación ilustrativa con datos ficticios").waitFor();
   check("ejemplo separado permanece sin acciones de compra", await page.getByRole("button", { name: "Crear orden de compra", exact: true }).count() === 0 && mutations.length === 0);
   await page.goto(comparisonUrl);
   const responsePromise = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === "/api/crm/orders");
