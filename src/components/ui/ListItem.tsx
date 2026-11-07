@@ -47,7 +47,7 @@ export function ListItem({ leading, title, subtitle, meta, actions, className }:
     <div
       className={cx(
         // flex-wrap: si no entra todo en una fila, el segundo grupo baja.
-        "flex flex-wrap items-center gap-x-5 gap-y-4 rounded-card bg-surface p-5",
+        "flex flex-wrap items-center gap-x-5 gap-y-4 rounded-card border border-line bg-surface px-4 py-3.5",
         "transition-colors hover:bg-surface-hover",
         className,
       )}
@@ -67,7 +67,7 @@ export function ListItem({ leading, title, subtitle, meta, actions, className }:
               g/p/y y los acentos de mayúsculas (Á, Ó) se salen ~1px y quedarían
               mochos. py-0.5 agranda la caja 2px arriba y abajo para que entren,
               y -my-0.5 lo compensa: la fila queda del mismo tamaño. */}
-          <p className="-my-0.5 truncate py-0.5 text-sm leading-none font-bold">{title}</p>
+          <p className="-my-0.5 truncate py-0.5 text-sm leading-none font-semibold">{title}</p>
           {subtitle && (
             <p className="-my-0.5 truncate py-0.5 text-xs leading-none text-ink-muted">{subtitle}</p>
           )}

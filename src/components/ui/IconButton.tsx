@@ -35,17 +35,17 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cx(
-        // Círculo de 44px: 24px de ícono + 10px de relleno por lado (como el Figma).
-        "inline-flex size-11 shrink-0 items-center justify-center rounded-full",
-        variant === "outline" ? "border-2 border-ink" : "border-2 border-transparent",
-        "transition-colors duration-150 hover:bg-surface",
+        // Cuadrado de 36px con el ícono de 18px en el medio.
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-control",
+        variant === "outline" ? "border border-line bg-surface" : "border border-transparent",
+        "transition-colors duration-150 hover:bg-surface-hover",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
         "disabled:pointer-events-none disabled:opacity-40",
         className,
       )}
       {...resto}
     >
-      <Icono size={22} aria-hidden />
+      <Icono size={18} aria-hidden />
     </button>
   );
 }

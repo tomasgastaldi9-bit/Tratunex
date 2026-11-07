@@ -31,7 +31,7 @@ const TAMANIOS = {
 };
 
 const TONOS = {
-  light: "bg-canvas text-ink",
+  light: "bg-wash text-ink-muted",
   dark: "bg-ink text-white",
 };
 
@@ -63,7 +63,7 @@ export function Avatar({ name, size = "md", tone = "light", className }: AvatarP
       aria-hidden
       className={cx(
         // shrink-0: dentro de una fila flex, el avatar nunca se aplasta.
-        "inline-flex shrink-0 items-center justify-center rounded-control leading-none font-bold",
+        "inline-flex shrink-0 items-center justify-center rounded-full leading-none font-medium",
         TAMANIOS[size],
         TONOS[tone],
         className,

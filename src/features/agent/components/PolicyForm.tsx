@@ -107,7 +107,7 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
 
       {/* fieldset disabled apaga TODOS los campos de adentro de una vez (si no es admin).
           min-w-0: sin esto, en el celular el fieldset no se achica y empuja la página de costado. */}
-      <fieldset disabled={!canEdit} className="min-w-0">
+      <fieldset disabled={!canEdit} className="min-w-0 rounded-card border border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-col gap-5">
           {/* Montos en pesos enteros, como texto: el servidor los pasa a
               unidades mínimas de ARGt. inputMode muestra el teclado numérico.
@@ -219,8 +219,9 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
 
       {/* Ejemplos calculados en vivo con decidePurchasePolicy: la MISMA regla
           que usa el servidor antes de pagar (ver policy-form-data.ts). */}
-      <Card className="flex flex-col gap-4">
-        <h2 className="text-base leading-none font-bold">Así decide el agente</h2>
+      {/* Borde punteado y gris muy claro: es una vista previa calculada, no algo que se edita. */}
+      <Card className="flex flex-col gap-4 border-dashed border-gray-300 bg-gray-50">
+        <h2 className="text-[15px] leading-none font-semibold">Así decide el agente</h2>
         {ejemplos.ok ? (
           <ul className="flex flex-col gap-4">
             {ejemplos.examples.map((ejemplo) => {
@@ -251,7 +252,7 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
 
       {/* Si no es admin, no hay botón: no tendría sentido apretarlo. */}
       {canEdit && (
-        <div>
+        <div className="flex justify-end">
           <Button type="submit" variant="primary" loading={pending}>
             {pending ? "Guardando…" : "Guardar reglas"}
           </Button>
