@@ -2,6 +2,8 @@ import "server-only";
 
 import type { ActionCtx, Ctx, Result } from "@/contracts/common";
 import type {
+  BeloPair,
+  BeloPrice,
   DispatchDueCallsData,
   DispatchDueCallsInput,
   GetCallData,
@@ -19,6 +21,7 @@ import * as calls from "./calls";
 import { importQuoteFromCall as importQuote, type ComparatorQuote, type ImportQuoteFromCallData } from "./quote-import";
 import { createSupabaseQuoteStore, listComparatorQuotes } from "./quote-store";
 import { fetchVapiCall } from "./vapi-api";
+import { fetchBeloPrice } from "./belo-price";
 
 // Funciones públicas de Voz para otros módulos de servidor (BRIEF §10).
 // VOICE_MODE=mock (por defecto) responde sin llamar a nadie y muestra llamadas
@@ -111,4 +114,20 @@ export async function listSupplierQuotes(ctx: Ctx, input: { purchase_request_id:
     return { ok: false, error: { code: "VALIDATION_ERROR", message: "La compra no es válida", retryable: false } };
   }
   return listComparatorQuotes(await createRequestSupabaseClient({ readOnlyCookies: true }), ctx, input.purchase_request_id);
+}
+
+// ---------------------------------------------------------------------------
+// Precio de Belo (QUO-04). La API es pública; se guarda 1 minuto por par para
+// no consultarla en cada pantalla. Si Belo no responde se informa el error:
+// nunca se muestra un precio inventado.
+// ---------------------------------------------------------------------------
+const BELO_CACHE_MS = 60_000;
+const beloCache = new Map<BeloPair, { at: number; price: BeloPrice }>();
+
+export async function getBeloPrice(pair: BeloPair = "USDT/ARS"): Promise<Result<BeloPrice>> {
+  const cached = beloCache.get(pair);
+  if (cached && Date.now() - cached.at < BELO_CACHE_MS) return { ok: true, data: cached.price };
+  const result = await fetchBeloPrice(pair);
+  if (result.ok) beloCache.set(pair, { at: Date.now(), price: result.data });
+  return result;
 }

@@ -13,7 +13,9 @@ import { Select } from "@/components/ui/Select";
 import { getPurchaseRequest } from "@/features/agent/server/public";
 import { listSuppliers } from "@/features/crm/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
-import { listSupplierQuotes } from "@/features/voice/server/public";
+import type { BeloPrice } from "@/contracts/voice";
+import { beloEquivalent } from "@/features/voice/server/belo-price";
+import { getBeloPrice, listSupplierQuotes } from "@/features/voice/server/public";
 import type { ComparatorQuote } from "@/features/voice/server/quote-import";
 import { importQuoteAction } from "./actions";
 
@@ -35,6 +37,25 @@ const ERRORS: Record<string, string> = {
 
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+const pesos = (value: number) => `$ ${value.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
+const usdt = (value: number) => `${value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+const hour = (iso: string) =>
+  new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
+
+// Total de la compra con el precio de la cotización, en pesos y USDT según Belo.
+function BeloLine({ quote, quantity, price }: { quote: ComparatorQuote; quantity: number | null; price: BeloPrice | null }) {
+  if (!quote.unit_price || !price) return null;
+  const unit = Number(quote.unit_price.amount_atomic) / 10 ** quote.unit_price.decimals;
+  const each = beloEquivalent(unit, quote.unit_price.currency, price);
+  const total = quantity ? beloEquivalent(unit * quantity, quote.unit_price.currency, price) : null;
+  return (
+    <p>
+      Según Belo: {pesos(each.ars)} ≈ {usdt(each.usdt)} por unidad
+      {total && <> · total por {quantity!.toLocaleString("es-AR")}: <strong>{pesos(total.ars)} ≈ {usdt(total.usdt)}</strong></>}
+    </p>
+  );
 }
 
 function formatPrice(quote: ComparatorQuote): string {
@@ -69,11 +90,14 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
 
   const purchaseParam = first(params.purchase_request_id);
   const purchaseId = purchaseParam && UUID.test(purchaseParam) ? purchaseParam : null;
-  const [purchase, suppliers, quotes] = await Promise.all([
+  const [purchase, suppliers, quotes, belo] = await Promise.all([
     purchaseId ? getPurchaseRequest(context.data, { purchase_request_id: purchaseId }) : null,
     listSuppliers(context.data, { limit: 100 }),
     purchaseId ? listSupplierQuotes(context.data, { purchase_request_id: purchaseId }) : null,
+    purchaseId ? getBeloPrice("USDT/ARS") : null,
   ]);
+  const beloPrice = belo?.ok ? belo.data : null;
+  const quantity = purchase?.ok ? purchase.data.purchase_request.quantity : null;
   const supplierOptions = suppliers.ok
     ? suppliers.data.items.map((s) => ({ value: s.id, label: s.organization ? `${s.organization} (${s.name})` : s.name }))
     : [];
@@ -139,6 +163,13 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
       {purchaseId && (
         <section>
           <PageHeader as="h2" title="Cotizaciones de esta compra" />
+          {beloPrice ? (
+            <p>
+              Dólar cripto en Belo (USDT/ARS): compra {pesos(beloPrice.bid)} · venta {pesos(beloPrice.ask)} · consultado a las {hour(beloPrice.fetched_at)}. Los equivalentes usan el precio medio y son de referencia.
+            </p>
+          ) : (
+            belo && <Alert tone="warning" title="Sin precio de Belo">No pudimos consultar el precio de Belo; los montos se muestran solo en su moneda.</Alert>
+          )}
           {!quotes?.ok ? (
             <Alert tone="danger" title="No pudimos leer las cotizaciones">Probá de nuevo en unos segundos.</Alert>
           ) : quotes.data.items.length === 0 ? (
@@ -154,6 +185,7 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
                     <p>
                       Stock: {quote.available_quantity ?? "sin dato"} · Plazo: {quote.lead_time_days !== null ? `${quote.lead_time_days} días` : quote.lead_time_text ?? "sin dato"} · Acepta ARGt: {quote.accepts_argt === "yes" ? "sí" : quote.accepts_argt === "no" ? "no" : "sin dato"}
                     </p>
+                    <BeloLine quote={quote} quantity={quantity} price={beloPrice} />
                     <p>{quote.summary}</p>
                   </Card>
                 </li>
