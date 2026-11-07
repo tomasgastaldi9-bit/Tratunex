@@ -21,6 +21,9 @@ un claim ni habilita pagos. El puerto permanece `unavailable`.
   actual llama a `checkBeforePayment`, que rechaza `needs_approval` aunque la
   orden ya esté aprobada. Hay que resolver ese caso con evidencia persistida
   del claim, sin añadir un booleano de aprobación controlable por el cliente.
+- `source: "call"` no demuestra telefonía real. El claim debe acordar la
+  procedencia admitida: un mock no pasa a ser una oferta externa por ese enum;
+  voz web y teléfono se identifican por el registro canónico de llamada.
 
 ## Firma propuesta
 
@@ -85,6 +88,12 @@ reintentos repitan acción y nonce. No se conecta como claim sin cambios.
 1. Una orden tiene una única intención durable; otra acción sobre la misma
    orden recupera esa intención, sin asignar otro nonce ni crear otra firma.
    Reutilizar una acción para otra orden/configuración produce `CONFLICT`.
+   El orquestador actual pasa el mismo `action_id` a aprobación y Pagos. Si el
+   claim usa `app_private.claim_action`, necesita un namespace interno separado:
+   el recibo común ya pertenece a `crm.approvePurchaseOrder`. Usar recibos
+   privados de Pagos o una clave interna derivada y estable, manteniendo la
+   clave original para auditoría; no reutilizar literalmente el recibo común
+   para otra operación. El API público no debe depender de nuevos IDs por clic.
 2. Una observación de nonce más nueva no cambia un replay: se devuelve el nonce
    ya reservado. La unicidad por billetera/red/nonce cruza empresas; un mutex
    en memoria por proceso no basta. El emisor debe usarse mediante ese mismo
