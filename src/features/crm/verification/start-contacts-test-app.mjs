@@ -12,6 +12,10 @@ const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: config.anonKey,
     SUPABASE_SECRET_KEY: config.serviceKey,
     NEXT_PUBLIC_APP_URL: "http://localhost:3101",
+    // The verification child must never inherit live integration credentials.
+    ANTHROPIC_API_KEY: "", FIRECRAWL_API_KEY: "", VAPI_PRIVATE_KEY: "",
+    AGENT_WALLET_PRIVATE_KEY: "", PAYMENT_RPC_URL: "",
+    DISCOVERY_MODE: "mock", VOICE_MODE: "mock",
   },
 });
 child.on("exit", code => { process.exitCode = code ?? 1; });
