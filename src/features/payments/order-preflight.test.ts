@@ -20,10 +20,18 @@ describe("verificación preliminar de orden", () => {
       expect(d.checkPolicy).not.toHaveBeenCalled();
     }
   });
-  it("falla si cambió la billetera o la regla necesita una aprobación vinculada", async () => {
+  it("falla si cambió la billetera", async () => {
     const d = deps(); d.getSupplier.mockResolvedValue({ ok: true, data: { supplier: { ...supplier, wallet_version: 2 } } });
     expect((await preflightOrder(ctx, orderId, d)).ok).toBe(false);
+  });
+  it("identifica la aprobación pendiente de comprobar bajo bloqueo sin autorizar el pago", async () => {
     const needs = deps(); needs.checkPolicy.mockResolvedValue({ ok: true, data: { decision: "needs_approval", reason: "requiere aprobación" } });
-    expect((await preflightOrder(ctx, orderId, needs)).ok).toBe(false);
+    expect(await preflightOrder(ctx, orderId, needs)).toMatchObject({ ok: true, data: { order_id: orderId, policy_decision: "needs_approval", authorization: "unverified" } });
+  });
+  it("rechaza reglas denegadas y errores incluso con aprobación", async () => {
+    const rejected = deps(); rejected.checkPolicy.mockResolvedValue({ ok: true, data: { decision: "rejected", reason: "rechazado" } });
+    expect((await preflightOrder(ctx, orderId, rejected)).ok).toBe(false);
+    const unavailable = deps(); unavailable.checkPolicy.mockRejectedValue(new Error("offline"));
+    expect((await preflightOrder(ctx, orderId, unavailable)).ok).toBe(false);
   });
 });
