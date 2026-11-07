@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download, PhoneOutgoing } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Alert } from "@/components/ui/Alert";
@@ -13,9 +13,11 @@ import { Select } from "@/components/ui/Select";
 import { getPurchaseRequest } from "@/features/agent/server/public";
 import { listSuppliers } from "@/features/crm/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
-import { listSupplierQuotes } from "@/features/voice/server/public";
+import type { BeloPrice } from "@/contracts/voice";
+import { beloEquivalent } from "@/features/voice/server/belo-price";
+import { getBeloPrice, listSupplierQuotes } from "@/features/voice/server/public";
 import type { ComparatorQuote } from "@/features/voice/server/quote-import";
-import { importQuoteAction } from "./actions";
+import { importQuoteAction, requestQuoteCallAction } from "./actions";
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -33,8 +35,37 @@ const ERRORS: Record<string, string> = {
   RATE_LIMITED: "Vapi pidió esperar un momento. Probá de nuevo en unos segundos.",
 };
 
+const CALL_ERRORS: Record<string, string> = {
+  VALIDATION_ERROR: "Elegí un proveedor y abrí esta página desde una compra.",
+  NOT_FOUND: "No encontramos el proveedor, la compra o el asistente de Vapi configurado.",
+  FORBIDDEN: "El proveedor pidió que no lo llamen, o tu sesión venció.",
+  CONFLICT: "Ese pedido de llamada ya se intentó: recargá la página y revisá en Vapi antes de volver a llamar.",
+  PROVIDER_ERROR: "Vapi rechazó la llamada. Revisá el teléfono del proveedor, el crédito y la configuración del servidor.",
+  PROVIDER_UNAVAILABLE: "Vapi no respondió o falta configuración del servidor (VAPI_ASSISTANT_ID, VAPI_PHONE_NUMBER_ID). Revisá en Vapi si la llamada salió antes de reintentar.",
+  RATE_LIMITED: "Vapi pidió esperar un momento. Probá de nuevo en unos segundos.",
+};
+
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+const pesos = (value: number) => `$ ${value.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
+const usdt = (value: number) => `${value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+const hour = (iso: string) =>
+  new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
+
+// Total de la compra con el precio de la cotización, en pesos y USDT según Belo.
+function BeloLine({ quote, quantity, price }: { quote: ComparatorQuote; quantity: number | null; price: BeloPrice | null }) {
+  if (!quote.unit_price || !price) return null;
+  const unit = Number(quote.unit_price.amount_atomic) / 10 ** quote.unit_price.decimals;
+  const each = beloEquivalent(unit, quote.unit_price.currency, price);
+  const total = quantity ? beloEquivalent(unit * quantity, quote.unit_price.currency, price) : null;
+  return (
+    <p className="text-sm">
+      Según Belo: {pesos(each.ars)} ≈ {usdt(each.usdt)} por unidad
+      {total && <> · total por {quantity!.toLocaleString("es-AR")}: <strong>{pesos(total.ars)} ≈ {usdt(total.usdt)}</strong></>}
+    </p>
+  );
 }
 
 function formatPrice(quote: ComparatorQuote): string {
@@ -69,16 +100,24 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
 
   const purchaseParam = first(params.purchase_request_id);
   const purchaseId = purchaseParam && UUID.test(purchaseParam) ? purchaseParam : null;
-  const [purchase, suppliers, quotes] = await Promise.all([
+  const [purchase, suppliers, quotes, belo] = await Promise.all([
     purchaseId ? getPurchaseRequest(context.data, { purchase_request_id: purchaseId }) : null,
     listSuppliers(context.data, { limit: 100 }),
     purchaseId ? listSupplierQuotes(context.data, { purchase_request_id: purchaseId }) : null,
+    purchaseId ? getBeloPrice("USDT/ARS") : null,
   ]);
+  const beloPrice = belo?.ok ? belo.data : null;
+  const quantity = purchase?.ok ? purchase.data.purchase_request.quantity : null;
   const supplierOptions = suppliers.ok
     ? suppliers.data.items.map((s) => ({ value: s.id, label: s.organization ? `${s.organization} (${s.name})` : s.name }))
     : [];
   const supplierName = new Map(supplierOptions.map((option) => [option.value, option.label]));
   const errorCode = first(params.error);
+  const callError = first(params.call_error);
+  const calledParam = first(params.called);
+  const called = calledParam && UUID.test(calledParam) ? calledParam : null;
+  const supplierParam = first(params.supplier);
+  const calledSupplier = supplierParam && UUID.test(supplierParam) ? supplierParam : undefined;
   const imported = first(params.imported);
 
   return (
@@ -91,6 +130,16 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
       {errorCode && (
         <Alert tone="danger" title="No se pudo traer la cotización">
           {ERRORS[errorCode] ?? "Algo salió mal. Probá de nuevo."}
+        </Alert>
+      )}
+      {callError && (
+        <Alert tone="danger" title="No se pudo hacer la llamada">
+          {CALL_ERRORS[callError] ?? "Algo salió mal. Revisá en Vapi si la llamada salió antes de reintentar."}
+        </Alert>
+      )}
+      {called && !imported && (
+        <Alert tone="success" title="Llamando al proveedor">
+          El cotizador está llamando. Cuando corte, tocá <strong>Traer cotización</strong>: el formulario ya tiene la llamada y el proveedor.
         </Alert>
       )}
       {imported && (
@@ -110,6 +159,26 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
           </Alert>
         )}
 
+        {purchase?.ok && (
+          <form action={requestQuoteCallAction} className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-end">
+            <input type="hidden" name="purchase_request_id" value={purchase.data.purchase_request.id} />
+            {/* Uno por carga de la página: un doble clic no llama dos veces. */}
+            <input type="hidden" name="click_id" value={crypto.randomUUID()} />
+            <div className="min-w-0 grow">
+              <Select
+                label="Llamar a un proveedor para pedirle cotización"
+                name="supplier_contact_id"
+                required
+                placeholder={supplierOptions.length ? "Elegí un proveedor" : "No hay proveedores cargados"}
+                options={supplierOptions}
+              />
+            </div>
+            <Button type="submit" variant="secondary" icon={PhoneOutgoing}>
+              Llamar ahora
+            </Button>
+          </form>
+        )}
+
         <form action={importQuoteAction} className="flex flex-col gap-5">
           {purchase?.ok ? (
             <input type="hidden" name="purchase_request_id" value={purchase.data.purchase_request.id} />
@@ -120,6 +189,7 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
             label="Proveedor al que llamó el cotizador"
             name="supplier_contact_id"
             required
+            defaultValue={calledSupplier}
             placeholder={supplierOptions.length ? "Elegí un proveedor" : "No hay proveedores cargados"}
             options={supplierOptions}
           />
@@ -129,6 +199,7 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
             required
             hint="En Vapi: Logs → Calls → la llamada. Es un código como 01a1b71c-99fc-7001-…"
             autoComplete="off"
+            defaultValue={called ?? undefined}
           />
           <div className="flex justify-end border-t border-line pt-4">
             <Button type="submit" variant="primary" icon={Download}>
@@ -141,6 +212,13 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
       {purchaseId && (
         <section className="flex flex-col gap-3">
           <PageHeader as="h2" title="Cotizaciones de esta compra" />
+          {beloPrice ? (
+            <p className="text-sm text-ink-muted">
+              Dólar cripto en Belo (USDT/ARS): compra {pesos(beloPrice.bid)} · venta {pesos(beloPrice.ask)} · consultado a las {hour(beloPrice.fetched_at)}. Los equivalentes usan el precio medio y son de referencia.
+            </p>
+          ) : (
+            belo && <Alert tone="warning" title="Sin precio de Belo">No pudimos consultar el precio de Belo; los montos se muestran solo en su moneda.</Alert>
+          )}
           {!quotes?.ok ? (
             <Alert tone="danger" title="No pudimos leer las cotizaciones">Probá de nuevo en unos segundos.</Alert>
           ) : quotes.data.items.length === 0 ? (
@@ -171,6 +249,7 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
                         <dd className="font-medium">{quote.accepts_argt === "yes" ? "Sí" : quote.accepts_argt === "no" ? "No" : "Sin dato"}</dd>
                       </div>
                     </dl>
+                    <BeloLine quote={quote} quantity={quantity} price={beloPrice} />
                     <p className="text-sm leading-relaxed text-ink-muted">{quote.summary}</p>
                   </Card>
                 </li>

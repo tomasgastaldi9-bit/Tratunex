@@ -91,9 +91,15 @@ export default async function HomePage() {
         />
         <Fila
           numero={5}
-          titulo="Elección y pago"
-          detalle="Ranking explicado y pago en ARGt con su hash."
-          accion={<span className="text-sm text-ink-subtle">En construcción</span>}
+          titulo="Comparación"
+          detalle="Ranking de las cotizaciones y por qué conviene cada una."
+          accion={<Ir href="/orders/quotes">Comparar</Ir>}
+        />
+        <Fila
+          numero={6}
+          titulo="Orden y pago"
+          detalle="La orden de la cotización elegida y su pago en ARGt."
+          accion={<Ir href="/orders">Pagos</Ir>}
         />
       </Seccion>
     </AppShell>

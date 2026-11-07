@@ -45,7 +45,7 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 
 `server/quote-call.ts` define el asistente que llama al proveedor en nombre de la pyme. La guía para cargarlo en Vapi, con los textos para pegar y el guion de prueba, está en [`vapi/cotizador.md`](vapi/cotizador.md).
 
-- **Qué pide:** si puede entregar, precio por unidad (moneda e IVA), stock, plazo, envío, compra mínima y si acepta cobrar en ARGt.
+- **Qué pide:** una charla de unos 30 segundos con cuatro preguntas armadas con los datos de la compra: si tiene el producto y la cantidad, el precio por unidad (`pricePerUnit`: "el kilo", "cada uno") y si incluye IVA, si llega a tiempo y con envío incluido, y si cobra en ARGt. Cierra repitiendo precio y plazo.
 - **Qué no hace:** no confirma la compra, no dice el presupuesto (no lo conoce) y no pide billetera, CBU ni alias por teléfono. La billetera la carga una persona en el CRM (BRIEF §7).
 - **Qué extrae Vapi:** el structured output `tratunex_supplier_quote` (`quoteExtractionJsonSchema`). `extractQuoteFromReport` lo lee del `end-of-call-report`: sin cotización devuelve `extraction: null`; un dato opcional mal formado se descarta y un dato obligatorio faltante es `VALIDATION_ERROR`.
 - `quoteAssistantPrompt(brief)` y `quoteAssistantFirstMessage(brief)` reciben los datos de la compra; QUO-03 los manda a Vapi al iniciar la llamada desde la app.
@@ -65,6 +65,24 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
   - Reintentar con la misma llamada no duplica (una fila por ID de Vapi y una cotización por llamada). Una llamada ya asociada a otra empresa, otro proveedor u otra compra se rechaza.
 - **`listSupplierQuotes(ctx, { purchase_request_id })`**: cotizaciones de una compra en la forma que propuso Nano para el comparador (`SupplierQuoteSchema` en ORD-02): precio en centavos enteros con moneda y decimales, y `source` con la llamada (y su transporte), la URL o el rótulo "Datos de prueba".
 - Variables: `VAPI_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `NEXT_PUBLIC_SUPABASE_URL` en el servidor.
+
+### Pedir la cotización llamando desde la app (QUO-03)
+
+- En `/calls/quotes/import?purchase_request_id=<compra>`: elegir el proveedor y **Llamar ahora**. Al volver, la pantalla avisa que está llamando y deja precargado el formulario para **Traer cotización** cuando corte.
+- **`requestQuoteCall(actionCtx, { supplier_contact_id, purchase_request_id })`** en `public.ts` (BRIEF §9):
+  1. Lee el proveedor (`getSupplier`, CRM), la compra (`getPurchaseRequest`, compras) y el nombre de la empresa. Si el proveedor pidió no ser llamado, no llama.
+  2. Reserva la llamada en `calls` por `action_id` (uno por carga de la página): un doble clic devuelve la misma llamada; un intento que quedó sin confirmar no se repite a ciegas (`CONFLICT`).
+  3. Lee el modelo del asistente (`GET /assistant/:id`) y crea la llamada (`POST /call`) con el prompt y el primer mensaje armados con los datos de la compra, el cierre del cotizador y `metadata` con empresa, llamada, proveedor y compra.
+  4. Guarda el ID de Vapi. Si Vapi no responde, la llamada queda `unknown` (no sabemos si salió); si la rechaza, `failed` con el motivo.
+- Variables: `VAPI_PRIVATE_KEY`, `VAPI_ASSISTANT_ID` (el asistente **Tratunex Cotizador**), `VAPI_PHONE_NUMBER_ID` (el número de Twilio importado en Vapi) y `SUPABASE_SECRET_KEY`.
+
+## Precio de Belo (QUO-04)
+
+- **`getBeloPrice(pair = "USDT/ARS")`** en `public.ts` → `Result<BeloPrice>` con `bid`, `ask`, `mid` (pesos por 1 USDT) y `fetched_at`. Lee la API pública `GET https://api.belo.app/public/price` (sin clave) y guarda el precio 1 minuto por instancia. Pares: `USDT/ARS` y `USDC/ARS`.
+- Belo no informa la hora del precio: `fetched_at` es la hora de la consulta. Tampoco publica `mid`: es el promedio de compra y venta.
+- **`beloEquivalent(monto, "ARS" | "USD", precio)`** (`server/belo-price.ts`) pasa pesos a USDT y USD a pesos con el precio medio. Es solo de referencia: no es el precio de una operación ni convierte pagos.
+- Si Belo no responde o cambia el formato, el error se informa (`PROVIDER_UNAVAILABLE` reintentable o `PROVIDER_ERROR`) y la pantalla muestra los montos solo en su moneda: nunca un precio inventado.
+- Lo usa `/calls/quotes/import`: precio por unidad y total de la compra en pesos y USDT, con la compra, la venta y la hora del precio. El comparador (ORD-02) y la pantalla de pago (PAY-03) pueden usar la misma función.
 
 ## Contrato compartido con el CRM
 

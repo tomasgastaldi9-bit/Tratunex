@@ -46,7 +46,7 @@ function claimsFor(request) {
   if (claims.exp < Date.now() / 1000) throw new Error("Expired fixture token");
   return claims;
 }
-const tables = new Set(["companies", "company_members", "contacts", "supplier_profiles"]);
+const tables = new Set(["companies", "company_members", "contacts", "supplier_profiles", "purchase_requests", "purchase_policies", "supplier_quotes", "calls"]);
 const identifier = value => {
   if (!/^[a-z_][a-z_0-9]*$/.test(value)) throw new Error("Invalid fixture query identifier");
   return `"${value}"`;
@@ -75,16 +75,39 @@ const server = http.createServer(async (request, response) => {
     }
     if (url.pathname === "/auth/v1/.well-known/jwks.json") return send(response, 200, { keys: [] });
     const actor = { role: claims.role, id: claims.sub };
-    const rpc = new Map([["/rest/v1/rpc/contacts_execute", "contacts_execute"], ["/rest/v1/rpc/suppliers_execute", "suppliers_execute"]]).get(url.pathname);
+    const rpc = new Map([["/rest/v1/rpc/contacts_execute", "contacts_execute"], ["/rest/v1/rpc/suppliers_execute", "suppliers_execute"], ["/rest/v1/rpc/orders_execute", "orders_execute"]]).get(url.pathname);
     if (rpc && request.method === "POST") {
       const output = await asActor(actor, `select public.${rpc}(${quote(JSON.stringify(body.p_ctx))}::jsonb,
         ${quote(body.p_operation)},${quote(JSON.stringify(body.p_input))}::jsonb)::text`);
       return send(response, 200, JSON.parse(output));
     }
+    if (url.pathname === "/rest/v1/rpc/create_purchase_request" && request.method === "POST") {
+      const output = await asActor(actor, `select public.create_purchase_request(${quote(body.p_company_id)}::uuid,
+        ${quote(body.p_action_id)},${quote(JSON.stringify(body.p_request))}::jsonb)::text`);
+      return send(response, 200, JSON.parse(output));
+    }
     const table = url.pathname.replace("/rest/v1/", "");
     if (request.method === "GET" && tables.has(table)) {
       const columns = url.searchParams.get("select") || "*";
-      const projection = columns === "*" ? "*" : columns.split(",").map(identifier).join(",");
+      // Fixed purchase projection preserves numeric(78,0) as text, including
+      // PostgREST's explicit budget_atomic::text spelling. No arbitrary casts.
+      const purchaseProjection = '"id","company_id","product","quantity","unit","needed_by","budget_atomic"::text as "budget_atomic","zone","status","created_by","created_at"';
+      const policyProjection = '"company_id","max_per_purchase_atomic"::text as "max_per_purchase_atomic","auto_pay_limit_atomic"::text as "auto_pay_limit_atomic","only_allowed_suppliers","allowed_supplier_ids","updated_by","updated_at"';
+      const projections = { purchase_requests: purchaseProjection, purchase_policies: policyProjection };
+      const atomicColumns = { purchase_requests: ["budget_atomic"], purchase_policies: ["max_per_purchase_atomic", "auto_pay_limit_atomic"] };
+      const projection = columns === "*" ? (projections[table] || "*") : columns.split(",").map(value => {
+        const column = value.trim();
+        for (const atomic of atomicColumns[table] || []) {
+          if ([atomic, `${atomic}::text`].includes(column)) return `${identifier(atomic)}::text as ${identifier(atomic)}`;
+        }
+        if (table === "supplier_quotes" && column === "unit_price::text") return '"unit_price"::text as "unit_price"';
+        // Exact read relationship used by Voice's listComparatorQuotes. No
+        // arbitrary joins/casts; both company equality and calls RLS apply.
+        if (table === "supplier_quotes" && column === "call:calls(transport)") {
+          return '(select jsonb_build_object(\'transport\',c.transport) from public.calls c where c.company_id="supplier_quotes".company_id and c.id="supplier_quotes".call_id) as "call"';
+        }
+        return identifier(column);
+      }).join(",");
       const conditions = [];
       for (const [key, value] of url.searchParams) {
         if (["select", "order", "limit", "offset"].includes(key)) continue;
@@ -99,7 +122,7 @@ const server = http.createServer(async (request, response) => {
         const operators = { eq: "=", gt: ">", gte: ">=", lt: "<", lte: "<=", is: "is" };
         conditions.push(`${identifier(key)} ${operators[match[1]]} ${match[1] === "is" && match[2] === "null" ? "null" : quote(match[2])}`);
       }
-      const order = (url.searchParams.get("order") || (table === "company_members" ? "company_id.asc" : table === "supplier_profiles" ? "contact_id.asc" : "id.asc")).split(",").map(item => {
+      const order = (url.searchParams.get("order") || (["company_members", "purchase_policies"].includes(table) ? "company_id.asc" : table === "supplier_profiles" ? "contact_id.asc" : "id.asc")).split(",").map(item => {
         const [column, direction] = item.split(".");
         return `${identifier(column)} ${direction === "desc" ? "desc" : "asc"}`;
       }).join(",");

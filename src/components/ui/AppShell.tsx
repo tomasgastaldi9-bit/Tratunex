@@ -29,9 +29,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         Saltar al contenido
       </a>
 
-      {/* En compu el menú ocupa todo el alto y queda quieto al scrollear. */}
-      <aside className="hidden shrink-0 md:sticky md:top-0 md:block md:h-screen md:w-[232px]">
-        <Sidebar />
+      {/* En compu el menú ocupa todo el alto y queda quieto al scrollear.
+          Columna gris oscura: logo (lleva al inicio), los pasos y "Cambiar empresa". */}
+      <aside className="hidden shrink-0 bg-gray-900 md:sticky md:top-0 md:flex md:h-screen md:w-[232px] md:flex-col">
+        <Link
+          href="/"
+          className="mx-3 mt-5 mb-4 rounded-control px-2 py-1.5 focus-visible:outline-2 focus-visible:outline-white"
+        >
+          <Logo tone="light" />
+        </Link>
+        <p className="px-6 pb-1.5 text-xs text-gray-500">Compras</p>
+        <Sidebar className="flex-1 overflow-y-auto" />
+        <div className="border-t border-white/10 px-3 py-3">
+          <Link
+            href="/login/companies"
+            className="block rounded-control px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-white"
+          >
+            Cambiar empresa
+          </Link>
+        </div>
       </aside>
 
       {/* En el celular no hay menú lateral: arriba va el nombre y abajo la barra. */}
