@@ -25,7 +25,7 @@ describe("ORD03: importes y estados del pago", () => {
 
   it("deshabilita pago sin adapter, conversión, billetera, red compatible o fuente real", () => {
     expect(paymentBlockedReason(order, false)).toContain("pendiente de integración");
-    expect(paymentBlockedReason({ ...order, pricing_status: "pending_conversion", amount_atomic: null }, true)).toContain("conversión");
+    expect(paymentBlockedReason({ ...order, quoted_currency: "USD", pricing_status: "pending_conversion", amount_atomic: null }, true)).toContain("conversión");
     expect(paymentBlockedReason({ ...order, wallet: null }, true)).toContain("billetera");
     expect(paymentBlockedReason({ ...order, wallet: { chain: "arbitrum", address: `0x${"0".repeat(40)}` } }, true)).toContain("billetera");
     expect(paymentBlockedReason({ ...order, wallet: { ...order.wallet!, chain: "base" } }, true)).toContain("Arbitrum");

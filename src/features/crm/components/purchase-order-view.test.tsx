@@ -41,6 +41,23 @@ describe("ORD03: lectura de órdenes y aprobación humana", () => {
     expect(html).toContain(order.wallet!.address);
   });
 
+  it("ARS listo muestra el original y ARGt con equivalencia nominal explícita, sin habilitar PAY02", () => {
+    const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={{ ...order, quoted_currency: "ARS" }} paymentAvailable={false} />);
+    expect(html).toContain("ARS 10,00");
+    expect(html).toContain("ARGt 10</span>");
+    expect(html).toContain("Equivalencia nominal del MVP: 1 ARS = 1 ARGt. No es una cotización de cambio de mercado.");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Aprobar y pagar<\/button>/);
+  });
+
+  it("USD conserva su precio y conversión pendiente sin inventar una equivalencia", () => {
+    const usd = { ...order, quoted_currency: "USD" as const, pricing_status: "pending_conversion" as const, amount_atomic: null };
+    const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={usd} paymentAvailable />);
+    expect(html).toContain("USD 10,00");
+    expect(html).toContain("Conversión pendiente");
+    expect(html).not.toContain("Equivalencia nominal del MVP");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Aprobar y pagar<\/button>/);
+  });
+
   it("ejemplo está rotulado y no contiene enlaces a proveedor ficticio", () => {
     const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={{ ...order, quote_source: "example" }} paymentAvailable />);
     expect(html).toContain("Datos de prueba");

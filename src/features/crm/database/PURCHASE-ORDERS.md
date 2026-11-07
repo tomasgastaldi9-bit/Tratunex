@@ -10,13 +10,22 @@ modifica tablas de Agente o Voz.
 
 QUO-02 ya está integrado en main por PR #35 (`d83096a`, migración
 `20261107180000_add_supplier_quotes.sql`): ofrece `unit_price numeric(14,2)` y
-monedas `ARS`, `USD` o `unknown`. No ofrece precios ARGt ni una conversión
-acordada. Por tanto, con ese contrato, las órdenes ARS/USD quedan con
-`pricing_status: pending_conversion` y `amount_atomic: null`. La aprobación
-devuelve un error explícito. No se supone una equivalencia ARS/ARGt o USD/ARGt.
+monedas `ARS`, `USD` o `unknown`. Las órdenes ARS usan la convención de
+liquidación nominal **1 ARS = 1 ARGt** que ya publica
+[`pesosToAtomic`](../../../contracts/purchases.ts), la sección de compras del
+[`README de Agente`](../../agent/README.md) y el brief v3. Conservan el precio
+y moneda ARS originales, calculan `amount_atomic` exacto a escala 18 y quedan
+con `pricing_status: ready`. Esto aplica una regla del producto; no consulta ni
+afirma una cotización de mercado.
 
-La propuesta admite una futura cotización expresada explícitamente en ARGt.
-Calcula `unit_price × quantity × 10^18` con `numeric` exacto, exige un entero
+USD sigue con `pricing_status: pending_conversion` y `amount_atomic: null`:
+no hay una conversión acordada para esa moneda y no puede aprobarse para pagar.
+Una orden ARS antigua que haya quedado pendiente permanece intacta hasta que un
+admin ejecute `refreshPurchaseOrder` y vuelva a revisar su nueva versión.
+
+La propuesta también admite una futura cotización expresada directamente en
+ARGt. Para ARS nominal y ARGt calcula `unit_price × quantity × 10^18` con
+`numeric` exacto, exige un entero
 positivo menor que `2^256` y devuelve el resultado como string. Una fracción de
 unidad atómica o un desbordamiento se rechaza antes de guardar. Los precios
 originales y totales cotizados también se devuelven como strings decimales.
@@ -101,14 +110,19 @@ No instala la migración de Voz ni crea su tabla `calls`. Si ya existe una tabla
 de cotizaciones que no pertenece a ese fixture, se detiene y no la altera.
 Esta tabla auxiliar no demuestra que QUO-02 soporte ARGt.
 
-El 2026-11-07, PostgreSQL **17.11** aprobó **60 comprobaciones, exit 0**:
-concurrencia/idempotencia de creación y aprobación; decimal exacto ARS/USD;
+El 2026-11-07, PostgreSQL **17.11** aprobó **64 comprobaciones, exit 0**:
+concurrencia/idempotencia de creación y aprobación; ARS nominal 1:1 con centavos
+exactos a escala 18 y aprobación humana; USD pendiente sin conversión;
+ARS histórico pendiente recuperado únicamente con actualización explícita;
 ARGt de 18 decimales, uint256 máximo, rechazo de desbordamiento/subunidad;
 snapshots desactualizados y recuperación explícita; política/allowlist/budget;
 billetera, fuente y disponibilidad; admin/membresía antes del caché; RLS/ACL;
 compatibilidad DTO; rollback conjunto e insert fallido forzado. El trigger de
 fallo y todos los registros aleatorios de cada ejecución se limpian al terminar;
-se preservan tablas y datos anteriores.
+se preservan tablas y datos anteriores. La corrección local de la propuesta
+validó los cuerpos `prosrc` de sus dos funciones y la definición/nombre de su
+constraint anterior antes de reemplazarlos. El hash de todas las filas
+preexistentes permaneció idéntico; una orden ARS histórica siguió pendiente.
 
 El fixture HTTP de QA añade únicamente la RPC `orders_execute` a su lista
 permitida. Auth/PostgREST son sustitutos locales sobre PostgreSQL real. No

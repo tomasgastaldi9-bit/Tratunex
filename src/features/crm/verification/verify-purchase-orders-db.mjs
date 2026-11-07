@@ -104,13 +104,30 @@ try {
   check("eight concurrent requests replay one order snapshot",results.every(result=>result.ok && JSON.stringify(result)===JSON.stringify(results[0])));
   const arsOrder = success(results[0]).order;
   check("ARS price and exact total stay decimal strings",arsOrder.quoted_unit_price==="900719925474.01" && arsOrder.quoted_total==="2702159776422.03");
-  check("ARS never assumes a conversion or payable ARGt amount",arsOrder.amount_atomic===null && arsOrder.pricing_status==="pending_conversion" && arsOrder.status==="awaiting_approval");
+  check("ARS settles nominally 1:1 with exact 18-decimal atoms and keeps its quoted currency",arsOrder.amount_atomic===`270215977642203${"0".repeat(16)}` && arsOrder.quoted_currency==="ARS" && arsOrder.pricing_status==="ready" && arsOrder.status==="awaiting_approval");
   check("created order conforms to public DTO",PurchaseOrderSchema.safeParse(arsOrder).success);
   const dedup = await Promise.all(Array.from({length:4},()=>rpc(actor,context(),"createPurchaseOrder",{supplier_quote_id:arsQuote})));
   check("different actions still produce one order for the quote",dedup.every(result=>result.ok && !result.data.created && result.data.order.id===arsOrder.id));
-  check("unconverted ARS order cannot be approved",failed(await approve(arsOrder),"FORBIDDEN"));
+  const approvedArs = success(await approve(arsOrder)).order;
+  check("ARS order can be human-approved under published nominal settlement",approvedArs.status==="approved" && approvedArs.quoted_currency==="ARS" && approvedArs.amount_atomic===arsOrder.amount_atomic);
+  const centOrder = await create(await insertQuote({currency:"ARS",unit_price:"0.01"}));
+  check("ARS centavos remain exact at the ARGt atomic scale",centOrder.quoted_total==="0.03" && centOrder.amount_atomic==="30000000000000000");
+  // Insert an owned historical fixture without rewriting any existing order.
+  // The old ARS state remains pending until the explicit refresh RPC is used.
+  const legacyQuote = await insertQuote({currency:"ARS",unit_price:"900719925474.01"});
+  const legacyId = randomUUID();
+  await sql(`insert into public.purchase_orders select (jsonb_populate_record(null::public.purchase_orders,
+    to_jsonb(o)||jsonb_build_object('id',${quote(legacyId)}::uuid,'supplier_quote_id',${quote(legacyQuote)}::uuid,
+      'quote_snapshot',(select to_jsonb(q) from public.supplier_quotes q where q.id=${quote(legacyQuote)}),
+      'amount_atomic',null,'pricing_status','pending_conversion','status','awaiting_approval','version',1,
+      'approved_by',null,'approved_at',null))).* from public.purchase_orders o where o.id=${quote(arsOrder.id)} and o.company_id=${quote(companies[0])}`);
+  const legacy = success(await rpc(actor,context(),"getPurchaseOrder",{order_id:legacyId})).order;
+  check("legacy ARS is preserved pending until explicit refresh",legacy.pricing_status==="pending_conversion" && legacy.amount_atomic===null && failed(await approve(legacy),"FORBIDDEN"));
+  const refreshedLegacy = await refresh(legacy);
+  check("explicit refresh upgrades only the selected legacy ARS order",refreshedLegacy.id===legacyId && refreshedLegacy.version===2 && refreshedLegacy.quoted_currency==="ARS" && refreshedLegacy.pricing_status==="ready" && refreshedLegacy.amount_atomic===arsOrder.amount_atomic);
   const usdOrder = await create(await insertQuote({currency:"USD",unit_price:"0.11"}));
   check("USD remains pending with exact total and no implicit conversion",usdOrder.quoted_total==="0.33" && usdOrder.amount_atomic===null && usdOrder.pricing_status==="pending_conversion");
+  check("USD cannot be approved without an agreed conversion",failed(await approve(usdOrder),"FORBIDDEN"));
   const argtQuote = await insertQuote();
   let order = await create(argtQuote);
   check("future ARGt fixture preserves all 18 decimals",order.quoted_total==="3.000000000000000003" && order.amount_atomic==="3000000000000000003" && order.pricing_status==="ready");
@@ -214,7 +231,7 @@ try {
   check("demoted admin cannot approve or refresh",failed(await approve(withoutPolicy),"FORBIDDEN") && failed(await rpc(actor,context(),"refreshPurchaseOrder",{order_id:withoutPolicy.id,expected_version:withoutPolicy.version}),"FORBIDDEN"));
   await sql(`delete from public.company_members where company_id=${quote(companies[0])} and user_id=${quote(users[0])}`);
   check("revoked membership blocks cached creation result",failed(await rpc(actor,context(action),"createPurchaseOrder",{supplier_quote_id:arsQuote}),"FORBIDDEN"));
-  console.log(`PASS ${assertions} PostgreSQL purchase order checks (future ARGt quote fixture only)`);
+  console.log(`PASS ${assertions} PostgreSQL purchase order checks (ARS nominal and future ARGt fixture cases)`);
 } finally {
   if(triggerInstalled) await sql(`drop trigger ${triggerName} on public.purchase_orders;drop function app_private.${triggerName}()`);
   const ids = companies.map(quote).join(",");

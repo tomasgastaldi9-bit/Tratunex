@@ -1,5 +1,5 @@
 // Local-only verification: synthetic Auth/PostgREST, isolated PostgreSQL and
-// explicitly fictional quotes (including future ARGt). No network payment port.
+// explicitly fictional ARS/USD quotes. No network payment port.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
@@ -50,7 +50,7 @@ try {
   const body = await created.json();
   check("creación toma únicamente la cotización del servidor", created.status() === 200 && body.ok && typeof body.data.created === "boolean");
   const order = body.data.order;
-  check("datos ficticios ARGt conservan atómicos exactos y no aprueban", order.status === "awaiting_approval" && order.amount_atomic !== null && typeof order.amount_atomic === "string");
+  check("ARS 1,25 por cuatro conserva ARGt 5 nominal sin aprobar", order.status === "awaiting_approval" && order.quoted_currency === "ARS" && order.quoted_total === "5" && order.amount_atomic === "5000000000000000000");
   const replay = await (await post("/api/crm/orders", action, input)).json();
   check("mismo action_id recupera la misma orden", replay.ok && replay.data.order.id === order.id);
   const dedup = await (await post("/api/crm/orders", randomUUID(), input)).json();
@@ -67,6 +67,7 @@ try {
 
   await page.goto(`${baseUrl}/orders/${order.id}`);
   await page.getByRole("heading", { name: "Orden de compra", exact: true }).waitFor();
+  check("la ficha explica la equivalencia nominal sin atribuirla al mercado", (await page.locator("main").innerText()).includes("Equivalencia nominal del MVP: 1 ARS = 1 ARGt. No es una cotización de cambio de mercado."));
   check("botón pagar permanece deshabilitado", await page.getByRole("button", { name: "Aprobar y pagar", exact: true }).isDisabled());
   check("no se inventa hash de pago", await page.locator('a[href^="https://arbiscan.io/tx/"]').count() === 0);
   const beforeVersion = after.data.order.version;
@@ -91,7 +92,7 @@ try {
   check("el navegador no inició pagos", browserPayments.length === 0);
   check("cero errores JavaScript", errors.length === 0);
   check("cero solicitudes externas del navegador", external.length === 0);
-  console.log(`ORD03_BROWSER_ASSERTIONS=${assertions}; PAYMENT_MODE=unavailable; QUOTE_MODE=fictional-future-ARGt`);
+  console.log(`ORD03_BROWSER_ASSERTIONS=${assertions}; PAYMENT_MODE=unavailable; QUOTE_MODE=fictional-ARS-nominal-and-USD`);
 } finally {
   await browser.close();
 }

@@ -47,7 +47,7 @@ create table public.purchase_orders (
   foreign key(company_id,supplier_contact_id) references public.supplier_profiles(company_id,contact_id),
   check((wallet_chain is null) = (wallet_address is null)),
   check((pricing_status = 'ready') = (amount_atomic is not null)),
-  check((pricing_status = 'ready') = (quoted_currency = 'ARGt')),
+  constraint purchase_orders_ready_currency_check check(pricing_status <> 'ready' or quoted_currency in ('ARS','ARGt')),
   check((status = 'approved') = (approved_by is not null and approved_at is not null)),
   check(status = 'approved' or (approved_by is null and approved_at is null)),
   check(status <> 'approved' or (pricing_status = 'ready' and wallet_chain = 'arbitrum' and wallet_address is not null and quote_source <> 'example'))
@@ -102,7 +102,8 @@ begin
   if v_unit <= 0 then raise exception 'VALIDATION_ERROR: El precio debe ser mayor a cero'; end if;
   v_total := v_unit * (v_request ->> 'quantity')::numeric;
   v_pricing := 'pending_conversion';
-  if v_currency = 'ARGt' then
+  -- Published purchase convention: ARS settles nominally 1:1 in ARGt. No market FX.
+  if v_currency in ('ARS','ARGt') then
     v_amount := v_total * 1000000000000000000::numeric;
     if trunc(v_amount) <> v_amount or v_amount <= 0 or v_amount >= 115792089237316195423570985008687907853269984665640564039457584007913129639936::numeric then
       raise exception 'VALIDATION_ERROR: El total ARGt debe ser un entero de 18 decimales dentro de uint256';
@@ -200,7 +201,7 @@ begin
         or v_order.supplier_snapshot is distinct from v_context -> 'supplier' or v_order.policy_snapshot is distinct from nullif(v_context -> 'policy','null'::jsonb) then
         raise exception 'CONFLICT: Cambiaron la cotización, compra, proveedor, billetera o reglas; actualizá explícitamente la orden y revisala de nuevo';
       end if;
-      if v_order.pricing_status <> 'ready' or v_order.amount_atomic is null then raise exception 'FORBIDDEN: Falta una conversión a ARGt acordada; no hay monto de liquidación aprobado'; end if;
+      if v_order.pricing_status <> 'ready' or v_order.amount_atomic is null then raise exception 'FORBIDDEN: Falta monto listo; actualizá ARS/ARGt nominal o acordá la conversión de USD'; end if;
       if v_order.wallet_chain is distinct from 'arbitrum' or v_order.wallet_address is null then raise exception 'FORBIDDEN: Se requiere una billetera de cobro configurada en Arbitrum'; end if;
       v_quote := v_context -> 'quote';
       if v_quote ->> 'source' = 'example' then raise exception 'FORBIDDEN: Una cotización de ejemplo no autoriza una orden real'; end if;

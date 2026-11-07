@@ -72,6 +72,9 @@ export function PurchaseOrderView({ company, order, payment, paymentAvailable }:
         <Datum label="Dirección de cobro">{order.wallet ? <span className="break-all font-mono">{order.wallet.address}</span> : "Sin dirección registrada en la orden"}</Datum>
         <Datum label="Versión de billetera registrada">{order.wallet_version}</Datum>
       </dl>
+      {order.quoted_currency === "ARS" && order.pricing_status === "ready" && <Alert tone="info">
+        Equivalencia nominal del MVP: 1 ARS = 1 ARGt. No es una cotización de cambio de mercado.
+      </Alert>}
       {order.pricing_status === "pending_conversion" && <Alert tone="info">El precio cotizado conserva su moneda. El importe ARGt requiere una conversión antes de aprobar el pago.</Alert>}
       {order.approved_at && <p className="text-xs text-ink-muted">Aprobada por una persona · {date.format(new Date(order.approved_at))}, horario de Argentina.</p>}
     </Card>

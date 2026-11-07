@@ -27,6 +27,7 @@ export const PurchaseOrderSchema = z.object({
   created_at: z.string().datetime(), updated_at: z.string().datetime(),
 }).strict().superRefine((order, ctx) => {
   if ((order.pricing_status === "ready") !== (order.amount_atomic !== null)) ctx.addIssue({ code: "custom", path: ["amount_atomic"], message: "El monto no coincide con el estado de liquidación" });
+  if (order.pricing_status === "ready" && order.quoted_currency === "USD") ctx.addIssue({ code: "custom", path: ["pricing_status"], message: "USD requiere una conversión definida" });
   if (order.status === "approved" && (!order.approved_by || !order.approved_at || order.wallet?.chain !== "arbitrum" || order.wallet_version < 1 || !order.amount_atomic || order.quote_source === "example")) ctx.addIssue({ code: "custom", path: ["status"], message: "La aprobación requiere monto, billetera Arbitrum vigente, fuente real y persona" });
   if (order.status === "awaiting_approval" && (order.approved_by !== null || order.approved_at !== null)) ctx.addIssue({ code: "custom", path: ["status"], message: "Una orden pendiente no tiene aprobación" });
 });
@@ -38,7 +39,7 @@ export type CreatePurchaseOrderInput = z.infer<typeof CreatePurchaseOrderInputSc
 export type GetPurchaseOrderInput = z.infer<typeof GetPurchaseOrderInputSchema>;
 export type ApprovePurchaseOrderInput = z.infer<typeof ApprovePurchaseOrderInputSchema>;
 export type RefreshPurchaseOrderInput = z.infer<typeof RefreshPurchaseOrderInputSchema>;
-export type PurchaseOrderListInput = z.infer<typeof PurchaseOrderListInputSchema>;
+export type PurchaseOrderListInput = z.input<typeof PurchaseOrderListInputSchema>;
 export type GetPurchaseOrder = (ctx: Ctx, input: GetPurchaseOrderInput) => Promise<Result<{ order: PurchaseOrder }>>;
 export type CreatePurchaseOrder = (ctx: ActionCtx, input: CreatePurchaseOrderInput) => Promise<Result<{ order: PurchaseOrder; created: boolean }>>;
 export type ApprovePurchaseOrder = (ctx: ActionCtx, input: ApprovePurchaseOrderInput) => Promise<Result<{ order: PurchaseOrder }>>;

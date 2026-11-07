@@ -9,6 +9,8 @@ export const crmIntegration = {
   operations: {
     getContact: "persisted", upsertContact: "persisted", updateContact: "persisted", listContacts: "persisted",
     upsertSupplier: "persisted", updateSupplier: "persisted", getSupplier: "persisted", listSuppliers: "persisted", setSupplierWallet: "persisted",
+    createPurchaseOrder: "persisted", getPurchaseOrder: "persisted", listPurchaseOrders: "persisted",
+    refreshPurchaseOrder: "persisted", approvePurchaseOrder: "persisted",
     recordCallResult: "mock", scheduleFollowup: "mock", claimDueFollowups: "mock",
     completeFollowup: "mock", failFollowup: "mock",
   },

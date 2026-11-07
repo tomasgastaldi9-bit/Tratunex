@@ -21,6 +21,7 @@ describe("ORD-03 contrato mínimo de orden", () => {
   it("conserva ARS pendiente separado del importe ARGt", () => {
     expect(PurchaseOrderSchema.parse(pending)).toMatchObject({ quoted_total: "1250.00", amount_atomic: null, pricing_status: "pending_conversion" });
     expect(PurchaseOrderSchema.safeParse({ ...pending, pricing_status: "ready" }).success).toBe(false);
+    expect(PurchaseOrderSchema.safeParse({ ...pending, quoted_currency: "USD", pricing_status: "ready", amount_atomic: "1" }).success).toBe(false);
   });
   it("no acepta monto, destino o empresa suministrados al crear/aprobar", () => {
     expect(CreatePurchaseOrderInputSchema.parse({ supplier_quote_id: id })).toEqual({ supplier_quote_id: id });

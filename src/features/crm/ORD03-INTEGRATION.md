@@ -27,8 +27,15 @@ Tomás consume la lectura; no recibe destino ni monto desde el navegador.
 | `approved_by`, `approved_at` | UUID de la persona y fecha ISO UTC; ambos null mientras espera aprobación |
 | `created_at`, `updated_at` | ISO UTC |
 
-ARS/USD quedan `pending_conversion` con `amount_atomic: null`: **no habilitan
-pago ni conversión 1:1 implícita**. La cotización y compra se leen del servidor;
+ARS usa la equivalencia nominal ya publicada por BUY-01/02 en
+`src/contracts/purchases.ts` (`pesosToAtomic`): **1 ARS = 1 ARGt nominal** para
+este MVP, sin afirmar una cotización de mercado. SQL conserva el precio ARS y
+calcula el total en unidades ARGt de 18 decimales con aritmética decimal exacta,
+incluidos centavos, sin pasar por `number`. La ficha muestra la equivalencia y
+el importe explícito para revisión humana. USD queda `pending_conversion` con
+`amount_atomic: null`, sin inventar un cambio. Una orden ARS antigua pendiente
+puede actualizarse mediante `refreshPurchaseOrder`, con una nueva revisión.
+La cotización y compra se leen del servidor;
 la creación no acepta cantidad, precio, destino o empresa adicionales del cliente.
 Cada mutación conserva `action_id`; su recibo y cambio son transaccionales.
 La aprobación comprueba `expected_version` bajo bloqueo y exige monto y billetera.
