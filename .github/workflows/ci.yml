@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+      - run: supabase start > /dev/null
+      - run: supabase test db --local
+      - run: npm run test:db:concurrency
+      - run: npx playwright install --with-deps chromium
+      - name: Configure local test environment
+        shell: bash
+        run: |
+          status="$(supabase status --output json)"
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(jq -r .API_URL <<< "$status")" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(jq -r .PUBLISHABLE_KEY <<< "$status")" >> "$GITHUB_ENV"
+          echo "LOCAL_SUPABASE_SERVICE_ROLE_KEY=$(jq -r .SERVICE_ROLE_KEY <<< "$status")" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100" >> "$GITHUB_ENV"
+      - run: npm run test:e2e
