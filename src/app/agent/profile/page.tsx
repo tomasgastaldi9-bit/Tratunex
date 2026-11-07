@@ -1,10 +1,12 @@
+import { Building2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Alert } from "@/components/ui/Alert";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DEFAULT_CALL_WINDOW, DEFAULT_TONE } from "@/contracts/agent";
 import { AccessAlert } from "@/features/agent/components/AccessAlert";
 import { ProfileForm } from "@/features/agent/components/ProfileForm";
-import type { ProfileFormValues } from "@/features/agent/components/profile-form-data";
+import { readSavedNotice, type ProfileFormValues } from "@/features/agent/components/profile-form-data";
 import { getAgentProfile } from "@/features/agent/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
 
@@ -24,13 +26,6 @@ type ProfilePageProps = {
   // En Next 16, searchParams es una Promise: hay que esperarla con await.
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-
-/** Lee la versión guardada de la dirección. Solo acepta un número entero desde 1. */
-function leerVersionGuardada(valor: string | string[] | undefined): number | null {
-  if (typeof valor !== "string") return null;
-  const numero = Number(valor);
-  return Number.isSafeInteger(numero) && numero >= 1 ? numero : null;
-}
 
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const encabezado = (
@@ -63,11 +58,28 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     );
   }
 
-  // 3. ¿Venimos de guardar? La acción redirige acá con ?saved=N&created=1 (o 0).
-  const { saved, created } = await searchParams;
-  const versionGuardada = leerVersionGuardada(saved);
-
   const { current, can_edit } = perfil.data;
+
+  // 3. Todavía no hay perfil y esta persona no lo puede completar (no es admin):
+  //    un formulario vacío y bloqueado no le sirve para nada. Le contamos qué
+  //    falta y quién lo puede hacer. Sin botón: no hay nada que ella pueda hacer acá.
+  if (current === null && !can_edit) {
+    return (
+      <>
+        {encabezado}
+        <EmptyState
+          icon={Building2}
+          title="Tu agente todavía no tiene perfil"
+          description="Pedile a una persona admin que lo complete."
+        />
+      </>
+    );
+  }
+
+  // 4. ¿Venimos de guardar? La acción redirige acá con ?saved=N&created=1 (o 0).
+  //    readSavedNotice vive al lado de savedProfileUrl (la que arma esa dirección),
+  //    así las dos usan siempre los mismos nombres.
+  const aviso = readSavedNotice(await searchParams);
 
   // Con qué arranca el formulario: lo guardado o, la primera vez, vacío con
   // el tono y el horario por defecto del contrato.
@@ -89,14 +101,16 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     <>
       {encabezado}
 
-      {versionGuardada !== null && created === "1" && (
-        <Alert tone="success" title={`Guardamos la versión ${versionGuardada}`}>
-          La próxima llamada ya la usa.
+      {aviso?.created === true && (
+        <Alert tone="success" title={`Guardamos la versión ${aviso.version}`}>
+          {/* "Se va a usar" y no "ya la usa": las llamadas todavía no leen el
+              perfil, y no prometemos algo que no está andando (AGENTS.md). */}
+          Se va a usar en las próximas llamadas.
         </Alert>
       )}
-      {versionGuardada !== null && created === "0" && (
+      {aviso?.created === false && (
         <Alert tone="info" title="No había cambios">
-          Seguís en la versión {versionGuardada}.
+          Seguís en la versión {aviso.version}.
         </Alert>
       )}
 

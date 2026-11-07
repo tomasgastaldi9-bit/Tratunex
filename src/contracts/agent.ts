@@ -12,6 +12,16 @@ import type { ActionCtx, Ctx, Result } from "./common";
  * Regla del equipo: una vez publicado, solo se AGREGAN campos. Nunca se
  * cambia ni se borra uno que ya exista, porque rompería a quien lo usa.
  *
+ * Y hay una regla más para el perfil y las versiones: las versiones viejas
+ * quedan guardadas en la base y se vuelven a leer con ESTOS mismos esquemas.
+ * Si una versión vieja deja de validar, /agent no puede mostrarla y la
+ * pantalla queda trabada con un error. Por eso:
+ *  - todo campo NUEVO del perfil o de la versión tiene que ser opcional,
+ *    aceptar null o tener un valor por defecto (las versiones viejas no lo traen);
+ *  - los límites nunca se ajustan para más estrictos: no se baja un máximo
+ *    de caracteres ni se saca un valor de una lista (rubro, tono, días).
+ *    Agrandarlos sí se puede.
+ *
  * Las decisiones de estructura están explicadas en src/features/agent/README.md.
  */
 
@@ -189,10 +199,16 @@ export type SaveCompanyProfileOutput = z.infer<typeof saveCompanyProfileOutputSc
 /**
  * Firmas de las funciones públicas. Errores posibles (ErrorCode de common.ts):
  *  - VALIDATION_ERROR: datos inválidos.
- *  - FORBIDDEN: no es miembro de la empresa, o no es admin (al guardar).
+ *  - FORBIDDEN: al guardar, no es admin de la empresa (o no es miembro).
  *  - CONFLICT: alguien guardó otra versión mientras editaba, o se reusó un
  *    action_id con otros datos.
  *  - PROVIDER_UNAVAILABLE: la base no respondió (retryable: true).
+ *
+ * Ojo con getAgentProfile: confía en que el ctx viene de getCompanyContext,
+ * que ya comprobó que la persona es miembro de esa empresa. Ella no lo vuelve
+ * a comprobar. Si igual le llega una empresa de la que la persona NO es
+ * miembro, la RLS de la base no le devuelve ninguna fila y la respuesta es
+ * { current: null, can_edit: false } (como una empresa sin perfil), no FORBIDDEN.
  */
 export type GetAgentProfile = (ctx: Ctx) => Promise<Result<GetAgentProfileOutput>>;
 export type SaveCompanyProfile = (

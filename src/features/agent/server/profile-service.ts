@@ -22,6 +22,28 @@ function fail(code: "VALIDATION_ERROR" | "FORBIDDEN" | "CONFLICT" | "PROVIDER_ER
 const LECTURA_NO_DISPONIBLE = "No pudimos leer la configuración del agente. Probá de nuevo en un rato.";
 
 /**
+ * Anota en el log del SERVIDOR (la terminal de Next, no el navegador) un error
+ * de la base que a la persona le mostramos solo como "probá de nuevo".
+ * Sin esto, cuando algo se rompe no queda ningún rastro de qué pasó.
+ *
+ * Solo anotamos el código y el mensaje del error. NUNCA el ctx, el perfil ni
+ * otros datos de la persona o de la empresa: los logs los puede leer más gente
+ * y se guardan en otros lados.
+ */
+function logError(queFallo: string, error: unknown): void {
+  if (typeof error === "object" && error !== null) {
+    const { code, message } = error as { code?: unknown; message?: unknown };
+    console.error(`[agent] ${queFallo}`, {
+      code: typeof code === "string" ? code : undefined,
+      message: typeof message === "string" ? message : undefined,
+    });
+    return;
+  }
+  // Alguien hizo "throw" de algo que no es un objeto (raro, pero posible).
+  console.error(`[agent] ${queFallo}`, { message: String(error) });
+}
+
+/**
  * Traduce el error de la base (save_agent_profile) a un error nuestro.
  * La base escribe el código al principio del mensaje, así que miramos cómo empieza.
  * Todo lo que no reconocemos se trata como "la base no respondió" (se puede reintentar).
@@ -41,6 +63,9 @@ function translateSaveError(error: { message?: string; code?: string }): Result<
   if (message.startsWith("VALIDATION_ERROR")) {
     return fail("VALIDATION_ERROR", "Hay datos con un formato inválido. Revisalos y probá de nuevo.", false);
   }
+  // Un error que no conocemos: a la persona le decimos "probá de nuevo", pero
+  // lo anotamos para poder ver después qué fue.
+  logError("save_agent_profile devolvió un error desconocido", error);
   return fail("PROVIDER_UNAVAILABLE", "No pudimos guardar. Revisá tu conexión y probá de nuevo.", true);
 }
 
@@ -64,15 +89,24 @@ export function createProfileService(getClient: () => Promise<SupabaseClient>) {
         .order("version", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (read.error) return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+      if (read.error) {
+        logError("falló la lectura de agent_profiles", read.error);
+        return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+      }
 
       // Quién puede editar lo decide la base, no la pantalla.
       const edit = await client.rpc("can_edit_agent_profile", { p_company_id: parsedCtx.data.company_id });
-      if (edit.error) return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+      if (edit.error) {
+        logError("falló can_edit_agent_profile", edit.error);
+        return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+      }
 
       row = read.data;
       canEdit = edit.data;
-    } catch {
+    } catch (error) {
+      // Por ejemplo: no se pudo crear el cliente (faltan las variables de
+      // Supabase) o se cortó la conexión.
+      logError("excepción al leer el perfil", error);
       return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
     }
 
@@ -113,7 +147,8 @@ export function createProfileService(getClient: () => Promise<SupabaseClient>) {
         p_base_version: parsedInput.data.base_version,
         p_profile: parsedInput.data.profile,
       });
-    } catch {
+    } catch (error) {
+      logError("excepción al llamar a save_agent_profile", error);
       return fail("PROVIDER_UNAVAILABLE", "No pudimos guardar. Revisá tu conexión y probá de nuevo.", true);
     }
     if (result.error) return translateSaveError(result.error);

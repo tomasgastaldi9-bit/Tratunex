@@ -1,6 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createProfileService } from "./profile-service";
+
+// Cuando la base falla, el servicio anota el error con console.error (a
+// propósito: es el log del servidor). En los tests lo "espiamos" en vez de
+// dejar que escriba: así la salida queda limpia y podemos revisar QUÉ anotó.
+let consoleError: MockInstance<typeof console.error>;
+beforeEach(() => {
+  consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+});
+afterEach(() => {
+  consoleError.mockRestore();
+});
 
 const company = "11111111-1111-4111-8111-111111111111";
 const ctx = { company_id: company, actor_type: "user" as const, actor_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" };
@@ -44,6 +55,20 @@ function fakeClient(opts: {
   return { service, from, rpc, chain };
 }
 
+/**
+ * Revisa que el servicio anotó UN error en el log, con ese texto y ese
+ * detalle (solo código y mensaje), y que no se coló ningún dato de la empresa
+ * ni del perfil.
+ */
+function expectLogged(queFallo: string, detalle: { code: string | undefined; message: string | undefined }) {
+  expect(consoleError).toHaveBeenCalledTimes(1);
+  expect(consoleError).toHaveBeenCalledWith(`[agent] ${queFallo}`, detalle);
+  const todoLoAnotado = JSON.stringify(consoleError.mock.calls);
+  expect(todoLoAnotado).not.toContain(company);
+  expect(todoLoAnotado).not.toContain(ctx.actor_id);
+  expect(todoLoAnotado).not.toContain(profile.offering);
+}
+
 describe("getAgentProfile", () => {
   it("rechaza un ctx inválido", async () => {
     const { service, from } = fakeClient({});
@@ -81,16 +106,25 @@ describe("getAgentProfile", () => {
       ok: false,
       error: { code: "PROVIDER_UNAVAILABLE", message: "No pudimos leer la configuración del agente. Probá de nuevo en un rato.", retryable: true },
     });
+    expectLogged("falló la lectura de agent_profiles", { code: undefined, message: "down" });
   });
 
   it("falla con PROVIDER_UNAVAILABLE si la lectura tira excepción", async () => {
     const { service } = fakeClient({ readThrows: true });
     expect(await service.getAgentProfile(ctx)).toMatchObject({ ok: false, error: { code: "PROVIDER_UNAVAILABLE", retryable: true } });
+    expectLogged("excepción al leer el perfil", { code: undefined, message: "boom" });
   });
 
   it("falla con PROVIDER_UNAVAILABLE si can_edit da error", async () => {
-    const { service } = fakeClient({ canEdit: { data: null, error: { message: "down" } } });
+    const { service } = fakeClient({ canEdit: { data: null, error: { message: "down", code: "08006" } } });
     expect(await service.getAgentProfile(ctx)).toMatchObject({ ok: false, error: { code: "PROVIDER_UNAVAILABLE", retryable: true } });
+    expectLogged("falló can_edit_agent_profile", { code: "08006", message: "down" });
+  });
+
+  it("no anota nada en el log cuando la lectura sale bien", async () => {
+    const { service } = fakeClient({ read: { data: row, error: null } });
+    await service.getAgentProfile(ctx);
+    expect(consoleError).not.toHaveBeenCalled();
   });
 });
 
@@ -149,6 +183,14 @@ describe("saveCompanyProfile", () => {
   it.each(cases)("traduce el error de la base: %s", async (_name, save, code, message, retryable) => {
     const { service } = fakeClient({ save });
     expect(await service.saveCompanyProfile(actionCtx, input)).toEqual({ ok: false, error: { code, message, retryable } });
+    // Los errores que reconocemos ya dicen qué pasó: solo el desconocido se anota en el log.
+    expect(consoleError).toHaveBeenCalledTimes(code === "PROVIDER_UNAVAILABLE" ? 1 : 0);
+  });
+
+  it("anota en el log el error desconocido de la base (solo código y mensaje)", async () => {
+    const { service } = fakeClient({ save: dbError("connection reset", "08006") });
+    await service.saveCompanyProfile(actionCtx, input);
+    expectLogged("save_agent_profile devolvió un error desconocido", { code: "08006", message: "connection reset" });
   });
 
   it("falla con PROVIDER_UNAVAILABLE si el rpc tira excepción", async () => {
@@ -157,6 +199,7 @@ describe("saveCompanyProfile", () => {
       ok: false,
       error: { code: "PROVIDER_UNAVAILABLE", retryable: true },
     });
+    expectLogged("excepción al llamar a save_agent_profile", { code: undefined, message: "boom" });
   });
 
   it("falla con PROVIDER_ERROR si la respuesta es inesperada", async () => {

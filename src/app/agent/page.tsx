@@ -53,6 +53,8 @@ export default async function AgentPage() {
   // null = la empresa todavía no guardó nada (estado "vacío").
   const version = perfil.data.current?.version ?? null;
   const tienePerfil = version !== null;
+  // Solo los admin pueden cambiar el perfil (lo decide la base, en getAgentProfile).
+  const puedeEditar = perfil.data.can_edit;
 
   return (
     <>
@@ -79,9 +81,16 @@ export default async function AgentPage() {
           { label: "Base de conocimiento", done: false },
         ]}
         action={
-          <Link href="/agent/profile" className={buttonStyles()}>
-            {tienePerfil ? "Editar perfil" : "Completar perfil"}
-          </Link>
+          // Si no puede editar, no la invitamos a "completar" ni a "editar"
+          // algo que después no va a poder guardar. Tampoco ponemos un botón
+          // gris: sobre esta tarjeta gris no se distinguiría (regla "nada gris
+          // sobre gris" de docs/DESIGN.md). Para mirar el perfil ya tiene el
+          // botón "Abrir" en la lista de abajo.
+          puedeEditar ? (
+            <Link href="/agent/profile" className={buttonStyles()}>
+              {tienePerfil ? "Editar perfil" : "Completar perfil"}
+            </Link>
+          ) : undefined
         }
       />
 
