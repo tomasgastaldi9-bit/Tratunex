@@ -5,18 +5,15 @@ import type { Ctx, Result } from "../../../contracts/common";
 import type { ContactDTO } from "../../../contracts/crm";
 import {
   checkPurchasePolicyInputSchema,
-  comparatorRankingSchema,
   createPurchaseRequestOutputSchema,
   decidePurchasePolicy,
-  POLICY_DECISION_LABELS,
   purchasePolicySchema,
   purchaseRequestInputSchema,
   purchaseRequestSchema,
   quoteForRankingSchema,
   RANK_QUOTES_MAX,
-  rankQuotesInputSchema,
+  rankQuotesAutoInputSchema,
   rankQuotesOutputSchema,
-  RULES_EXPLANATION_PREFIX,
 } from "../../../contracts/purchases";
 import type {
   CheckPurchasePolicy,
@@ -26,7 +23,6 @@ import type {
   PurchasePolicy,
   QuoteForRanking,
   RankQuotes,
-  RankSupplierQuotes,
   SavePurchasePolicy,
 } from "../../../contracts/purchases";
 // Solo el TIPO de la cotización de Voz: la función real llega por deps (desde public.ts).
@@ -44,13 +40,6 @@ import { fail, logError, translateSaveError } from "./save-errors";
  */
 
 const LECTURA_NO_DISPONIBLE = "No pudimos leer los datos de compras. Probá de nuevo en un rato.";
-/** El comparador acepta explicaciones de hasta 4000 caracteres (comparatorRankingSchema). */
-const EXPLICACION_MAX = 4000;
-
-/** Corta la explicación a 4000 caracteres (terminando en "…") para que un texto largo no frene la comparación. */
-function recortarExplicacion(texto: string): string {
-  return texto.length <= EXPLICACION_MAX ? texto : `${texto.slice(0, EXPLICACION_MAX - 1)}…`;
-}
 const GUARDADO_NO_DISPONIBLE = "No pudimos guardar. Revisá tu conexión y probá de nuevo.";
 
 /**
@@ -395,7 +384,8 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     if (!parsedCtx.success) {
       return fail("VALIDATION_ERROR", parsedCtx.error.issues[0]?.message ?? "Contexto inválido", false);
     }
-    const parsedInput = safeParseSinExcepcion(rankQuotesInputSchema, input);
+    // Cotizaciones opcionales: si no vienen, se leen de supplier_quotes.
+    const parsedInput = safeParseSinExcepcion(rankQuotesAutoInputSchema, input);
     if (!parsedInput.success) {
       return fail("VALIDATION_ERROR", parsedInput.message, false);
     }
@@ -452,37 +442,6 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     return { ok: true, data: output.data };
   };
 
-  /**
-   * Puerto para el comparador de Nano (decisión 21 del README): lee las
-   * cotizaciones de la compra, las ordena con rankQuotes y devuelve la forma
-   * EXACTA de comparatorRankingSchema (un motivo de texto por cotización).
-   */
-  const rankSupplierQuotes: RankSupplierQuotes = async (ctx, input) => {
-    // Sin "quotes": rankQuotes las lee de supplier_quotes.
-    const ranked = await rankQuotes(ctx, { purchase_request_id: input?.purchase_request_id });
-    if (!ranked.ok) return ranked;
-    const { ranking, recommended_quote_id, explanation, explanation_source } = ranked.data;
-
-    // Si ninguna sirve no hay recomendada: error explícito con el porqué.
-    if (recommended_quote_id === null) return fail("NOT_FOUND", explanation, false);
-
-    const output = comparatorRankingSchema.safeParse({
-      ranking: ranking.map((rank) => ({
-        quote_id: rank.quote_id,
-        // Un solo texto: los motivos unidos con " · " (y, si califica, qué haría el agente al pagar).
-        reason: rank.eligible
-          ? rank.reasons.join(" · ") + (rank.policy ? ` · ${POLICY_DECISION_LABELS[rank.policy.decision]}` : "")
-          : `No califica: ${rank.reasons.join(" · ")}`,
-      })),
-      recommended_quote_id,
-      // No hacemos pasar una explicación de reglas por una de IA: la rotulamos.
-      // Se corta DESPUÉS de agregar el rótulo, así el total nunca pasa de 4000.
-      explanation: recortarExplicacion(explanation_source === "ai" ? explanation : RULES_EXPLANATION_PREFIX + explanation),
-    });
-    if (!output.success) return fail("PROVIDER_ERROR", "No pudimos armar la comparación de cotizaciones.", false);
-    return { ok: true, data: output.data };
-  };
-
   return {
     createPurchaseRequest,
     getPurchaseRequest,
@@ -490,6 +449,5 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     savePurchasePolicy,
     checkPurchasePolicy,
     rankQuotes,
-    rankSupplierQuotes,
   };
 }

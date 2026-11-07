@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { comparatorRankingSchema, pesosToAtomic, RULES_EXPLANATION_PREFIX } from "../../../contracts/purchases";
+import { pesosToAtomic } from "../../../contracts/purchases";
 import type { ComparatorQuote } from "../../voice/server/quote-import";
 import { createPurchaseService, type GetContactDep, type ListSupplierQuotesDep, type PurchaseServiceDeps } from "./purchase-service";
 
@@ -342,8 +342,8 @@ describe("rankQuotes", () => {
 });
 
 // ---------------------------------------------------------------------------
-// BUY-03 (2): rankQuotes lee las cotizaciones de supplier_quotes y el puerto
-// rankSupplierQuotes para el comparador de Nano. Voz y CRM son falsos.
+// BUY-03 (2): rankQuotes lee las cotizaciones de supplier_quotes.
+// rankQuotes sin cotizaciones: las lee de supplier_quotes. Voz y CRM son falsos.
 // ---------------------------------------------------------------------------
 
 // Una cotización como la entrega listSupplierQuotes de Voz (precio en centavos de pesos).
@@ -478,61 +478,3 @@ describe("rankQuotes sin quotes (lee supplier_quotes)", () => {
   });
 });
 
-describe("rankSupplierQuotes (puerto del comparador)", () => {
-  it("devuelve la forma estricta del comparador, con el prefijo \"sin IA\" si explicaron las reglas", async () => {
-    const { service } = quotesService();
-    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-
-    expect(r.data.ranking).toEqual([
-      { quote_id: "q-sirve", reason: "El precio total más bajo · Acepta ARGt · Paga solo" },
-      { quote_id: "q-no-puede", reason: "No califica: Tiene 0 de 500" },
-      { quote_id: "q-dolares", reason: "No califica: No dio precio en pesos" },
-    ]);
-    expect(r.data.recommended_quote_id).toBe("q-sirve");
-    expect(r.data.explanation.startsWith(RULES_EXPLANATION_PREFIX)).toBe(true);
-    // Exactamente las claves que valida el comparador (estricto: ni una de más).
-    expect(Object.keys(r.data).sort()).toEqual(["explanation", "ranking", "recommended_quote_id"]);
-    expect(comparatorRankingSchema.safeParse(r.data).success).toBe(true);
-  });
-
-  it("si la explicación la escribió la IA, va tal cual (sin prefijo)", async () => {
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: "Conviene Descartables Sur." }] })));
-    const { service } = quotesService({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
-    expect(await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId })).toMatchObject({
-      ok: true,
-      data: { recommended_quote_id: "q-sirve", explanation: "Conviene Descartables Sur." },
-    });
-  });
-
-  it("una explicación de más de 4000 caracteres se corta a 4000 (con \"…\") y no frena la comparación", async () => {
-    const larga = "x".repeat(5000);
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: larga }] })));
-    const { service } = quotesService({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
-    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.data.explanation).toBe(`${"x".repeat(3999)}…`);
-    expect(r.data.explanation).toHaveLength(4000);
-    expect(comparatorRankingSchema.safeParse(r.data).success).toBe(true);
-  });
-
-  it("si ninguna sirve → NOT_FOUND con la explicación como mensaje", async () => {
-    const items = [storedQuote({ can_supply: "no" })];
-    const { service } = quotesService({ list: async () => ({ ok: true, data: { items } }) });
-    const ranked = await service.rankQuotes(ctx, { purchase_request_id: requestId });
-    expect(ranked).toMatchObject({ ok: true, data: { recommended_quote_id: null } });
-    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
-    expect(r).toMatchObject({ ok: false, error: { code: "NOT_FOUND", retryable: false } });
-    if (!r.ok && ranked.ok) expect(r.error.message).toBe(ranked.data.explanation);
-  });
-
-  it("si rankQuotes falla, devuelve el mismo error", async () => {
-    const vozError = { ok: false as const, error: { code: "PROVIDER_UNAVAILABLE" as const, message: "Voz no respondió", retryable: true } };
-    const { service } = quotesService({ list: async () => vozError });
-    expect(await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId })).toEqual(vozError);
-    // Una compra inválida también llega como el error de rankQuotes.
-    expect(await service.rankSupplierQuotes(ctx, { purchase_request_id: "no-es-uuid" })).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
-  });
-});
