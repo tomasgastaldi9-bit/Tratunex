@@ -125,6 +125,9 @@ La reserva PAY actual depende de empresas; el futuro claim sí depende de las
 órdenes. No reescribir migraciones aplicadas, usar `IF NOT EXISTS` para ocultar
 drift ni hacer reset. Antes de aplicar, comparar objetos y registro de
 migraciones del entorno destino. No se aplicó nada remoto en esta revisión.
+El conector disponible no lista el proyecto de Tratunex; por eso no se pudo
+contrastar el historial remoto ni aplicar las propuestas en el destino
+compartido. Tomás debe confirmar ese proyecto y su estado antes de ejecutarlas.
 
 Pruebas requeridas antes de `ready`: doble claim de una orden; dos empresas
 usando el mismo emisor; misma acción con otra orden; política/billetera/aprobación
