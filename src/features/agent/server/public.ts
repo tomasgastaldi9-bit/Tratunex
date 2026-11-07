@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { GetAgentProfile, SaveCompanyProfile } from "@/contracts/agent";
+import type { GetAgentProfile, SaveAgentKnowledge, SaveCompanyProfile } from "@/contracts/agent";
 import { createRequestSupabaseClient } from "@/lib/supabase/request";
 import { createProfileService } from "./profile-service";
 
@@ -23,3 +23,13 @@ export const getAgentProfile: GetAgentProfile = (ctx) => readService.getAgentPro
 
 /** Guarda el perfil de empresa como una versión nueva (solo admin, sin duplicados). */
 export const saveCompanyProfile: SaveCompanyProfile = (ctx, input) => writeService.saveCompanyProfile(ctx, input);
+
+/**
+ * Guarda la lista completa de conocimiento como una versión nueva (AGT-02).
+ * ESQUELETO: responde un error explícito hasta que la tarea "Servidor" de
+ * AGT-02 lo implemente, sin cambiar esta firma.
+ */
+export const saveAgentKnowledge: SaveAgentKnowledge = async () => ({
+  ok: false,
+  error: { code: "PROVIDER_ERROR", message: "Esta función todavía no está implementada", retryable: false },
+});

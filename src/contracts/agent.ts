@@ -142,6 +142,98 @@ export const DEFAULT_CALL_WINDOW: CallWindow = { days: [1, 2, 3, 4, 5], start: "
 export const DEFAULT_TONE: Tone = "professional_warm";
 
 // ---------------------------------------------------------------------------
+// Base de conocimiento (AGT-02)
+// ---------------------------------------------------------------------------
+
+/**
+ * Máximo de caracteres de TODO el conocimiento junto. Todo entra en el prompt
+ * de cada llamada: si crece mucho, la llamada es más lenta, más cara y el
+ * modelo se confunde más. La pantalla muestra cuánto se usó de este máximo.
+ */
+export const KNOWLEDGE_TEXT_MAX = 6000;
+
+/** Máximo de ítems (productos + preguntas) en la lista. */
+export const KNOWLEDGE_ITEMS_MAX = 60;
+
+/** Máximos de cada campo de un ítem. */
+export const KNOWLEDGE_NAME_MAX = 120;
+export const KNOWLEDGE_QUESTION_MAX = 200;
+export const KNOWLEDGE_BODY_MAX = 600;
+export const KNOWLEDGE_PRICE_MAX = 80;
+
+/** Texto de un ítem: sin espacios sobrantes y con un máximo. */
+function itemText(max: number) {
+  return z.string().trim().max(max, `Usá como máximo ${max} caracteres`);
+}
+
+/** Texto obligatorio de un ítem. */
+function requiredItemText(campo: string, max: number) {
+  return itemText(max).min(1, `Completá ${campo}`);
+}
+
+/**
+ * Un producto o servicio que vende la empresa.
+ * El precio es ORIENTATIVO y opcional ("Desde $3.200 + IVA"): el agente lo
+ * puede mencionar, pero nunca inventar uno que no esté cargado.
+ */
+export const productItemSchema = z.object({
+  kind: z.literal("product"),
+  name: requiredItemText("el nombre", KNOWLEDGE_NAME_MAX),
+  /** Opcional: puede quedar vacío. */
+  description: itemText(KNOWLEDGE_BODY_MAX),
+  /** Opcional: puede quedar vacío. */
+  price_hint: itemText(KNOWLEDGE_PRICE_MAX),
+});
+export type ProductItem = z.infer<typeof productItemSchema>;
+
+/** Una pregunta que los clientes suelen hacer, con su respuesta. */
+export const faqItemSchema = z.object({
+  kind: z.literal("faq"),
+  question: requiredItemText("la pregunta", KNOWLEDGE_QUESTION_MAX),
+  answer: requiredItemText("la respuesta", KNOWLEDGE_BODY_MAX),
+});
+export type FaqItem = z.infer<typeof faqItemSchema>;
+
+/**
+ * Un ítem es un producto O una pregunta. "kind" dice cuál es, y según eso
+ * Zod sabe qué campos pedir (eso es una "unión discriminada").
+ */
+export const knowledgeItemSchema = z.discriminatedUnion("kind", [productItemSchema, faqItemSchema]);
+export type KnowledgeItem = z.infer<typeof knowledgeItemSchema>;
+
+/** Etiqueta en español de cada tipo de ítem. */
+export const KNOWLEDGE_KIND_LABELS: Record<KnowledgeItem["kind"], string> = {
+  product: "Producto o servicio",
+  faq: "Pregunta frecuente",
+};
+
+/**
+ * Cuántos caracteres ocupa la lista: suma de todos los textos de todos los
+ * ítems. La usan la pantalla (para el contador en vivo) y el esquema (para el
+ * límite), así los dos cuentan exactamente igual.
+ */
+export function knowledgeTextLength(items: ReadonlyArray<KnowledgeItem>): number {
+  return items.reduce((total, item) => {
+    if (item.kind === "product") {
+      return total + item.name.length + item.description.length + item.price_hint.length;
+    }
+    return total + item.question.length + item.answer.length;
+  }, 0);
+}
+
+/**
+ * La lista completa de conocimiento, en el orden en que la cargó la empresa.
+ * Puede estar vacía (la empresa borró todo).
+ */
+export const knowledgeSchema = z
+  .array(knowledgeItemSchema)
+  .max(KNOWLEDGE_ITEMS_MAX, `Cargá como máximo ${KNOWLEDGE_ITEMS_MAX} ítems`)
+  .refine((items) => knowledgeTextLength(items) <= KNOWLEDGE_TEXT_MAX, {
+    error: `El conocimiento supera los ${KNOWLEDGE_TEXT_MAX} caracteres. Acortá textos o sacá ítems.`,
+  });
+export type Knowledge = z.infer<typeof knowledgeSchema>;
+
+// ---------------------------------------------------------------------------
 // Versiones
 // ---------------------------------------------------------------------------
 
@@ -150,12 +242,17 @@ export const DEFAULT_TONE: Tone = "professional_warm";
  * Cada guardado de cualquier sección crea la versión siguiente (1, 2, 3…).
  * Las llamadas guardan este número (agent_version en CallResultV1).
  *
- * Por ahora solo trae el perfil. AGT-03 agrega `instructions`, AGT-04
- * `criteria` y AGT-02 el conocimiento, como campos NUEVOS.
+ * Trae el perfil y el conocimiento. AGT-03 agrega `instructions` y AGT-04
+ * `criteria`, como campos NUEVOS (opcionales: ver la regla de arriba).
  */
 export const agentProfileVersionSchema = z.object({
   version: z.number().int().min(1),
   profile: companyProfileSchema,
+  /**
+   * El conocimiento de esa versión. null = nunca se cargó (las versiones
+   * creadas antes de AGT-02 no lo tienen). Una lista vacía = se borró todo.
+   */
+  knowledge: knowledgeSchema.nullable().default(null),
   /** Cuándo se creó, en ISO UTC. */
   created_at: z.string(),
   /** Usuario que la creó (null si ese usuario ya no existe). */
@@ -215,3 +312,29 @@ export type SaveCompanyProfile = (
   ctx: ActionCtx,
   input: SaveCompanyProfileInput,
 ) => Promise<Result<SaveCompanyProfileOutput>>;
+
+/** Lo que recibe saveAgentKnowledge (AGT-02). */
+export const saveAgentKnowledgeInputSchema = z.object({
+  /**
+   * Versión sobre la que estaba editando la persona. Es obligatoria: para
+   * cargar conocimiento la empresa ya tiene que tener al menos un perfil
+   * guardado (toda versión necesita un perfil).
+   */
+  base_version: z.number().int().min(1),
+  knowledge: knowledgeSchema,
+});
+export type SaveAgentKnowledgeInput = z.infer<typeof saveAgentKnowledgeInputSchema>;
+
+/** Lo que devuelve saveAgentKnowledge: igual que al guardar el perfil. */
+export const saveAgentKnowledgeOutputSchema = saveCompanyProfileOutputSchema;
+export type SaveAgentKnowledgeOutput = z.infer<typeof saveAgentKnowledgeOutputSchema>;
+
+/**
+ * Guarda la lista completa de conocimiento como una versión nueva.
+ * Mismos errores que saveCompanyProfile, y además VALIDATION_ERROR si la
+ * empresa todavía no tiene perfil guardado.
+ */
+export type SaveAgentKnowledge = (
+  ctx: ActionCtx,
+  input: SaveAgentKnowledgeInput,
+) => Promise<Result<SaveAgentKnowledgeOutput>>;
