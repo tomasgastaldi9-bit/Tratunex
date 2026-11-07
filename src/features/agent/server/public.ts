@@ -1,8 +1,16 @@
 import "server-only";
 
 import type { GetAgentProfile, SaveAgentKnowledge, SaveCompanyProfile } from "@/contracts/agent";
+import type {
+  CheckPurchasePolicy,
+  CreatePurchaseRequest,
+  GetPurchasePolicy,
+  GetPurchaseRequest,
+  SavePurchasePolicy,
+} from "@/contracts/purchases";
 import { createRequestSupabaseClient } from "@/lib/supabase/request";
 import { createProfileService } from "./profile-service";
+import { createPurchaseService } from "./purchase-service";
 import { createSectionService } from "./section-service";
 
 /**
@@ -21,6 +29,10 @@ const writeService = createProfileService(() => createRequestSupabaseClient());
 // El conocimiento (y las demás secciones) se guarda con save_agent_section.
 const sectionWriteService = createSectionService(() => createRequestSupabaseClient());
 
+// Compras: leer (páginas y checkPurchasePolicy) usa cookies de solo lectura; guardar usa las normales.
+const purchaseReadService = createPurchaseService(() => createRequestSupabaseClient({ readOnlyCookies: true }));
+const purchaseWriteService = createPurchaseService(() => createRequestSupabaseClient());
+
 /** Devuelve la versión vigente del agente de la empresa y si la persona puede editarla. */
 export const getAgentProfile: GetAgentProfile = (ctx) => readService.getAgentProfile(ctx);
 
@@ -29,3 +41,27 @@ export const saveCompanyProfile: SaveCompanyProfile = (ctx, input) => writeServi
 
 /** Guarda la lista completa de conocimiento como una versión nueva (solo admin, sin duplicados). */
 export const saveAgentKnowledge: SaveAgentKnowledge = (ctx, input) => sectionWriteService.saveAgentKnowledge(ctx, input);
+
+// ---------------------------------------------------------------------------
+// Compras (brief v3: BUY-01 y BUY-02)
+// La lógica está en purchase-service.ts (firmas en src/contracts/purchases.ts).
+// ---------------------------------------------------------------------------
+
+/** Crea la compra que necesita la pyme (BUY-01). */
+export const createPurchaseRequest: CreatePurchaseRequest = (ctx, input) =>
+  purchaseWriteService.createPurchaseRequest(ctx, input);
+
+/** Lee una compra de la empresa (la usan prospección, cotizaciones y el comparador). */
+export const getPurchaseRequest: GetPurchaseRequest = (ctx, input) =>
+  purchaseReadService.getPurchaseRequest(ctx, input);
+
+/** Lee las reglas de pago de la empresa y si la persona puede cambiarlas (BUY-02). */
+export const getPurchasePolicy: GetPurchasePolicy = (ctx) => purchaseReadService.getPurchasePolicy(ctx);
+
+/** Guarda las reglas de pago de la empresa (solo admin, sin duplicados). */
+export const savePurchasePolicy: SavePurchasePolicy = (ctx, input) =>
+  purchaseWriteService.savePurchasePolicy(ctx, input);
+
+/** Decide si un pago se hace solo, necesita aprobación o se rechaza. La llama payInvoice (Tomás). */
+export const checkPurchasePolicy: CheckPurchasePolicy = (ctx, input) =>
+  purchaseReadService.checkPurchasePolicy(ctx, input);
