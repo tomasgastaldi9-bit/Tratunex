@@ -1,0 +1,16 @@
+begin;
+select plan(9);
+insert into public.companies(id,name) values ('a1000000-0000-4000-8000-000000000001','Empresa pago A'),('a1000000-0000-4000-8000-000000000002','Empresa pago B');
+set local role service_role;
+select is(public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a',42161,'0x0000000000000000000000000000000000000001',7,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100') ->> 'state','reserved','first reservation');
+select is(public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a',42161,'0x0000000000000000000000000000000000000001',7,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100') ->> 'state','reserved','identical replay');
+select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a',42161,'0x0000000000000000000000000000000000000001',7,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','101')$$,'P0001','CONFLICT: order already reserved with different input','different order input rejected');
+select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000002','a2000000-0000-4000-8000-000000000002','action-b',42161,'0x0000000000000000000000000000000000000001',7,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100')$$,'P0001','CONFLICT: wallet nonce already reserved','nonce shared across companies is exclusive');
+select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000003','action-a',42161,'0x0000000000000000000000000000000000000001',8,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100')$$,'P0001','CONFLICT: action already reserved','action id cannot identify another order');
+select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000003','x',8453,'0x0000000000000000000000000000000000000001',8,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100')$$,'P0001','VALIDATION_ERROR: invalid payment reservation','wrong chain rejected');
+select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000003','x',42161,'0x0000000000000000000000000000000000000001',8,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','0')$$,'P0001','VALIDATION_ERROR: invalid payment reservation','zero amount rejected');
+reset role;
+select is(has_function_privilege('authenticated','public.reserve_payment_attempt(uuid,uuid,text,integer,text,bigint,text,text,text)','EXECUTE'),false,'authenticated cannot reserve directly');
+select is(has_function_privilege('anon','public.reserve_payment_attempt(uuid,uuid,text,integer,text,bigint,text,text,text)','EXECUTE'),false,'anonymous cannot reserve');
+select * from finish();
+rollback;

@@ -29,6 +29,7 @@ jobs:
       - run: supabase start > /dev/null
       - run: supabase test db --local
       - run: npm run test:db:concurrency
+      - run: node scripts/test-payment-reservation-concurrency.mjs
       - run: npx playwright install --with-deps chromium
       - name: Configure local test environment
         shell: bash

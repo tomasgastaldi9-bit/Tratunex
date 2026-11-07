@@ -5,6 +5,7 @@ Estado: preparación; no habilita pagos ni contiene un firmador conectado.
 ## Integraciones necesarias
 
 - Nano: contrato público de servidor que resuelva una orden persistida por `company_id` y `order_id` con proveedor, importe entero en unidades atómicas, versión o huella de la orden y aprobación verificable. La billetera del proveedor debe provenir de su contacto persistido; no aceptar destino ni monto del navegador.
+- ORD-01 ya expone `getSupplier` con `collection_wallet` y `wallet_version` en `src/features/crm/server/public.ts`. La aprobación debe fijar y verificar esa versión; un cambio de billetera posterior invalida la aprobación.
 - Vale: `checkPurchasePolicy(ctx, { amount_atomic, supplier_contact_id })`, con reglas persistidas y decisión `auto_pay | needs_approval | rejected`; definir cómo se prueba una aprobación vigente y cómo se invalida cuando cambian la orden o las reglas.
 - Las reglas, el proveedor, el destino, la orden y su aprobación tienen que seguir vigentes al reclamar el pago. Si no hay contrato confiable para ello, fallar cerrado.
 
@@ -25,3 +26,7 @@ Estado: preparación; no habilita pagos ni contiene un firmador conectado.
 - Simular interrupciones antes/después de persistir firma, al transmitir y al consultar el recibo; comprobar que no se produce una segunda transferencia.
 - Probar recibos exitosos, revertidos, pendientes, sustituidos y coincidencia de evento. Comprobar aislamiento entre empresas.
 - Primero verificar con mocks y una red/local fork seguro sin fondos; solo ejecutar una transferencia real cuando la orden, el destinatario y el importe estén definidos y autorizados.
+
+## Avance de reserva
+
+La migración propuesta agrega una reserva privada accesible solo al rol de servicio. Una orden, una acción por empresa y un nonce por billetera/red son únicos; los datos de una reserva no se cambian en un reintento. La función todavía no obtiene datos de órdenes ni políticas y no debe exponerse al navegador. Falta persistir de forma segura la transacción firmada, coordinar la autorización vigente con la reserva y reconciliar el recibo; este avance no firma ni transmite. Las pruebas concurrentes usan una base local aislada y descartable.
