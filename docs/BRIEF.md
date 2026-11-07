@@ -74,7 +74,7 @@ Cada persona hace frontend y backend de su parte. Leer código ajeno está permi
 | Dueño | Carpetas y archivos | API | Tablas |
 |---|---|---|---|
 | Tomás | `package.json`, lockfile, configuración raíz, `.env.example`, `src/lib/**` (auth, env, http, clientes Supabase), `src/contracts/common.ts`, `src/features/platform/**`, `src/features/discovery/**`, `src/contracts/discovery.ts`, `src/app/login/**`, `src/app/prospects/**`, `supabase/migrations/**` (coordina), despliegue | `/api/prospects/**`, `/api/jobs/tick` | `companies`, `company_members`, `prospect_searches`, `prospect_candidates` |
-| Vale | `src/features/agent/**`, `src/contracts/agent.ts`, `src/app/agent/**` | `/api/agent/**` | `agent_profiles`, `knowledge_items`, `industry_templates` |
+| Vale | `src/features/agent/**`, `src/contracts/agent.ts`, `src/app/agent/**` | `/api/agent/**` | `agent_profiles`, `knowledge (columna de agent_profiles)`, `industry_templates` |
 | Bautista | `src/features/voice/**`, `src/contracts/voice.ts`, `src/app/calls/**` | `/api/voice/**` | `calls`, `voice_events` |
 | Nano | `src/features/crm/**`, `src/contracts/crm.ts`, `src/app/pipeline/**`, `src/app/contacts/**`, `src/app/tasks/**`, `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css`, `src/components/ui/**` | `/api/crm/**` | `contacts`, `deals`, `tasks`, `call_results`, `activity_log` |
 
@@ -138,7 +138,7 @@ Todas las tablas llevan `company_id` y RLS por membresía real (no `user_metadat
 | `companies`, `company_members` | Tomás | Empresas y usuarios con su rol (admin, vendedor). |
 | `prospect_searches`, `prospect_candidates` | Tomás | Búsquedas y resultados con su fuente. |
 | `agent_profiles` | Vale | Rubro, contexto, propuesta de valor, tono, guion, objeciones, criterios, horario de llamadas. Versionado. |
-| `knowledge_items` | Vale | Productos, servicios, precios orientativos y FAQs. |
+| `agent_profiles.knowledge` | Vale | Productos, servicios, precios orientativos y FAQs, guardados dentro de cada versión del agente. |
 | `industry_templates` | Vale | Plantillas por rubro (distribuidora, agencia, servicios profesionales, SaaS). |
 | `calls` | Bautista | Cada intento: estado, `provider_call_id` (único), `source_task_id` (único si existe), versión del agente, transcripción, grabación, resumen y clasificación. |
 | `voice_events` | Bautista | Avisos de Vapi, únicos por ID del proveedor. |
