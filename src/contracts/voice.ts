@@ -163,6 +163,22 @@ export const SupplierQuoteDTOSchema = z.object({
   }
 });
 
+// ---------------------------------------------------------------------------
+// Precio de Belo (QUO-04, BRIEF §6): API pública, sin clave. Sirve para mostrar
+// el equivalente en ARS y USDT de una cotización o de un pago en ARGt.
+// ---------------------------------------------------------------------------
+export const BeloPairSchema = z.enum(["USDT/ARS", "USDC/ARS"]);
+
+export const BeloPriceSchema = z.object({
+  pair: BeloPairSchema,
+  // Pesos por 1 USDT (o USDC). bid: Belo compra; ask: Belo vende; mid: el promedio.
+  bid: z.number().positive(),
+  ask: z.number().positive(),
+  mid: z.number().positive(),
+  // Belo no informa la hora del precio: es la hora en que lo consultamos.
+  fetched_at: UtcSchema,
+}).refine((price) => price.ask >= price.bid, { message: "ask no puede ser menor que bid", path: ["ask"] });
+
 // Catálogo de payloads de las operaciones de src/features/voice/server/public.ts.
 export const voiceOperationSchemas = {
   startCall: { input: StartCallInputSchema, data: StartCallDataSchema },
@@ -191,3 +207,5 @@ export type QuoteCanSupply = z.infer<typeof QuoteCanSupplySchema>;
 export type QuoteCurrency = z.infer<typeof QuoteCurrencySchema>;
 export type YesNoUnknown = z.infer<typeof YesNoUnknownSchema>;
 export type SupplierQuoteDTO = z.infer<typeof SupplierQuoteDTOSchema>;
+export type BeloPair = z.infer<typeof BeloPairSchema>;
+export type BeloPrice = z.infer<typeof BeloPriceSchema>;
