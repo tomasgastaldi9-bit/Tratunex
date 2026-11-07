@@ -30,7 +30,7 @@ export type ExampleSupplier = {
 export const EXAMPLE_SUPPLIERS: readonly ExampleSupplier[] = [
   {
     id: "00000000-0000-4000-8000-000000000200",
-    name: "Sur Envases · ficticio",
+    name: "Sur Envases",
     contact: "Mariana (ventas)",
     phone: "+1 202 555 0101",
     source: "Búsqueda web",
@@ -39,7 +39,7 @@ export const EXAMPLE_SUPPLIERS: readonly ExampleSupplier[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000201",
-    name: "Papel del Centro · ficticio",
+    name: "Papel del Centro",
     contact: "Jorge (dueño)",
     phone: "+1 202 555 0102",
     source: "Búsqueda web",
@@ -48,7 +48,7 @@ export const EXAMPLE_SUPPLIERS: readonly ExampleSupplier[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000202",
-    name: "Vasos del Río · ficticio",
+    name: "Vasos del Río",
     contact: "Atención comercial",
     phone: "+1 202 555 0103",
     source: "Carga manual",
@@ -72,7 +72,7 @@ export const EXAMPLE_ORDERS: readonly ExampleOrder[] = [
   {
     id: "00000000-0000-4000-8000-000000000400",
     product: "Vasos de papel de 240 cc",
-    supplier: "Sur Envases · ficticio",
+    supplier: "Sur Envases",
     quantity: 500,
     unit: "unidades",
     unit_price_ars: 180,

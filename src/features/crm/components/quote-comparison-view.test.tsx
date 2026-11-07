@@ -83,10 +83,10 @@ describe("ORD02: comparación presentada con fuentes y estados explícitos", () 
 
   it("el ejemplo es ilustrativo, rotula cada origen y evita vínculos a IDs ficticios", () => {
     const html = render(comparison({ mode: "example" }));
-    expect(html).toContain("Ejemplo: comparación ilustrativa con datos ficticios, sin IA ejecutada.");
-    expect(html).toContain('Ejemplo<span class="sr-only"> (datos de prueba)</span>');
-    expect(html).toContain("Cotización de ejemplo");
-    expect(html).toContain("Recomendación ilustrativa");
+    expect(html).toContain("Ejemplo: comparación con datos de muestra.");
+    expect(html).toContain('<span class="sr-only"> (datos de prueba)</span>');
+    expect(html).toContain("Sin registro de origen (datos de prueba)");
+    expect(html).toContain(">Recomendación<");
     expect(html).not.toContain('href="/suppliers/');
     expect(html).not.toContain('href="/calls/');
     const illustrativeCall = comparison({ mode: "example", rows: [{ quote: quote({ source: { kind: "call", call_id: callId, transport: "phone" } }),
