@@ -46,7 +46,7 @@ function claimsFor(request) {
   if (claims.exp < Date.now() / 1000) throw new Error("Expired fixture token");
   return claims;
 }
-const tables = new Set(["companies", "company_members", "contacts", "supplier_profiles"]);
+const tables = new Set(["companies", "company_members", "contacts", "supplier_profiles", "purchase_requests"]);
 const identifier = value => {
   if (!/^[a-z_][a-z_0-9]*$/.test(value)) throw new Error("Invalid fixture query identifier");
   return `"${value}"`;
@@ -84,7 +84,14 @@ const server = http.createServer(async (request, response) => {
     const table = url.pathname.replace("/rest/v1/", "");
     if (request.method === "GET" && tables.has(table)) {
       const columns = url.searchParams.get("select") || "*";
-      const projection = columns === "*" ? "*" : columns.split(",").map(identifier).join(",");
+      // Fixed purchase projection preserves numeric(78,0) as text, including
+      // PostgREST's explicit budget_atomic::text spelling. No arbitrary casts.
+      const purchaseProjection = '"id","company_id","product","quantity","unit","needed_by","budget_atomic"::text as "budget_atomic","zone","status","created_by","created_at"';
+      const projection = columns === "*" ? (table === "purchase_requests" ? purchaseProjection : "*") : columns.split(",").map(value => {
+        const column = value.trim();
+        if (table === "purchase_requests" && ["budget_atomic", "budget_atomic::text"].includes(column)) return '"budget_atomic"::text as "budget_atomic"';
+        return identifier(column);
+      }).join(",");
       const conditions = [];
       for (const [key, value] of url.searchParams) {
         if (["select", "order", "limit", "offset"].includes(key)) continue;
