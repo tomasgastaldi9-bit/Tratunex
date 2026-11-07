@@ -13,13 +13,16 @@ El dashboard donde cada empresa "entrena" a su agente de voz: qué vende, a qui�
 5. **Solo los admin guardan.** Admin y vendedor pueden ver; solo `role = 'admin'` en `company_members` puede guardar. La base es la que decide (no alcanza con ocultar el botón).
 6. **Una página por sección.** `/agent` es el resumen; cada sección tiene su página y su carpeta, así cada ticket toca archivos distintos.
 7. **Tono y horario viven en el Perfil.** AGT-03 (instrucciones) no repite el tono.
+8. **El conocimiento vive dentro de cada versión (AGT-02).** No hay tabla `knowledge_items` aparte (el brief la nombraba): la lista completa se guarda en la columna `knowledge` de `agent_profiles`. Así cada versión es una foto entera y no hay que copiar la lista a otro lado en cada guardado.
+9. **Primero el perfil.** Conocimiento, instrucciones y criterios solo se pueden guardar si la empresa ya tiene al menos una versión (toda versión necesita un perfil). Si no, la pantalla invita a completar el perfil.
+10. **Una sola función de guardado para todas las secciones.** `save_agent_section` guarda cualquier sección (`profile`, `knowledge`, `instructions`, `criteria`) con las mismas reglas: solo admin, sin duplicados, sin pisar, sin cambios no hay versión nueva, y la fila nueva copia TODAS las demás secciones. `save_agent_profile` sigue existiendo (misma firma) y delega en ella.
 
 ## Mapa de archivos por ticket
 
 | Ticket | Página | Archivos |
 |---|---|---|
 | AGT-01 Perfil | `/agent`, `/agent/profile` | `src/app/agent/layout.tsx`, `src/app/agent/page.tsx`, `src/app/agent/profile/**`, `src/features/agent/components/ProfileForm.tsx`, `src/features/agent/components/DayPicker.tsx`, `src/features/agent/components/AccessAlert.tsx`, `src/features/agent/components/profile-form-data.ts` (+ `profile-form-data.test.ts`), `src/features/agent/server/**`, `src/contracts/agent.test.ts`, migración y test de `agent_profiles` |
-| AGT-02 Conocimiento | `/agent/knowledge` | `src/app/agent/knowledge/**`, tabla `knowledge_items` |
+| AGT-02 Conocimiento | `/agent/knowledge` | `src/app/agent/knowledge/**`, `src/features/agent/components/KnowledgeEditor.tsx`, `src/features/agent/components/knowledge-form-data.ts` (+ test), `src/features/agent/server/section-service.ts` y `save-errors.ts` (+ tests), columna `knowledge` y función `save_agent_section` (migración + test pgTAP) |
 | AGT-03 Instrucciones | `/agent/instructions` | `src/app/agent/instructions/**`, columna `instructions` (ya existe) |
 | AGT-04 Criterios | `/agent/criteria` | `src/app/agent/criteria/**`, columna `criteria` (ya existe) |
 | AGT-05 getAgentConfig | — | `src/features/agent/server/agent-config.ts` |
@@ -36,6 +39,7 @@ El dashboard donde cada empresa "entrena" a su agente de voz: qué vende, a qui�
 | `company_id` | `uuid` not null | FK `companies(id)` on delete cascade |
 | `version` | `integer` not null | `>= 1`, único junto con `company_id` |
 | `profile` | `jsonb` not null | objeto con la forma de `companyProfileSchema` |
+| `knowledge` | `jsonb` null | lista (array) con la forma de `knowledgeSchema`; la llena AGT-02 |
 | `instructions` | `jsonb` null | lo llena AGT-03 |
 | `criteria` | `jsonb` null | lo llena AGT-04 |
 | `created_by` | `uuid` null | FK `auth.users(id)` on delete set null |
@@ -60,6 +64,22 @@ public.save_agent_profile(
 
 `save_agent_profile` usa la idempotencia de PLAT-02 (`app_private.claim_action` / `complete_action`) con la operación `'agent.save_company_profile'` y el payload `{"base_version": …, "profile": …}`. Mismo `action_id` y mismos datos → mismo resultado; mismo `action_id` con otros datos → `CONFLICT`.
 
+Desde AGT-02 hay una función genérica para guardar cualquier sección (decisión 10):
+
+```sql
+-- Guarda UNA sección como versión nueva, copiando todas las demás de la
+-- versión vigente. Devuelve {"version": n, "created": bool}.
+public.save_agent_section(
+  p_company_id uuid,
+  p_action_id text,
+  p_base_version integer,   -- null solo para 'profile' cuando no hay versiones
+  p_section text,           -- 'profile' | 'knowledge' | 'instructions' | 'criteria'
+  p_value jsonb             -- objeto para profile/instructions/criteria, array para knowledge
+) returns jsonb
+```
+
+Operación de idempotencia: `'agent.save_company_profile'` para `profile` (la misma de siempre) y `'agent.save_' || p_section` para las otras (por ejemplo `'agent.save_knowledge'`). Payload `{"base_version": …, "section": …, "value": …}`; para `profile` se mantiene el payload de siempre (`{"base_version": …, "profile": …}`) para que los reintentos de antes sigan funcionando. `save_agent_profile` pasa a delegar en `save_agent_section(…, 'profile', p_profile)`.
+
 Errores: la función lanza excepciones cuyo mensaje empieza con el código, igual que las de PLAT-02:
 
 | Mensaje empieza con | Cuándo | El servidor responde |
@@ -67,7 +87,8 @@ Errores: la función lanza excepciones cuyo mensaje empieza con el código, igua
 | `FORBIDDEN:` (SQLSTATE `42501`) | no es admin o no es miembro | `FORBIDDEN` |
 | `CONFLICT: stale base version` | `p_base_version` no es la vigente | `CONFLICT` ("Alguien guardó cambios mientras editabas…") |
 | `CONFLICT:` (otro) | `action_id` reusado con otros datos | `CONFLICT` |
-| `VALIDATION_ERROR:` | datos con forma inválida | `VALIDATION_ERROR` |
+| `VALIDATION_ERROR: profile required` | se quiere guardar una sección que no es el perfil y la empresa no tiene ninguna versión | `VALIDATION_ERROR` ("Primero completá y guardá el perfil de empresa.") |
+| `VALIDATION_ERROR:` (otro) | datos con forma inválida | `VALIDATION_ERROR` |
 
 ## Servidor (`src/features/agent/server/`)
 

@@ -81,15 +81,21 @@ describe("getAgentProfile", () => {
     const { service, from, chain } = fakeClient({ canEdit: { data: false, error: null } });
     expect(await service.getAgentProfile(ctx)).toEqual({ ok: true, data: { current: null, can_edit: false } });
     expect(from).toHaveBeenCalledWith("agent_profiles");
-    expect(chain.select).toHaveBeenCalledWith("version, profile, created_at, created_by");
+    expect(chain.select).toHaveBeenCalledWith("version, profile, knowledge, created_at, created_by");
     expect(chain.eq).toHaveBeenCalledWith("company_id", company);
     expect(chain.order).toHaveBeenCalledWith("version", { ascending: false });
   });
 
   it("devuelve la versión vigente y can_edit", async () => {
     const { service, rpc } = fakeClient({ read: { data: row, error: null } });
-    expect(await service.getAgentProfile(ctx)).toEqual({ ok: true, data: { current: row, can_edit: true } });
+    expect(await service.getAgentProfile(ctx)).toEqual({ ok: true, data: { current: { ...row, knowledge: null }, can_edit: true } });
     expect(rpc).toHaveBeenCalledWith("can_edit_agent_profile", { p_company_id: company });
+  });
+
+  it("devuelve el conocimiento guardado, ya parseado", async () => {
+    const knowledge = [{ kind: "faq" as const, question: "¿Hacen envíos?", answer: "Sí, en 24 h" }];
+    const { service } = fakeClient({ read: { data: { ...row, knowledge }, error: null } });
+    expect(await service.getAgentProfile(ctx)).toEqual({ ok: true, data: { current: { ...row, knowledge }, can_edit: true } });
   });
 
   it("falla con PROVIDER_ERROR si la fila tiene formato roto", async () => {
