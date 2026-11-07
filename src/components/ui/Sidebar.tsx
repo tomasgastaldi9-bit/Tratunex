@@ -2,15 +2,14 @@
 // "use client": este componente corre en el navegador porque necesita saber
 // en qué página está el usuario (usePathname) para resaltar la sección activa.
 
-import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cx } from "./cx";
 import { NAV_GROUPS, NAV_ITEMS, isNavItemActive, type NavItem } from "./navigation";
 
 /**
- * Menú principal: columna oscura a la izquierda (en compu) con la marca
- * arriba, las secciones agrupadas y "Cambiar empresa" abajo de todo.
+ * Menú principal (en compu): columna clara a la izquierda con el nombre de la
+ * app, las secciones agrupadas y "Cambiar empresa" abajo de todo.
  *
  * No recibe las secciones por props: las lee de navigation.ts, así hay un solo
  * menú en toda la app. Normalmente no lo usás directo: viene dentro de <AppShell>.
@@ -19,40 +18,19 @@ export function Sidebar({ className }: { className?: string }) {
   const rutaActual = usePathname();
 
   return (
-    <nav
-      aria-label="Menú principal"
-      className={cx(
-        "relative flex h-full flex-col overflow-hidden text-white",
-        // Degradé grafito → negro, con un círculo decorativo arriba a la derecha.
-        "bg-[linear-gradient(165deg,var(--color-graphite-soft)_0%,var(--color-ink)_55%,var(--color-graphite)_100%)]",
-        className,
-      )}
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-24 -right-28 size-72 rounded-full border border-white/[0.06] bg-white/[0.03]"
-      />
-
-      {/* Marca. Es un link al inicio. */}
+    <nav aria-label="Menú principal" className={cx("flex h-full flex-col border-r border-line bg-canvas", className)}>
       <Link
         href="/"
-        className="relative flex items-center gap-3 border-b border-white/10 px-6 py-5 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white"
+        className="mx-3 mt-4 mb-2 rounded-control px-3 py-2 text-[17px] font-semibold tracking-[-0.01em] focus-visible:outline-2 focus-visible:outline-ink"
       >
-        <span className="flex size-11 items-center justify-center rounded-[14px] bg-white text-xl font-bold text-ink shadow-sm">
-          t
-        </span>
-        <span className="text-2xl font-semibold tracking-tight">
-          Tratu<span className="text-white/45">nex</span>
-        </span>
+        Tratunex
       </Link>
 
-      <div className="relative flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 [scrollbar-color:rgb(255_255_255/0.2)_transparent] [scrollbar-width:thin]">
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-3">
         {NAV_GROUPS.map((group) => (
-          <div key={group.title} className="flex flex-col gap-1.5">
-            <p className="px-3 pb-1 text-[11px] font-semibold tracking-[0.16em] text-white/40 uppercase">
-              {group.title}
-            </p>
-            <ul className="flex flex-col gap-1">
+          <div key={group.title} className="flex flex-col gap-0.5">
+            <p className="px-3 pb-1.5 text-xs text-ink-subtle">{group.title}</p>
+            <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => (
                 <li key={item.href}>
                   <SidebarLink item={item} activa={isNavItemActive(item, rutaActual)} />
@@ -63,19 +41,12 @@ export function Sidebar({ className }: { className?: string }) {
         ))}
       </div>
 
-      {/* Pie: empresa activa. Lleva a elegir otra empresa o cerrar sesión. */}
-      <div className="relative border-t border-white/10 p-4">
+      <div className="border-t border-line px-3 py-3">
         <Link
           href="/login/companies"
-          className="flex items-center gap-3 rounded-control px-3 py-2.5 text-white/75 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-white"
+          className="block rounded-control px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10">
-            <Building2 size={18} aria-hidden />
-          </span>
-          <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-sm font-semibold text-white">Mi empresa</span>
-            <span className="text-xs text-white/50">Cambiar empresa o salir</span>
-          </span>
+          Cambiar empresa
         </Link>
       </div>
     </nav>
@@ -91,23 +62,12 @@ function SidebarLink({ item, activa }: { item: NavItem; activa: boolean }) {
       // aria-current="page": le avisa al lector de pantalla cuál es la página actual.
       aria-current={activa ? "page" : undefined}
       className={cx(
-        "group flex items-center gap-3 rounded-control border px-3 py-2 text-[15px]",
-        "transition-colors duration-150",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
-        // Activa: fondo un poco más claro y borde fino (se ve clarísimo dónde estás).
-        activa
-          ? "border-white/15 bg-white/[0.09] font-semibold text-white"
-          : "border-transparent text-white/70 hover:bg-white/[0.05] hover:text-white",
+        "flex items-center gap-2.5 rounded-control px-3 py-[7px] text-sm transition-colors duration-100",
+        "focus-visible:outline-2 focus-visible:outline-ink",
+        activa ? "bg-wash font-medium text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
       )}
     >
-      <span
-        className={cx(
-          "flex size-8 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-          activa ? "bg-white text-ink" : "bg-white/[0.06] text-white/80 group-hover:bg-white/10",
-        )}
-      >
-        <Icono size={17} aria-hidden />
-      </span>
+      <Icono size={16} strokeWidth={1.75} aria-hidden className="shrink-0" />
       {item.label}
     </Link>
   );
@@ -115,7 +75,7 @@ function SidebarLink({ item, activa }: { item: NavItem; activa: boolean }) {
 
 /**
  * Barra de abajo en el celular: las 5 secciones principales, al alcance del
- * pulgar (como las apps). El resto se abre desde Inicio.
+ * pulgar. El resto se abre desde Inicio.
  */
 export function MobileNav() {
   const rutaActual = usePathname();
@@ -124,11 +84,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Menú principal"
-      className={cx(
-        "fixed inset-x-3 bottom-3 z-40 rounded-card bg-ink px-2 pt-2 text-white shadow-sidebar md:hidden",
-        // Deja lugar para la barrita de inicio del iPhone.
-        "pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-      )}
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="flex">
         {items.map((item) => {
@@ -140,13 +96,13 @@ export function MobileNav() {
                 href={item.href}
                 aria-current={activa ? "page" : undefined}
                 className={cx(
-                  "flex flex-col items-center gap-1.5 rounded-control px-1 py-2 transition-colors",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
-                  activa ? "bg-white text-ink" : "text-white/65 hover:bg-white/10 hover:text-white",
+                  "flex flex-col items-center gap-1 px-1 pt-2.5 pb-2 text-[11px] transition-colors",
+                  "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink",
+                  activa ? "font-medium text-ink" : "text-ink-subtle hover:text-ink",
                 )}
               >
-                <Icono size={20} aria-hidden />
-                <span className="text-[11px] leading-none font-semibold">{item.shortLabel ?? item.label}</span>
+                <Icono size={20} strokeWidth={activa ? 2 : 1.75} aria-hidden />
+                {item.shortLabel ?? item.label}
               </Link>
             </li>
           );

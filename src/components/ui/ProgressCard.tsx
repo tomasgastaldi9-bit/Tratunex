@@ -51,7 +51,7 @@ export function ProgressCard({ title, steps, action, className }: ProgressCardPr
   const siguiente = steps.find((paso) => !paso.done);
 
   return (
-    <div className={cx("flex flex-col gap-5 rounded-card border border-line bg-surface p-5 shadow-card", className)}>
+    <div className={cx("flex flex-col gap-5 rounded-card border border-line bg-surface p-5", className)}>
       {/* Fila de arriba: anillo + textos a la izquierda, botón a la derecha.
           flex-wrap: en el celular, si no entran, el botón baja a otra línea. */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
@@ -103,7 +103,7 @@ export function ProgressCard({ title, steps, action, className }: ProgressCardPr
           </div>
 
           <div className="flex min-w-0 flex-col gap-1.5">
-            <p className="text-base leading-tight font-semibold">{title}</p>
+            <p className="text-[15px] leading-tight font-semibold">{title}</p>
             <p className="text-xs leading-tight text-ink-muted">
               {siguiente ? `Siguiente paso: ${siguiente.label}` : "¡Todo listo!"}
             </p>

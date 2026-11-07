@@ -1,36 +1,19 @@
-import {
-  ArrowRight,
-  CircleCheck,
-  ClipboardList,
-  Contact,
-  Hammer,
-  PhoneCall,
-  PhoneIncoming,
-  Search,
-  ShieldCheck,
-  ShoppingCart,
-  TriangleAlert,
-  Truck,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppShell, fechaDeHoy } from "@/components/ui/AppShell";
-import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
-import { Hero, heroButtonStyles } from "@/components/ui/Hero";
+import { buttonStyles } from "@/components/ui/Button";
+import { cx } from "@/components/ui/cx";
 import { AccessAlert } from "@/features/agent/components/AccessAlert";
 import { getAgentProfile, getPurchasePolicy } from "@/features/agent/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
 
 /**
- * Inicio: el panel del día. Bienvenida, el recorrido del agente paso a paso
- * (BRIEF §4) y accesos rápidos.
+ * Inicio: qué falta configurar y el recorrido de una compra (BRIEF §4).
  *
  * Solo muestra datos que lee de verdad (si el perfil y las reglas están
- * cargados). No inventa números: si algo no se puede leer, no se muestra.
+ * cargados). No inventa números: si algo no se puede leer, lo dice.
  */
 export const metadata: Metadata = {
   title: "Inicio · Tratunex",
@@ -53,223 +36,123 @@ export default async function HomePage() {
 
   return (
     <AppShell>
-      <Hero
-        eyebrow="Tu agente de compras"
-        title="Hola, ¿qué compramos hoy?"
-        description="Contale qué necesitás y hasta cuánto puede gastar. El agente pide cotización a los proveedores por teléfono, compara, te explica cuál conviene y paga en ARGt."
-        actions={
-          <>
-            <Link href="/purchases/new" className={heroButtonStyles("solid")}>
-              <ShoppingCart size={16} aria-hidden />
-              Nueva compra
-            </Link>
-            <Link href="/agent/rules" className={heroButtonStyles("outline")}>
-              <ShieldCheck size={16} aria-hidden />
-              Reglas de pago
-            </Link>
-          </>
-        }
-        aside={
-          <div className="hidden flex-col items-start gap-3 sm:flex lg:items-end">
-            <p className="text-xs font-semibold tracking-[0.18em] text-white/60 uppercase">Panel del día</p>
-            <p className="rounded-control border border-white/15 bg-white/[0.06] px-5 py-3 text-base font-semibold">
-              {fechaDeHoy()}
-            </p>
-          </div>
-        }
-      />
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-ink-muted">{fechaDeHoy()}</p>
+          <h1 className="text-2xl leading-tight font-semibold tracking-[-0.01em]">Inicio</h1>
+        </div>
+        <Link href="/purchases/new" className={buttonStyles()}>
+          Nueva compra
+        </Link>
+      </header>
 
       {!contexto.ok && <AccessAlert code={contexto.error.code} />}
 
-      {/* Estado de la configuración: leído de la base, no inventado. */}
       {contexto.ok && (
-        <section aria-label="Configuración del agente" className="grid gap-4 sm:grid-cols-2">
-          <EstadoCard
+        <Seccion titulo="Antes de comprar" descripcion="El agente necesita saber quién compra y hasta cuánto puede pagar.">
+          <Fila
             titulo="Perfil de empresa"
-            estado={perfil}
-            listo="Cargado"
-            falta="Falta cargarlo"
-            href="/agent/profile"
-            icon={ClipboardList}
+            detalle={<EstadoTexto estado={perfil} listo="Cargado" falta="Falta cargarlo" />}
+            accion={<Ir href="/agent/profile">{perfil === "listo" ? "Ver" : "Completar"}</Ir>}
           />
-          <EstadoCard
+          <Fila
             titulo="Reglas de pago"
-            estado={reglas}
-            listo="Cargadas"
-            falta="Faltan cargar"
-            href="/agent/rules"
-            icon={ShieldCheck}
+            detalle={<EstadoTexto estado={reglas} listo="Cargadas" falta="Faltan cargar" />}
+            accion={<Ir href="/agent/rules">{reglas === "listo" ? "Ver" : "Cargar"}</Ir>}
           />
-        </section>
+        </Seccion>
       )}
 
-      <Card padding="none">
-        <div className="flex flex-col gap-1 border-b border-line px-6 py-5">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <span aria-hidden className="size-2 rounded-full bg-ink" />
-            Cómo compra tu agente
-          </h2>
-          <p className="text-sm text-ink-muted">Cinco pasos, de la necesidad al pago con su comprobante.</p>
-        </div>
-        <ol className="grid gap-px bg-line sm:grid-cols-2 xl:grid-cols-5">
-          <Paso n={1} icon={ShoppingCart} titulo="Contá qué necesitás" texto="Producto, cantidad, fecha y presupuesto." href="/purchases/new" />
-          <Paso
-            n={2}
-            icon={ShieldCheck}
-            titulo="Poné tus reglas"
-            texto="Hasta cuánto paga solo y a quién."
-            href="/agent/rules"
-            extra={<EstadoBadge estado={reglas} listo="Cargadas" falta="Faltan" />}
-          />
-          <Paso n={3} icon={Truck} titulo="Elegí proveedores" texto="Con su teléfono y su billetera de cobro." href="/suppliers" />
-          <Paso
-            n={4}
-            icon={PhoneIncoming}
-            titulo="Cotización por teléfono"
-            texto="El cotizador llama y guardás lo que dijo."
-            href="/calls/quotes/import"
-          />
-          <Paso
-            n={5}
-            icon={Wallet}
-            titulo="Compará y pagá"
-            texto="Ranking con IA y pago en ARGt con su hash."
-            extra={
-              <Badge tone="warning" icon={Hammer}>
-                En construcción
-              </Badge>
-            }
-          />
-        </ol>
-      </Card>
-
-      <section aria-labelledby="accesos" className="flex flex-col gap-3">
-        <h2 id="accesos" className="text-lg font-semibold">
-          Accesos rápidos
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Acceso href="/calls" icon={PhoneCall} titulo="Llamadas" texto="Cada llamada y su resultado." />
-          <Acceso href="/prospects" icon={Search} titulo="Buscar proveedores" texto="Por rubro y zona, en la web." />
-          <Acceso href="/contacts" icon={Contact} titulo="Contactos" texto="Tu agenda de empresas." />
-          <Acceso href="/agent/profile" icon={ClipboardList} titulo="Perfil de empresa" texto="Qué hace tu pyme." />
-        </div>
-      </section>
+      <Seccion titulo="Cómo compra el agente" descripcion="De la necesidad al pago, con su comprobante.">
+        <Fila
+          numero={1}
+          titulo="Necesidad"
+          detalle="Producto, cantidad, para cuándo y presupuesto."
+          accion={<Ir href="/purchases/new">Nueva compra</Ir>}
+        />
+        <Fila
+          numero={2}
+          titulo="Reglas del dueño"
+          detalle="Hasta cuánto paga solo y a qué proveedores."
+          accion={<Ir href="/agent/rules">Reglas</Ir>}
+        />
+        <Fila
+          numero={3}
+          titulo="Proveedores"
+          detalle="Con su teléfono y su billetera de cobro."
+          accion={<Ir href="/suppliers">Proveedores</Ir>}
+        />
+        <Fila
+          numero={4}
+          titulo="Cotización por teléfono"
+          detalle="El cotizador llama al proveedor y se guarda lo que dijo."
+          accion={<Ir href="/calls/quotes/import">Cotizaciones</Ir>}
+        />
+        <Fila
+          numero={5}
+          titulo="Elección y pago"
+          detalle="Ranking explicado y pago en ARGt con su hash."
+          accion={<span className="text-sm text-ink-subtle">En construcción</span>}
+        />
+      </Seccion>
     </AppShell>
   );
 }
 
-function EstadoBadge({ estado, listo, falta }: { estado: Estado; listo: string; falta: string }) {
-  if (estado === "listo")
-    return (
-      <Badge tone="success" icon={CircleCheck}>
-        {listo}
-      </Badge>
-    );
-  if (estado === "falta")
-    return (
-      <Badge tone="warning" icon={TriangleAlert}>
-        {falta}
-      </Badge>
-    );
-  return null;
-}
-
-function EstadoCard({
-  titulo,
-  estado,
-  listo,
-  falta,
-  href,
-  icon: Icono,
-}: {
-  titulo: string;
-  estado: Estado;
-  listo: string;
-  falta: string;
-  href: string;
-  icon: LucideIcon;
-}) {
-  const borde = estado === "listo" ? "border-l-success" : estado === "falta" ? "border-l-warning" : "border-l-ink";
+function Seccion({ titulo, descripcion, children }: { titulo: string; descripcion: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className={`group flex items-center gap-4 rounded-card border border-l-4 border-line ${borde} bg-surface px-5 py-4 shadow-card transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink`}
-    >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-wash ring-1 ring-line">
-        <Icono size={20} aria-hidden />
-      </span>
-      <span className="flex min-w-0 grow flex-col gap-1">
-        <span className="text-xs font-semibold tracking-[0.12em] text-ink-muted uppercase">{titulo}</span>
-        <span className="text-lg leading-tight font-semibold">
-          {estado === "listo" ? listo : estado === "falta" ? falta : "No pudimos leerlo"}
-        </span>
-      </span>
-      <ArrowRight size={18} aria-hidden className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5" />
-    </Link>
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-[15px] font-semibold">{titulo}</h2>
+        <p className="text-sm text-ink-muted">{descripcion}</p>
+      </div>
+      <ul className="divide-y divide-line rounded-card border border-line">{children}</ul>
+    </section>
   );
 }
 
-function Paso({
-  n,
-  icon: Icono,
+function Fila({
+  numero,
   titulo,
-  texto,
-  href,
-  extra,
+  detalle,
+  accion,
 }: {
-  n: number;
-  icon: LucideIcon;
+  numero?: number;
   titulo: string;
-  texto: string;
-  href?: string;
-  extra?: ReactNode;
+  detalle: ReactNode;
+  accion: ReactNode;
 }) {
-  const contenido = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex size-10 items-center justify-center rounded-full bg-ink text-white">
-          <Icono size={18} aria-hidden />
-        </span>
-        <span className="text-xs font-semibold tracking-[0.12em] text-ink-subtle">PASO {n}</span>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <p className="text-base leading-tight font-semibold">{titulo}</p>
-        <p className="text-sm leading-snug text-ink-muted">{texto}</p>
-      </div>
-      {extra && <div>{extra}</div>}
-    </>
-  );
-
   return (
-    <li className="bg-surface">
-      {href ? (
-        <Link
-          href={href}
-          className="flex h-full flex-col gap-4 p-5 transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
-        >
-          {contenido}
-        </Link>
-      ) : (
-        <div className="flex h-full flex-col gap-4 p-5">{contenido}</div>
-      )}
+    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3.5 sm:items-center">
+      {numero !== undefined && <span className="w-4 text-sm text-ink-subtle tabular-nums">{numero}</span>}
+      <div className="flex min-w-0 grow basis-60 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
+        <p className="text-sm font-medium sm:w-48 sm:shrink-0">{titulo}</p>
+        <div className="text-sm text-ink-muted">{detalle}</div>
+      </div>
+      <div className="shrink-0">{accion}</div>
     </li>
   );
 }
 
-function Acceso({ href, icon: Icono, titulo, texto }: { href: string; icon: LucideIcon; titulo: string; texto: string }) {
+function EstadoTexto({ estado, listo, falta }: { estado: Estado; listo: string; falta: string }) {
+  const texto = estado === "listo" ? listo : estado === "falta" ? falta : "No pudimos leerlo";
+  const color = estado === "listo" ? "bg-success" : estado === "falta" ? "bg-warning" : "bg-ink-subtle";
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span aria-hidden className={cx("size-1.5 rounded-full", color)} />
+      <span className={estado === "falta" ? "text-warning" : undefined}>{texto}</span>
+    </span>
+  );
+}
+
+function Ir({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-card border border-line bg-surface p-4 shadow-card transition-colors hover:border-ink-subtle/50 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="group inline-flex items-center gap-1 rounded-control px-2 py-1 text-sm text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-wash ring-1 ring-line">
-        <Icono size={18} aria-hidden />
-      </span>
-      <span className="flex min-w-0 grow flex-col gap-0.5">
-        <span className="text-[15px] leading-tight font-semibold">{titulo}</span>
-        <span className="truncate text-xs text-ink-muted">{texto}</span>
-      </span>
-      <ArrowRight size={16} aria-hidden className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5" />
+      {children}
+      <ArrowRight size={14} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }

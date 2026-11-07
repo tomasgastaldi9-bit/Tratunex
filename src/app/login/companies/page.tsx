@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, CircleCheck, LogOut } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -48,7 +48,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
       ) : null}
       {!error && companies?.length === 0 ? <Alert tone="warning">Tu usuario todavía no pertenece a ninguna empresa.</Alert> : null}
       {companies && companies.length > 0 ? (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="divide-y divide-line rounded-card border border-line">
           {companies.map((company) => {
             const isSelected = selected === company.id;
             return (
@@ -57,21 +57,13 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
                   <input type="hidden" name="company_id" value={company.id} />
                   <button
                     type="submit"
-                    className={`flex w-full items-center gap-3 rounded-card border bg-surface px-4 py-3.5 text-left shadow-card transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${isSelected ? "border-ink" : "border-line hover:border-ink-subtle"}`}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors first:rounded-t-card hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
                   >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-wash ring-1 ring-line">
-                      <Building2 size={18} aria-hidden />
-                    </span>
-                    <span className="min-w-0 grow text-[15px] font-semibold">
+                    <span className={`min-w-0 grow ${isSelected ? "font-medium" : ""}`}>
                       {company.name}
                       {isSelected ? <span className="sr-only"> (seleccionada)</span> : null}
                     </span>
-                    {isSelected ? (
-                      <span aria-hidden className="inline-flex items-center gap-1.5 rounded-full border border-success/15 bg-success-soft px-3 py-1.5 text-xs font-semibold text-success">
-                        <CircleCheck size={14} />
-                        Elegida
-                      </span>
-                    ) : null}
+                    {isSelected ? <Check size={16} aria-hidden className="shrink-0" /> : null}
                   </button>
                 </form>
               </li>
@@ -88,7 +80,6 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
         ) : <span />}
         <form action={signOut}>
           <button type="submit" className={buttonStyles({ variant: "ghost" })}>
-            <LogOut size={16} aria-hidden />
             Cerrar sesión
           </button>
         </form>

@@ -31,16 +31,16 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const VARIANTES: Record<ButtonVariant, string> = {
-  primary: "bg-ink text-white shadow-sm hover:bg-graphite-soft",
-  secondary: "border border-line bg-surface text-ink shadow-card hover:border-ink-subtle hover:bg-surface-hover",
-  ghost: "bg-transparent text-ink hover:bg-ink/[0.05]",
+  primary: "bg-ink text-white hover:bg-ink/85",
+  secondary: "border border-line bg-surface text-ink hover:bg-surface-hover",
+  ghost: "bg-transparent text-ink-muted hover:bg-wash hover:text-ink",
   danger: "bg-danger text-white hover:bg-danger/85",
 };
 
 const TAMANIOS: Record<ButtonSize, string> = {
-  sm: "min-h-8 px-4 py-2 text-xs",
+  sm: "min-h-8 px-3 py-1.5 text-[13px]",
   // 40px de alto mínimo: fácil de tocar con el dedo en el celular.
-  md: "min-h-10 px-5 py-2.5 text-sm",
+  md: "min-h-9 px-4 py-2 text-sm",
 };
 
 const TAMANIO_ICONO: Record<ButtonSize, number> = { sm: 14, md: 16 };
@@ -57,7 +57,7 @@ export function buttonStyles({
 }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
   return cx(
     // Base común: esquinas de 10px, texto en una línea, transición suave.
-    "inline-flex items-center justify-center gap-2 rounded-control leading-none font-semibold whitespace-nowrap",
+    "inline-flex items-center justify-center gap-2 rounded-control leading-none font-medium whitespace-nowrap",
     "transition-colors duration-150",
     // Anillo negro visible cuando se navega con teclado (accesibilidad).
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",

@@ -23,7 +23,7 @@ const RELLENOS = {
 export function Card({ padding = "md", className, ...resto }: CardProps) {
   return (
     <div
-      className={cx("rounded-card border border-line bg-surface shadow-card", RELLENOS[padding], className)}
+      className={cx("rounded-card border border-line bg-surface", RELLENOS[padding], className)}
       {...resto}
     />
   );

@@ -67,7 +67,7 @@ export function Field({
 
   return (
     <div className={cx("flex flex-col gap-2", className)}>
-      <label htmlFor={idControl} className={cx("text-sm leading-none font-semibold", hideLabel && "sr-only")}>
+      <label htmlFor={idControl} className={cx("text-[13px] leading-none font-medium", hideLabel && "sr-only")}>
         {label}
         {required && (
           <span aria-hidden className="text-danger">
@@ -100,11 +100,11 @@ export function Field({
 export function fieldBoxStyles(conError: boolean) {
   return cx(
     // Caja blanca con borde fino: se ve sobre el fondo gris y dentro de una tarjeta blanca.
-    "rounded-control border bg-surface transition-[border-color,box-shadow] duration-150",
+    "rounded-control border bg-surface transition-[border-color,box-shadow] duration-100",
     conError ? "border-danger" : "border-line hover:border-ink-subtle",
     // Al tener el cursor adentro, borde negro y un halo suave (o rojo si hay error).
     conError
-      ? "focus-within:border-danger focus-within:ring-4 focus-within:ring-danger/10"
-      : "focus-within:border-ink focus-within:ring-4 focus-within:ring-ink/[0.06]",
+      ? "focus-within:border-danger focus-within:ring-2 focus-within:ring-danger/10"
+      : "focus-within:border-ink focus-within:ring-2 focus-within:ring-ink/10",
   );
 }

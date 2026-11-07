@@ -39,19 +39,19 @@ export function EmptyState({ icon: Icono = Inbox, title, description, action, cl
   return (
     <div
       className={cx(
-        // Borde punteado: se lee como "acá va a haber algo", un lugar libre para llenar.
-        "flex flex-col items-center gap-5 rounded-card border border-dashed border-ink-subtle/40 bg-surface px-5 py-12 text-center",
+        // Caja blanca con borde fino, como el resto de las superficies.
+        "flex flex-col items-center gap-4 rounded-card border border-line bg-surface px-5 py-12 text-center",
         className,
       )}
     >
-      {/* Círculo gris de 48px con el ícono en el medio. Es decorativo (aria-hidden):
+      {/* Ícono gris, decorativo (aria-hidden):
           lo importante ya lo dice el título. */}
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-wash text-ink-muted ring-1 ring-line">
+      <span className="flex size-10 shrink-0 items-center justify-center text-ink-subtle">
         <Icono size={24} aria-hidden />
       </span>
 
       <div className="flex max-w-sm flex-col gap-2.5">
-        <p className="text-base leading-tight font-bold">{title}</p>
+        <p className="text-[15px] leading-tight font-semibold">{title}</p>
         {description && <p className="text-sm leading-snug text-ink-muted">{description}</p>}
       </div>
 
