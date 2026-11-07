@@ -8,52 +8,24 @@ import { cx } from "./cx";
 import { getActiveNavHref, NAV_ITEMS, type NavItem } from "./navigation";
 
 /**
- * Menú principal (el menú lateral negro del Figma), con ícono + nombre en cada
- * sección para que cualquiera entienda a dónde va.
+ * Menú principal: los cuatro pasos del recorrido de compras (navigation.ts),
+ * con ícono + nombre en cada uno.
  *
- * - En compu: columna negra a la izquierda, con la marca arriba.
- * - En celular: barra fija abajo de todo, al alcance del pulgar (como las apps).
+ * - Sidebar: la lista de la columna oscura de la izquierda (en compu). El logo
+ *   y "Cambiar empresa" los pone <AppShell> arriba y abajo de esta lista.
+ * - MobileNav: la barra fija de abajo en el celular, al alcance del pulgar.
  *
- * No recibe las secciones por props: las lee de navigation.ts, así hay un solo
- * menú en toda la app. Normalmente no lo usás directo: viene dentro de <AppShell>.
+ * No reciben las secciones por props: las leen de navigation.ts, así hay un
+ * solo menú en toda la app. Normalmente no los usás directo: vienen en <AppShell>.
  */
-type SidebarProps = {
-  /** Letra o sigla de la marca, arriba de todo (solo en compu). */
-  brand?: string;
-  className?: string;
-};
-
-export function Sidebar({ brand = "T", className }: SidebarProps) {
-  const rutaActual = usePathname();
-  const activeHref = getActiveNavHref(rutaActual);
+export function Sidebar({ className }: { className?: string }) {
+  const activeHref = getActiveNavHref(usePathname());
 
   return (
-    <nav
-      aria-label="Menú principal"
-      className={cx(
-        "rounded-card bg-ink text-white shadow-sidebar",
-        // Celular: barra fija abajo, separada 12px de los bordes.
-        // El relleno de abajo usa "safe-area-inset-bottom" para dejar lugar a la
-        // barrita de inicio del iPhone. (Ojo: Tailwind lee también los
-        // comentarios, así que acá no hay que escribir clases a medias.)
-        "fixed inset-x-3 bottom-3 z-40 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-        // Desde tablet (md): columna vertical de 112px, como el Figma.
-        "md:static md:flex md:h-full md:w-[112px] md:flex-col md:items-center md:gap-10 md:px-2 md:py-8",
-        className,
-      )}
-    >
-      {/* Marca: letra grande en negrita (la "M" del Figma). En celular no entra, se oculta.
-          No es un link: todavía no hay página de inicio, y un link a una
-          página que no existe lleva a un error 404. Cuando exista, se puede
-          volver a convertir en <Link href="/">. */}
-      <p className="hidden text-[32px] leading-none font-bold md:block">
-        <span aria-hidden>{brand}</span>
-        <span className="sr-only">Tratunex</span>
-      </p>
-
-      <ul className="grid grid-cols-4 md:flex md:w-full md:flex-col md:gap-2">
+    <nav aria-label="Menú principal" className={cx("px-3", className)}>
+      <ul className="flex flex-col gap-0.5">
         {NAV_ITEMS.map((item) => (
-          <li key={item.href} className="min-w-0 md:flex-none">
+          <li key={item.href}>
             <SidebarLink item={item} activa={activeHref === item.href} />
           </li>
         ))}
@@ -71,17 +43,51 @@ function SidebarLink({ item, activa }: { item: NavItem; activa: boolean }) {
       // aria-current="page": le avisa al lector de pantalla cuál es la página actual.
       aria-current={activa ? "page" : undefined}
       className={cx(
-        "flex min-w-0 flex-col items-center gap-1.5 rounded-control px-0 py-2 md:px-1 md:py-3",
-        "transition-colors duration-150",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
-        // Activa: pastilla blanca con letra negra (se ve clarísimo dónde estás).
-        // Resto: blanco apagado, que se ilumina al pasar el mouse.
-        activa ? "bg-white text-ink" : "text-white/65 hover:bg-white/10 hover:text-white",
+        "relative flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors duration-100",
+        "focus-visible:outline-2 focus-visible:outline-white",
+        // Activa: fondo gris más claro, letra blanca y una rayita blanca a la izquierda.
+        activa
+          ? "bg-white/10 font-medium text-white before:absolute before:inset-y-2 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-white"
+          : "text-gray-400 hover:bg-white/5 hover:text-gray-100",
       )}
     >
-      <Icono size={22} aria-hidden />
-      {/* Dos líneas disponibles en celular, sin truncar las cuatro etiquetas. */}
-      <span className="min-h-7 w-full break-words text-center text-[11px] leading-[14px] font-bold md:min-h-0 md:text-xs md:leading-tight">{item.label}</span>
+      <Icono size={16} strokeWidth={1.75} aria-hidden className="shrink-0" />
+      {item.label}
     </Link>
+  );
+}
+
+/** Barra de abajo en el celular, con los mismos cuatro pasos. */
+export function MobileNav() {
+  const activeHref = getActiveNavHref(usePathname());
+
+  return (
+    <nav
+      aria-label="Menú principal"
+      className="fixed inset-x-0 bottom-0 z-40 bg-gray-900 pb-[env(safe-area-inset-bottom)] md:hidden"
+    >
+      <ul className="grid grid-cols-4">
+        {NAV_ITEMS.map((item) => {
+          const Icono = item.icon;
+          const activa = activeHref === item.href;
+          return (
+            <li key={item.href} className="min-w-0">
+              <Link
+                href={item.href}
+                aria-current={activa ? "page" : undefined}
+                className={cx(
+                  "flex flex-col items-center gap-1 px-1 pt-2.5 pb-2 text-center text-[11px] leading-tight transition-colors",
+                  "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white",
+                  activa ? "font-medium text-white" : "text-gray-500 hover:text-gray-200",
+                )}
+              >
+                <Icono size={20} strokeWidth={activa ? 2 : 1.75} aria-hidden />
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

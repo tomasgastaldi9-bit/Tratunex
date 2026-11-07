@@ -26,7 +26,7 @@ import { cx } from "./cx";
 export type BadgeTone = "neutral" | "strong" | "info" | "success" | "warning" | "danger";
 
 const TONOS: Record<BadgeTone, string> = {
-  neutral: "bg-surface text-ink border-line",
+  neutral: "bg-surface text-ink-muted border-line",
   strong: "bg-ink text-white border-ink",
   info: "bg-info-soft text-info border-transparent",
   success: "bg-success-soft text-success border-transparent",
@@ -43,7 +43,7 @@ export function Badge({ tone = "neutral", icon: Icono, className, children, ...r
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 rounded-control border px-2.5 py-1 text-xs leading-none font-bold whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-[5px] border px-2 py-1 text-xs leading-none font-medium whitespace-nowrap",
         TONOS[tone],
         className,
       )}
