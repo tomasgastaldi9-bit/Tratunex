@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { parsePublicEnv, parseServerEnv } from "./env";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getPublicEnv, parsePublicEnv, parseServerEnv } from "./env";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("public environment", () => {
   it("requires valid Supabase and application URLs and a publishable key", () => {
@@ -23,6 +27,19 @@ describe("public environment", () => {
         VAPI_PRIVATE_KEY: "vapi_private_do_not_expose",
       }),
     ).toStrictEqual({
+      NEXT_PUBLIC_SUPABASE_URL: "https://db.tratunex.test",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+      NEXT_PUBLIC_APP_URL: "https://app.tratunex.test",
+    });
+  });
+
+  it("reads statically referenced public values for the Next.js browser bundle", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://db.tratunex.test");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.tratunex.test");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_do_not_expose");
+
+    expect(getPublicEnv()).toStrictEqual({
       NEXT_PUBLIC_SUPABASE_URL: "https://db.tratunex.test",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
       NEXT_PUBLIC_APP_URL: "https://app.tratunex.test",
