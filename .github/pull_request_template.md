@@ -12,13 +12,13 @@ Describe el resultado y el motivo en pocas líneas.
 - Archivos principales:
 - ¿Se coordinó con sus dueños?:
 
-Mapa de responsables y límites de edición: [sección 3 del brief general](https://github.com/tomasgastaldi9-bit/Tratunex/blob/main/docs/brief/00_GENERAL.md)
+Mapa de responsables y límites de edición: [sección 5 del brief](https://github.com/tomasgastaldi9-bit/Tratunex/blob/main/docs/BRIEF.md)
 
 ## Verificación
 
 - [ ] Comandos ejecutados y resultado exacto:
 - [ ] Pruebas relevantes del dominio:
-- [ ] Estado de integración identificado: mock / voz web / voz live / testnet / no aplica
+- [ ] Estado de integración identificado: mock / voz web / voz live / no aplica
 - [ ] Actualicé contratos o documentación afectados
 
 ## Revisión y riesgos

@@ -1,29 +1,24 @@
 # Tratunex
 
-Asistente de operaciones comerciales para distribuidoras B2B de insumos recurrentes. Conecta prospección, llamadas con IA, CRM, seguimientos, pedidos, cobros y reposición a proveedores en un flujo trazable.
+Plataforma para que cualquier empresa prospecte clientes en frío con un agente de voz que llama por teléfono, detecta si hay un cliente potencial y deja cada llamada transcripta, resumida y clasificada en un CRM con seguimiento automático.
 
-## Alcance de la demo
+## Alcance del MVP
 
-El recorrido de referencia usa una distribuidora ficticia, Sur Insumos, para buscar cafeterías, revisar el origen de los prospectos, gestionar llamadas y oportunidades, confirmar pedidos y verificar pagos de prueba en Avalanche Fuji. También contempla compras a proveedores sujetas a una política de gasto. El brief fija el alcance y los contratos; la aplicación todavía no está implementada.
+Cada empresa entrena a su agente desde un dashboard (contexto, conocimiento, instrucciones y criterios), busca o importa prospectos, los llama con Vapi + Twilio y gestiona el resultado en un pipeline de 7 etapas. Los seguimientos ("llamame el jueves") se ejecutan solos desde un cron. La demo muestra dos empresas de rubros distintos con el mismo sistema. La aplicación todavía no está implementada.
 
 ## Equipo
 
 | Integrante | Responsabilidad |
 |---|---|
-| Vale | Negocio, catálogo y prospección |
-| Bauti | Voz y campañas |
-| Tomi | Comercio e infraestructura |
-| Nano | CRM e historia de seguimiento |
+| Tomás | Plataforma (repo, auth, multi-empresa, cron, deploy) y prospección |
+| Vale | Dashboard de entrenamiento del agente |
+| Bautista | Voz, número y llamadas |
+| Nano | CRM, pipeline y seguimiento |
 
 ## Documentación del proyecto
 
+- [Brief del MVP: alcance, contratos, ownership y tareas](docs/BRIEF.md)
 - [Guía para contribuir](CONTRIBUTING.md)
 - [Flujo de desarrollo y coordinación](docs/DEVELOPMENT_WORKFLOW.md)
-- [Brief técnico y contratos](docs/brief/00_GENERAL.md)
-- [Objetivos, alcance y pitch](docs/brief/05_OBJETIVOS_ALCANCES_Y_PITCH.md)
-- [Plan de Vale](docs/brief/01_VALE.md)
-- [Plan de Bauti](docs/brief/02_BAUTI.md)
-- [Plan de Tomi](docs/brief/03_TOMI.md)
-- [Plan de Nano](docs/brief/04_NANO.md)
 
-El brief técnico es la fuente de verdad para stack, contratos, seguridad, responsabilidades e integraciones de la demo.
+El brief es la fuente de verdad para stack, contratos, seguridad, responsabilidades e integraciones de la demo.

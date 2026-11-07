@@ -5,10 +5,10 @@
 ¿Qué problema o dependencia resuelve?
 
 ## Dominio y responsable
-- Dominio: Business & Discovery / Voice / Commerce / CRM
+- Dominio: Platform / Business & Discovery / Agent / Voice / CRM
 - Responsable:
 
-Consulta la [sección 3 del brief general, sobre responsables y límites de edición](https://github.com/tomasgastaldi9-bit/Tratunex/blob/main/docs/brief/00_GENERAL.md) antes de asignar archivos; acuerda los cambios que crucen dominios.
+Consulta la [sección 5 del brief, sobre responsables y límites de edición](https://github.com/tomasgastaldi9-bit/Tratunex/blob/main/docs/BRIEF.md) antes de asignar archivos; acuerda los cambios que crucen dominios.
 
 ## Criterios de aceptación
 - [ ]
@@ -24,7 +24,7 @@ Consulta la [sección 3 del brief general, sobre responsables y límites de edic
 
 ## Verificación
 - Comandos o recorrido que demuestran el resultado:
-- Modo: mock / voz web / voz live / testnet / no aplica
+- Modo: mock / voz web / voz live / no aplica
 
 ## Riesgos o decisiones abiertas
 -
