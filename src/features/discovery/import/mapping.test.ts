@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { upsertContact, crmIntegration } from "../../crm/server/public";
-import { toContactInput } from "./mapping";
+import { toContactInput, csvRecordToContact } from "./mapping";
 
 const company_id = "10000000-0000-4000-8000-000000000001";
 const actor_id = "30000000-0000-4000-8000-000000000001";
@@ -29,4 +29,9 @@ describe("mapeo para CRM", () => {
       expect(again.data.contact.do_not_contact).toBe(true);
     }
   });
-});
+  it("mapea un registro CSV válido sin borrar preferencias de contacto", () => {
+    const result = csvRecordToContact({ row: 1, name: "Empresa CSV", phone_e164: "+12025550123", website: null, errors: [] });
+    expect(result).toMatchObject({ ok: true, data: { name: "Empresa CSV", phone_e164: "+12025550123", source: { kind: "csv", url: null } } });
+    if (result.ok) expect(result.data).not.toHaveProperty("do_not_contact");
+    expect(csvRecordToContact({ row: 2, name: "Falla", phone_e164: null, website: null, errors: ["Teléfono inválido"] })).toMatchObject({ ok: false });
+  });});
