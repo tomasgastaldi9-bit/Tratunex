@@ -4,6 +4,19 @@ Versión visual 1 para implementar el MVP. Nano mantiene los componentes UI y el
 layout. Cada responsable aplica esta referencia en las pantallas de su dominio.
 La revisión del equipo puede proponer ajustes sobre esta base.
 
+## Uso en Next.js
+
+Los tokens y las clases compartidas ya se importan en `src/app/layout.tsx`.
+El shell React está en `app-shell.tsx`; las pantallas CRM lo consumen mediante
+`src/features/crm/components/demo-shell.tsx`. El shell incluye sidebar responsive,
+navegación, acceso por teclado al contenido y rótulo visible del modo mock.
+
+El selector actual recorre solo dos escenarios ficticios. Al integrar Plataforma,
+Tomás debe proporcionar la selección de empresa basada en membresía real. Los
+otros módulos pueden aplicar estas mismas clases `.button`, `.badge`, `.panel`
+y los tokens sin copiar colores ni modificar el CRM. Su contenido se implementa
+dentro de las carpetas de cada responsable.
+
 La galería permite probar formularios, botones, filtros y estados con datos
 ficticios. Se abre directamente en el navegador. [Abrir galería](index.html)
 

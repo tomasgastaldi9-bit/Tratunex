@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "@/components/ui/tokens.css";
 import "@/components/ui/components.css";
+import "./globals.css";
+import "@/features/crm/components/crm.css";
 
 export const metadata: Metadata = {
   title: "Tratunex",

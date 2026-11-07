@@ -71,11 +71,12 @@ Este cambio no implementa estas reglas ni aplica migraciones.
 
 ## Pendientes de coordinación
 
-1. El bootstrap de TRA-24 ya está integrado desde `origin/main`, con Zod 4.6.7.
-   Tomás continúa con los contratos comunes de Plataforma.
-2. Nano: conectar estos schemas a
-   `src/features/crm/server/public.ts` con `server-only` y respuestas `Result<T>`.
-   No hay un endpoint mock que simule éxito de escrituras sin persistir.
+1. El bootstrap de TRA-24 y los contratos comunes PLAT-02 ya están incorporados
+   desde `origin/main`, con Zod 4.6.7.
+2. La continuación conecta los schemas a `src/features/crm/server/public.ts`
+   con `server-only` y respuestas `Result<T>`, usando una simulación en memoria.
+   Las pantallas funcionan dentro de Next.js. Ver [`../README.md`](../README.md)
+   para ejecutar la app y conocer los límites del mock.
 3. Consumidores: acordar selección de oportunidad cuando falta `deal_id` y hay
    varias; resolución de coincidencias distintas por teléfono/dominio; cierre
    manual de una tarea `human_review`; catálogo de errores de tarea.
@@ -117,7 +118,9 @@ git diff --check
 La ejecución inicial aprobó 11 comprobaciones, el typecheck y la comprobación
 de JavaScript. Esa evidencia cubre los contratos y datos de preparación.
 La verificación de la aplicación utiliza ahora los scripts del bootstrap.
-Después de integrar TRA-24 se ejecutaron los siguientes comandos en el repo.
+El registro histórico siguiente corresponde a la preparación inicial después
+de integrar TRA-24. La continuación en Next.js y su evidencia actual están en
+[`../README.md`](../README.md).
 
 | Comando | Resultado |
 |---|---|
@@ -128,7 +131,7 @@ Después de integrar TRA-24 se ejecutaron los siguientes comandos en el repo.
 | `npm run build` | Exit 0, scaffold con ruta estática `/404` |
 | `node src/features/crm/preparation/verify.mjs` | 11 comprobaciones aprobadas |
 
-El recorrido CRM se revisa con el HTML local y sus pruebas de navegador.
+El boceto original se revisa con el HTML local y sus pruebas de navegador.
 Las pruebas de base de datos y las integraciones live corresponden al trabajo
 de servicios que queda pendiente.
 La versión visual 1 pasó 67 comprobaciones de navegador headless, incluyendo

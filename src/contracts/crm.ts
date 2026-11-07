@@ -173,8 +173,8 @@ export const RecordCallResultDataSchema = z.object({
 export const FollowupDataSchema = z.object({ task: TaskDTOSchema });
 export const ClaimDueFollowupsDataSchema = z.object({ tasks: z.array(TaskDTOSchema) });
 
-// Catálogo de payloads. No es un servidor mock ni un Result<T> alternativo.
-// Al llegar common.ts se conectará a las siete funciones de server/public.ts.
+// Catálogo de payloads, consumido por las siete operaciones de server/public.ts.
+// Ctx, ActionCtx y Result<T> se importan del contrato común de Plataforma.
 export const crmOperationSchemas = {
   upsertContact: { input: UpsertContactInputSchema, data: UpsertContactDataSchema },
   getContact: { input: GetContactInputSchema, data: GetContactDataSchema },
