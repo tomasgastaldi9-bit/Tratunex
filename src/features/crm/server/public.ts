@@ -34,3 +34,8 @@ export const getSupplier = suppliers.getSupplier;
 export const listSuppliers = suppliers.listSuppliers;
 export const setSupplierWallet = suppliers.setSupplierWallet;
 export { recordCallResult, scheduleFollowup, claimDueFollowups, completeFollowup, failFollowup } from "./mock-public";
+// ORD-03: contratos de lectura y aprobación; pagos permanecen deshabilitados.
+export {
+  createPurchaseOrder, getPurchaseOrder, listPurchaseOrders,
+  refreshPurchaseOrder, approvePurchaseOrder,
+} from "./purchase-orders-public";
