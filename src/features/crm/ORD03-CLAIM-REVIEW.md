@@ -172,3 +172,11 @@ caminos de firma, lectura durable de estados (incluido reservado/ambiguo),
 firma y persistencia inmutable del intento, transmisión y reconciliación.
 También debe cerrarse qué procedencia de llamada es admisible: `source=call`
 por sí solo no distingue mock, web y teléfono. El puerto permanece apagado.
+
+Una revisión independiente de `48ee1a0` no encontró inversión de locks
+alcanzable frente a aprobación, proveedores, contactos y `save_purchase_policy`.
+El namespace privado de acciones ya evita la colisión con el recibo de
+aprobación. La reserva antigua aún no toma el mutex global `pay-wallet` y no
+debe convertirse en un camino alternativo de firma/asignación al activar PAY.
+Esta conclusión es de lectura de código; no sustituye las carreras de base de
+datos ni las pruebas de recuperación que requiere la activación.
