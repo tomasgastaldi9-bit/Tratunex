@@ -11,6 +11,7 @@ import type { ErrorCode } from "../../../contracts/common";
 import type { QuoteRanking, SupplierQuote } from "../../../contracts/supplier-quotes";
 import { formatQuoteMoney, quoteTotal, type QuoteComparison, type QuoteComparisonRow } from "../quote-comparison";
 import { SuppliersFrame } from "./supplier-view";
+import type { PurchaseChoicesPage } from "../server/purchase-picker-service";
 import { CreatePurchaseOrderButton } from "./purchase-order-create-button";
 
 type Company = { id: string; name: string; industry?: string | null };
@@ -194,12 +195,31 @@ export function QuoteComparisonAccessState({ code, message }: { code: ErrorCode;
   </SuppliersFrame>;
 }
 
-export function QuoteComparisonStart({ company }: { company: Company }) {
+export function QuoteComparisonStart({ company, purchases }: { company: Company; purchases?: PurchaseChoicesPage }) {
   return <SuppliersFrame company={company}>
-    <PageHeader title="Comparar cotizaciones" description="Revisá las cotizaciones de los proveedores para una compra." />
-    <EmptyState icon={FileText} title="Elegí una compra para comparar"
+    <PageHeader title="Comparar cotizaciones" description="Elegí una compra guardada para revisar las ofertas de sus proveedores."
+      actions={<Link href="/purchases/new" className={buttonStyles({ variant: "secondary" })}>Nueva compra<ArrowRight size={16} aria-hidden /></Link>} />
+    {purchases?.items.length ? <section aria-label="Compras para comparar" className="space-y-4">
+      <h2 className="text-base font-bold">Compras de tu empresa</h2>
+      <ul className="space-y-3">{purchases.items.map(purchase => <li key={purchase.id}><Card className="space-y-4">
+        <div className="min-w-0"><h3 className="break-words text-base font-bold">{purchase.product}</h3>
+          <p className="mt-2 break-words text-sm text-ink-muted">{purchase.quantity.toLocaleString("es-AR")} {purchase.unit || "unidades"} · Para el {purchase.needed_by.split("-").reverse().join("/")}</p></div>
+        <div className="flex flex-wrap gap-3">
+          <Link href={`/orders/quotes?purchase_request_id=${purchase.id}`} className={buttonStyles({ variant: "primary" })}
+            aria-label={`Comparar cotizaciones de ${purchase.product}`}>Comparar cotizaciones<ArrowRight size={16} aria-hidden /></Link>
+          <Link href={`/calls/quotes/import?purchase_request_id=${purchase.id}`} prefetch={false} className={buttonStyles({ variant: "secondary" })}
+            aria-label={`Solicitar cotizaciones de ${purchase.product}`}>Solicitar cotizaciones</Link>
+        </div>
+      </Card></li>)}</ul>
+    </section> : <EmptyState icon={FileText} title={purchases && purchases.page > 0 ? "No hay más compras en esta página" : "Elegí una compra para comparar"}
       description="La comparación se abre desde una solicitud de compra guardada."
-      action={<Link href="/purchases/new" className={buttonStyles({ variant: "primary" })}>Nueva compra<ArrowRight size={16} aria-hidden /></Link>} />
+      action={<Link href="/purchases/new" className={buttonStyles({ variant: "primary" })}>Crear una compra<ArrowRight size={16} aria-hidden /></Link>} />}
+    {purchases && (purchases.page > 0 || purchases.has_next) && <nav aria-label="Páginas de compras" className="flex flex-wrap items-center gap-3">
+      {purchases.page > 0 && <Link href={`/orders/quotes?page=${purchases.page - 1}`} className={buttonStyles({ variant: "secondary" })}>Página anterior</Link>}
+      <span className="text-xs text-ink-muted">Página {purchases.page + 1}</span>
+      {purchases.has_next && <Link href={`/orders/quotes?page=${purchases.page + 1}`} className={buttonStyles({ variant: "secondary" })}>Más compras<ArrowRight size={16} aria-hidden /></Link>}
+    </nav>}
+    {purchases?.limit_reached && <Alert tone="info">Mostramos el máximo de compras de esta lista. Las anteriores siguen guardadas.</Alert>}
     <div><Link href="/orders/quotes/example" className={buttonStyles({ variant: "ghost" })}><FlaskConical size={16} aria-hidden />Ver comparación de ejemplo</Link></div>
     <p className="text-xs text-ink-muted">El ejemplo usa datos de prueba y una explicación ilustrativa.</p>
   </SuppliersFrame>;

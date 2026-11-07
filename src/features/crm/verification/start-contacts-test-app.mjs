@@ -3,10 +3,12 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const config = JSON.parse(await readFile(path.join(tmpdir(), "tratunex-contacts-local-api.json"), "utf8"));
 if (config.apiUrl !== "http://127.0.0.1:55440") throw new Error("This launcher accepts only the local verification fixture");
-const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3101"], {
+const guard = pathToFileURL(path.resolve("src/features/crm/verification/local-network-guard.mjs")).href;
+const child = spawn(process.execPath, ["--import", guard, "node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3101"], {
   stdio: "inherit", windowsHide: true, env: { ...process.env,
     NEXT_PUBLIC_SUPABASE_URL: config.apiUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: config.anonKey,
@@ -16,6 +18,7 @@ const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start
     ANTHROPIC_API_KEY: "", FIRECRAWL_API_KEY: "", VAPI_PRIVATE_KEY: "",
     AGENT_WALLET_PRIVATE_KEY: "", PAYMENT_RPC_URL: "",
     DISCOVERY_MODE: "mock", VOICE_MODE: "mock",
+    CRM_LOCAL_VERIFICATION: "loopback-fixtures-only",
   },
 });
 child.on("exit", code => { process.exitCode = code ?? 1; });

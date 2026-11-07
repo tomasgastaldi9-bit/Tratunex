@@ -67,7 +67,8 @@ export function SuppliersListView({ company, page, filters }: {
 }) {
   const filtered = !!(filters.query || filters.source || filters.do_not_contact || filters.wallet_status);
   return <SuppliersFrame company={company}>
-    <PageHeader title="Proveedores" description="Contactos, fuentes y datos de cobro de los proveedores de tu empresa." />
+    <PageHeader title="Proveedores" description="Contactos, fuentes y datos de cobro de los proveedores de tu empresa."
+      actions={<Link href="/orders/quotes" className={buttonStyles({ variant: "secondary" })}>Cotizar una compra<ArrowRight size={16} aria-hidden /></Link>} />
     <SupplierEditor key={company.id} companyId={company.id} />
     <Card className="space-y-5">
       <h2 className="text-base font-bold">Buscar y filtrar proveedores</h2>
