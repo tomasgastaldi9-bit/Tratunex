@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -147,12 +146,8 @@ function EstadoTexto({ estado, listo, falta }: { estado: Estado; listo: string; 
 
 function Ir({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="group inline-flex items-center gap-1 rounded-control px-2 py-1 text-sm text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
-    >
+    <Link href={href} className={buttonStyles({ variant: "secondary", size: "sm" })}>
       {children}
-      <ArrowRight size={14} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }

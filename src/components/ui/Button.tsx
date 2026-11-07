@@ -6,16 +6,21 @@ import { cx } from "./cx";
  * Botón de Tratunex.
  *
  * Variantes (qué tan importante es la acción):
- *  - "primary": negro con letra blanca. La acción MÁS importante de la
- *    pantalla. Tratá de que haya una sola por sección.
- *  - "secondary": gris claro. Acciones de apoyo ("Cancelar", "Ver detalle").
+ *  - "primary": gris casi negro con letra blanca. La acción MÁS importante de
+ *    la pantalla. Tratá de que haya una sola por sección.
+ *  - "secondary": blanco con borde. Acciones de apoyo ("Cancelar", "Ver detalle").
+ *  - "soft": gris claro, sin borde. Acciones frecuentes pero no principales
+ *    ("Agregar otro", filtros).
  *  - "ghost": sin fondo. Acciones discretas dentro de listas o tarjetas.
  *  - "danger": rojo. Solo para acciones que borran o no tienen vuelta atrás.
  *    El texto tiene que decir qué pasa ("Borrar contacto", no "Aceptar").
  *
+ * Todos responden al mouse (se oscurecen), al clic (se hunden 1px) y al
+ * teclado (anillo visible). Deshabilitados se ven grises y no reaccionan.
+ *
  * Tamaños:
- *  - "md" (por defecto): letra de 14px, cómodo de leer y de tocar.
- *  - "sm": letra de 12px, como el Figma. Para lugares apretados (filas de listas).
+ *  - "md" (por defecto): 40px de alto, letra de 14px. Cómodo de tocar.
+ *  - "sm": 32px de alto. Para lugares apretados (filas de listas).
  *
  * Extras:
  *  - icon: un ícono de lucide-react a la izquierda del texto.
@@ -27,20 +32,24 @@ import { cx } from "./cx";
  *    Igual, en tu función de guardar, chequeá que no esté ya guardando: el
  *    navegador puede enviar un formulario apretando Enter en un campo.
  */
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "soft" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const VARIANTES: Record<ButtonVariant, string> = {
-  primary: "bg-ink text-white hover:bg-ink/85",
-  secondary: "border border-line bg-surface text-ink hover:bg-surface-hover",
-  ghost: "bg-transparent text-ink-muted hover:bg-wash hover:text-ink",
-  danger: "bg-danger text-white hover:bg-danger/85",
+  // Brillo de 1px arriba y sombra mínima abajo: se lee como algo que se aprieta.
+  primary:
+    "border-gray-900 bg-gray-900 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.1),0_1px_2px_rgb(0_0_0/0.15)] hover:border-gray-800 hover:bg-gray-800 active:bg-gray-950",
+  secondary:
+    "border-gray-300 bg-white text-gray-900 shadow-[0_1px_2px_rgb(0_0_0/0.05)] hover:border-gray-400 hover:bg-gray-50 active:bg-gray-100",
+  soft: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300",
+  ghost: "border-transparent bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200",
+  danger: "border-danger bg-danger text-white shadow-[0_1px_2px_rgb(0_0_0/0.15)] hover:bg-danger/90 active:bg-danger",
 };
 
 const TAMANIOS: Record<ButtonSize, string> = {
-  sm: "min-h-8 px-3 py-1.5 text-[13px]",
+  sm: "min-h-8 px-3 text-[13px]",
   // 40px de alto mínimo: fácil de tocar con el dedo en el celular.
-  md: "min-h-9 px-4 py-2 text-sm",
+  md: "min-h-10 px-4 text-sm",
 };
 
 const TAMANIO_ICONO: Record<ButtonSize, number> = { sm: 14, md: 16 };
@@ -56,13 +65,14 @@ export function buttonStyles({
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
   return cx(
-    // Base común: esquinas de 10px, texto en una línea, transición suave.
-    "inline-flex items-center justify-center gap-2 rounded-control leading-none font-medium whitespace-nowrap",
-    "transition-colors duration-150",
-    // Anillo negro visible cuando se navega con teclado (accesibilidad).
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
-    // Deshabilitado: más claro y sin clic.
-    "disabled:pointer-events-none disabled:opacity-40",
+    // Base común: borde de 1px (así todas las variantes miden lo mismo), texto en una línea.
+    "inline-flex items-center justify-center gap-2 rounded-control border leading-none font-medium whitespace-nowrap select-none",
+    // Transición corta de color y el "hundido" de 1px al hacer clic (sin movimiento si la persona lo pidió).
+    "transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0",
+    // Anillo visible cuando se navega con teclado (accesibilidad).
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900",
+    // Deshabilitado: gris plano, sin sombra y sin clic.
+    "disabled:pointer-events-none disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none",
     VARIANTES[variant],
     TAMANIOS[size],
     className,

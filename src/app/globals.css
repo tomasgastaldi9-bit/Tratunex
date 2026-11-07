@@ -14,31 +14,47 @@
 @import "tailwindcss";
 
 @theme {
-  /* ---------- Colores ---------- */
+  /* ---------- Escala de grises ----------
+     Grises neutros puros (sin tinte azul ni cálido), del más claro al más
+     oscuro. Reemplazan a los grises de Tailwind: bg-gray-100, text-gray-600…
+     Los nombres de abajo (canvas, surface, ink…) son atajos a esta escala. */
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f4;
+  --color-gray-200: #e8e8e8;
+  --color-gray-300: #d6d6d6;
+  --color-gray-400: #a8a8a8;
+  --color-gray-500: #767676;
+  --color-gray-600: #575757;
+  --color-gray-700: #404040;
+  --color-gray-800: #2a2a2a;
+  --color-gray-900: #1a1a1a;
+  --color-gray-950: #000000;
 
-  /* Fondo de la página y del menú: casi blanco. */
-  --color-canvas: #fafafa;
+  /* ---------- Colores con nombre ---------- */
 
-  /* Tarjetas, campos y filas: blanco (siempre con borde fino). */
+  /* Fondo del menú y de las pantallas de acceso. */
+  --color-canvas: var(--color-gray-50);
+
+  /* Fondo del contenido, tarjetas, campos y filas: blanco (con borde fino). */
   --color-surface: #ffffff;
 
   /* Cuando pasás el mouse por una fila o un botón claro. */
-  --color-surface-hover: #f4f4f5;
+  --color-surface-hover: var(--color-gray-50);
 
-  /* Relleno gris suave (chips, ítem activo del menú, avatares). */
-  --color-wash: #f1f1f2;
+  /* Relleno gris suave (ítem activo del menú, avatares, botón "soft"). */
+  --color-wash: var(--color-gray-100);
 
   /* Bordes y líneas divisorias. */
-  --color-line: #e6e6e8;
+  --color-line: var(--color-gray-200);
 
   /* Texto principal y botón principal. */
-  --color-ink: #111113;
+  --color-ink: var(--color-gray-900);
 
-  /* Texto secundario. Contraste ≥ 4.5:1 sobre blanco y sobre el fondo. */
-  --color-ink-muted: #5f5f66;
+  /* Texto secundario. Contraste 7:1 sobre blanco. */
+  --color-ink-muted: var(--color-gray-600);
 
-  /* Placeholder y detalles de poca importancia. */
-  --color-ink-subtle: #8e8e96;
+  /* Placeholder y detalles de poca importancia. Contraste 4.5:1 sobre blanco. */
+  --color-ink-subtle: var(--color-gray-500);
 
   /* ---------- Colores de ESTADO ----------
      Regla: el color solo aparece para decir algo (nunca para decorar).
@@ -65,10 +81,10 @@
   /* ---------- Bordes redondeados ---------- */
 
   /* Tarjetas y paneles. Clase: rounded-card */
-  --radius-card: 10px;
+  --radius-card: 8px;
 
   /* Botones, campos y etiquetas. Clase: rounded-control */
-  --radius-control: 7px;
+  --radius-control: 6px;
 
   /* ---------- Sombras ---------- */
 

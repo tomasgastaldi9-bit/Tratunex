@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -75,7 +75,6 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
         {companies?.some((company) => company.id === selected) ? (
           <Link href="/" className={buttonStyles()}>
             Ir al inicio
-            <ArrowRight size={16} aria-hidden />
           </Link>
         ) : <span />}
         <form action={signOut}>
