@@ -1,4 +1,4 @@
-import type { CallDTO, CallResultV1 } from "@/contracts/voice";
+import type { CallDetailDTO, CallDTO, CallResultV1 } from "@/contracts/voice";
 
 // FIXTURES de Voz (TRA-43): datos ficticios para desarrollar y probar sin
 // telefonía. No son resultados de llamadas reales. Los IDs son UUID fijos y no
@@ -127,3 +127,87 @@ export const callResultFixtures = {
     next_action: null,
   },
 } as const satisfies Record<string, CallResultV1>;
+
+// Llamadas de ejemplo para las pantallas en modo mock (TRA-49): una por cada
+// caso que se ve en /calls. Sin audio: en mock no hay grabaciones.
+const secondContact = "33333333-3333-4333-8333-333333333334";
+
+function detailFixture(
+  id: string,
+  contactId: string,
+  createdAt: string,
+  endedAt: string | null,
+  status: CallDetailDTO["status"],
+  result: CallResultV1 | null,
+  extra: Partial<CallDetailDTO> = {},
+): CallDetailDTO {
+  return {
+    ...callDtoFixture,
+    id,
+    contact_id: contactId,
+    deal_id: null,
+    status,
+    agent_version: result ? result.agent_version : null,
+    created_at: createdAt,
+    updated_at: endedAt ?? createdAt,
+    ended_at: endedAt,
+    ended_reason: null,
+    recording_url: null,
+    transcript: null,
+    result: result ? { ...result, call_id: id, contact_id: contactId, deal_id: null, occurred_at: endedAt ?? createdAt } : null,
+    ...extra,
+  };
+}
+
+export const callDetailFixtures: CallDetailDTO[] = [
+  detailFixture(
+    "66666666-6666-4666-8666-666666666605",
+    secondContact,
+    "2026-11-07T15:40:00.000Z",
+    null,
+    "queued",
+    null,
+  ),
+  detailFixture(
+    "66666666-6666-4666-8666-666666666604",
+    secondContact,
+    "2026-11-07T15:20:00.000Z",
+    "2026-11-07T15:20:12.000Z",
+    "failed",
+    callResultFixtures.technicalFailure,
+    { ended_reason: "twilio-failed-to-connect-call" },
+  ),
+  detailFixture(
+    "66666666-6666-4666-8666-666666666603",
+    secondContact,
+    "2026-11-07T14:30:00.000Z",
+    "2026-11-07T14:30:41.000Z",
+    "completed",
+    callResultFixtures.voicemail,
+    { ended_reason: "voicemail" },
+  ),
+  detailFixture(
+    "66666666-6666-4666-8666-666666666602",
+    voiceFixtureIds.contact,
+    "2026-11-07T14:10:00.000Z",
+    "2026-11-07T14:11:30.000Z",
+    "completed",
+    callResultFixtures.callbackRequested,
+    {
+      ended_reason: "customer-ended-call",
+      transcript: "Agente: Hola, soy el asistente virtual de la empresa. ¿Tenés un minuto?\nCliente: Ahora no puedo, llamame el jueves a las dos.\nAgente: Perfecto, te llamo el jueves a las 14. ¡Gracias!",
+    },
+  ),
+  detailFixture(
+    "66666666-6666-4666-8666-666666666601",
+    voiceFixtureIds.contact,
+    "2026-11-07T14:00:00.000Z",
+    "2026-11-07T14:02:10.000Z",
+    "completed",
+    callResultFixtures.interested,
+    {
+      ended_reason: "customer-ended-call",
+      transcript: "Agente: Hola, soy el asistente virtual de la empresa. ¿Hablo con el dueño?\nCliente: Sí, ¿qué necesitás?\nAgente: Te cuento en un minuto qué hacemos...\nCliente: Me interesa, mandame los precios por mail.",
+    },
+  ),
+];
