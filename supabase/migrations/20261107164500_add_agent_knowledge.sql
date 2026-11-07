@@ -292,8 +292,10 @@ $$;
 -- ---------------------------------------------------------------------------
 
 -- Misma firma que en AGT-01 (mismos parámetros, mismo tipo de respuesta), así
--- quien ya la usaba no nota ningún cambio. "create or replace" cambia solo el
--- cuerpo de la función; no se borra ni se crea otra.
+-- quien ya la usaba no nota ningún cambio. "create or replace" reemplaza la
+-- función que ya existía sin borrarla: conserva su dueño y sus permisos
+-- (grants), y acá cambia el cuerpo, el lenguaje (ahora sql), el modo de
+-- seguridad (ahora invoker) y el search_path.
 --
 -- Antes copiaba solo instrucciones y criterios, y un perfil nuevo dejaba la
 -- versión sin conocimiento. Ahora todo pasa por save_agent_section, que copia
