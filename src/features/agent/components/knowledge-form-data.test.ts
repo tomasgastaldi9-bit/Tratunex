@@ -10,6 +10,7 @@ import {
   KNOWLEDGE_UNREADABLE_MESSAGE,
   knowledgeCounterText,
   knowledgeCounterTone,
+  knowledgeFailureTitle,
   knowledgeFieldErrors,
   readKnowledgeForm,
   savedKnowledgeUrl,
@@ -183,5 +184,18 @@ describe("contador de caracteres", () => {
     // Justo en el máximo todavía se puede guardar: es warning, no danger.
     expect(knowledgeCounterTone(KNOWLEDGE_TEXT_MAX)).toBe("warning");
     expect(knowledgeCounterTone(KNOWLEDGE_TEXT_MAX + 1)).toBe("danger");
+  });
+});
+
+describe("knowledgeFailureTitle", () => {
+  it("usa el mensaje de la lista cuando es el único error", () => {
+    expect(knowledgeFailureTitle({ _list: "Demasiados ítems." })).toBe("Demasiados ítems.");
+  });
+
+  it("manda a mirar los campos si hay alguno marcado", () => {
+    expect(knowledgeFailureTitle({ "0.name": "Falta el nombre." })).toBe("Revisá los campos marcados.");
+    expect(knowledgeFailureTitle({ _list: "Demasiados ítems.", "1.answer": "Falta." })).toBe(
+      "Revisá los campos marcados.",
+    );
   });
 });
