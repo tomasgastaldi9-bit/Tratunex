@@ -163,7 +163,11 @@ export type PolicyExample = { amount_atomic: string; check: PolicyCheck };
  * Los ejemplos, o por qué todavía no se pueden mostrar (montos incompletos
  * o al revés). Tiene la misma forma que Result: ok true con datos, ok false con mensaje.
  */
-export type PolicyExamples = { ok: true; examples: PolicyExample[] } | { ok: false; message: string };
+export type PolicyExamples =
+  | { ok: true; examples: PolicyExample[] }
+  // reason "no_suppliers": el filtro está activo y no hay ningún proveedor
+  // tildado; la pantalla lo muestra como aviso en vez de un texto suelto.
+  | { ok: false; message: string; reason?: "no_suppliers" };
 
 /** Pesos escritos (solo dígitos) → número entero grande (BigInt), o null si no es un monto. */
 function leerPesos(pesos: string): bigint | null {
@@ -184,7 +188,8 @@ function leerPesos(pesos: string): bigint | null {
  * "bajo el límite", y con límite igual al máximo no hay nada "entre los dos".
  *
  * Si el filtro de proveedores está activo, el ejemplo es con el primer
- * proveedor marcado (si no hay ninguno, el agente rechaza: eso es lo que pasaría).
+ * proveedor marcado. Si no hay ninguno, no hay ejemplos: tres "Rechaza"
+ * iguales no ayudan, mejor avisar que falta elegir (reason "no_suppliers").
  */
 export function policyExamples(values: PolicyFormValues): PolicyExamples {
   const maximo = leerPesos(values.max_per_purchase);
@@ -194,6 +199,14 @@ export function policyExamples(values: PolicyFormValues): PolicyExamples {
   }
   if (limite > maximo) {
     return { ok: false, message: "Lo que el agente paga solo no puede superar el máximo por compra." };
+  }
+
+  if (values.only_allowed_suppliers && values.allowed_supplier_ids.length === 0) {
+    return {
+      ok: false,
+      reason: "no_suppliers",
+      message: "Elegí al menos un proveedor permitido. Si no, el agente no le puede pagar a nadie.",
+    };
   }
 
   const reglas: PurchasePolicy = {
