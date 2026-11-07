@@ -17,6 +17,8 @@ El recorrido de referencia usa una distribuidora ficticia, Sur Insumos, para bus
 
 ## Documentación del proyecto
 
+- [Guía para contribuir](CONTRIBUTING.md)
+- [Flujo de desarrollo y coordinación](docs/DEVELOPMENT_WORKFLOW.md)
 - [Brief técnico y contratos](docs/brief/00_GENERAL.md)
 - [Objetivos, alcance y pitch](docs/brief/05_OBJETIVOS_ALCANCES_Y_PITCH.md)
 - [Plan de Vale](docs/brief/01_VALE.md)

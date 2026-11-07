@@ -1,0 +1,23 @@
+# Contribuir a Tratunex
+
+El alcance, el stack y los contratos están en [`docs/brief/00_GENERAL.md`](docs/brief/00_GENERAL.md). El proceso completo de coordinación está en [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md).
+
+## Flujo corto
+
+1. Elige un issue asignado en el proyecto **Tratunex MVP** de Linear. Asegúrate de que tenga criterios de aceptación, dominio responsable y dependencias claras.
+2. Revisa `git status --short --branch`. Conserva tus cambios locales; empieza desde una copia limpia y actualizada de `main`.
+3. Crea una rama por issue: `feat/TRA-123-descripcion`, `fix/TRA-123-descripcion`, `docs/TRA-123-descripcion` o `chore/TRA-123-descripcion`, usando el ID real del issue.
+4. Mantén los commits pequeños y descriptivos, con prefijos como `feat:`, `fix:`, `docs:`, `chore:`, `test:` o `refactor:`.
+5. Abre un pull request con el issue de Linear enlazado. Completa la plantilla, incluye la evidencia de verificación y solicita revisión a alguien distinto del autor.
+6. Después del merge, Linear pasa a **Done**. GitHub usa squash merge y elimina automáticamente la rama mergeada.
+
+## Instalación y checks
+
+La aplicación todavía no tiene scaffold. Cuando `package.json` y sus scripts estén disponibles, usa `npm ci` y los comandos definidos allí; no inventes comandos de lint, tipos o tests. Para cambios de producto, el brief requiere Vitest para reglas de dominio, Playwright para recorridos E2E y una verificación real de base cuando se depende de atomicidad.
+
+## Reglas de equipo
+
+- Linear es la fuente única de tickets; no dupliques trabajo en GitHub Issues.
+- `main` se integra mediante PR por acuerdo del equipo. La protección técnica de ramas no está disponible en el plan actual del repo privado.
+- Respeta los dueños de archivos y coordina con ellos antes de tocar un dominio compartido.
+- No incluyas secretos, datos reales ni resultados simulados presentados como live.
