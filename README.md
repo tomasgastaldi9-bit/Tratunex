@@ -1,6 +1,6 @@
-# TRATO
+# Tratunex
 
-Repositorio del proyecto TRATO.
+Repositorio del proyecto Tratunex.
 
 ## Equipo
 
@@ -14,3 +14,4 @@ El equipo está formado por 4 integrantes:
 ## Estado
 
 Proyecto en preparación. La descripción, alcance y tecnologías se completarán cuando estén definidos.
+
