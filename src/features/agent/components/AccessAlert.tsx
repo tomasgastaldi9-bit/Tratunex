@@ -8,15 +8,16 @@ import type { ErrorCode } from "@/contracts/common";
  * (cuando falla getCompanyContext). Dice qué pasó y qué hacer, con un botón
  * para resolverlo cuando se puede.
  *
- * Lo usan /agent y /agent/profile: está en un solo lugar para que las dos
- * pantallas digan exactamente lo mismo.
+ * Lo usan /agent, /agent/profile y /purchases/new: está en un solo lugar para
+ * que digan lo mismo. "subject" cambia el final del título cuando la pantalla
+ * necesita otro texto (por defecto, "para ver tu agente").
  *
  * No tiene "use client" ni estado: funciona en páginas del servidor.
  *
  *   const contexto = await getCompanyContext(undefined, { readOnlyCookies: true });
  *   if (!contexto.ok) return <AccessAlert code={contexto.error.code} />;
  */
-export function AccessAlert({ code }: { code: ErrorCode }) {
+export function AccessAlert({ code, subject = "para ver tu agente" }: { code: ErrorCode; subject?: string }) {
   // VALIDATION_ERROR: no hay una empresa elegida (o la cookie no sirve).
   if (code === "VALIDATION_ERROR") {
     return (
@@ -40,7 +41,7 @@ export function AccessAlert({ code }: { code: ErrorCode }) {
     return (
       <Alert
         tone="warning"
-        title="Iniciá sesión para ver tu agente"
+        title={"Iniciá sesión " + subject}
         action={
           // Alert recibe una sola "action": juntamos los dos botones en un div.
           // flex-wrap: en el celular, si no entran uno al lado del otro, el segundo baja.

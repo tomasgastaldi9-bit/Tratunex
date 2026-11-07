@@ -40,7 +40,7 @@ export default async function NewPurchasePage({ searchParams }: NewPurchasePageP
     return (
       <>
         {encabezado}
-        <AccessAlert code={contexto.error.code} />
+        <AccessAlert code={contexto.error.code} subject="para crear una compra" />
       </>
     );
   }

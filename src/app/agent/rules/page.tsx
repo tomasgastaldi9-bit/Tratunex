@@ -8,14 +8,14 @@ import { AccessAlert } from "@/features/agent/components/AccessAlert";
 import { PolicyForm, type SupplierOption } from "@/features/agent/components/PolicyForm";
 import { policyToFormValues, readPolicySaved } from "@/features/agent/components/policy-form-data";
 import { getPurchasePolicy } from "@/features/agent/server/public";
-import { listContacts } from "@/features/crm/server/public";
+import { listSuppliers } from "@/features/crm/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
 
 /**
  * /agent/rules: las reglas de pago del dueño (BUY-02). Hasta cuánto paga el
  * agente solo, cuál es el máximo por compra y a qué proveedores les puede pagar.
  *
- * Es un componente del SERVIDOR: lee las reglas y los contactos del CRM y le
+ * Es un componente del SERVIDOR: lee las reglas y los proveedores del CRM y le
  * pasa al formulario (que sí corre en el navegador) solo datos simples.
  * Sigue el mismo camino que /agent/profile.
  */
@@ -29,12 +29,13 @@ type RulesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-/** Cuántas páginas de 100 contactos leemos como mucho (hasta 1.000 proveedores). */
-const MAX_PAGINAS_CONTACTOS = 10;
+/** Cuántas páginas de 100 proveedores leemos como mucho (hasta 1.000 proveedores). */
+const MAX_PAGINAS_PROVEEDORES = 10;
 
 /**
- * Lee los contactos del CRM (solo lectura) para elegir proveedores permitidos.
- * listContacts devuelve de a 100 como mucho, así que pedimos página por
+ * Lee los PROVEEDORES del CRM (solo lectura) para elegir los permitidos: un
+ * contacto común no es alguien a quien el agente pueda pagarle.
+ * listSuppliers devuelve de a 100 como mucho, así que pedimos página por
  * página. ¿Por qué no solo la primera? Si un proveedor ya elegido quedara
  * afuera de la lista, al guardar se borraría sin que nadie lo note.
  */
@@ -42,12 +43,18 @@ async function leerProveedores(ctx: Ctx): Promise<Result<SupplierOption[]>> {
   const proveedores: SupplierOption[] = [];
   let cursor: string | null = null;
 
-  for (let pagina = 0; pagina < MAX_PAGINAS_CONTACTOS; pagina++) {
-    const resultado = await listContacts(ctx, cursor ? { limit: 100, cursor } : { limit: 100 });
+  for (let pagina = 0; pagina < MAX_PAGINAS_PROVEEDORES; pagina++) {
+    const resultado = await listSuppliers(ctx, cursor ? { limit: 100, cursor } : { limit: 100 });
     if (!resultado.ok) return resultado;
-    // Solo lo que hace falta mostrar: nombre y organización (nada de teléfonos).
-    for (const contacto of resultado.data.items) {
-      proveedores.push({ id: contacto.id, name: contacto.name, organization: contacto.organization });
+    // Solo lo que hace falta mostrar: nombre, organización y si tiene
+    // billetera de cobro (sin ella el agente no le puede pagar). Nada de teléfonos.
+    for (const proveedor of resultado.data.items) {
+      proveedores.push({
+        id: proveedor.id,
+        name: proveedor.name,
+        organization: proveedor.organization,
+        withoutWallet: proveedor.collection_wallet === null,
+      });
     }
     cursor = resultado.data.next_cursor;
     if (cursor === null) break;
