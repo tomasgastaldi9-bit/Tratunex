@@ -85,7 +85,7 @@ function evaluate(quote: QuoteForRanking, request: RankInput["request"], policy:
   const check = total === null ? null : decidePurchasePolicy(policy, total.toString(), quote.supplier_contact_id);
 
   if (total === null) {
-    problems.push("No dio precio");
+    problems.push("No dio precio en pesos");
   } else if (total > BigInt(request.budget_atomic)) {
     problems.push(`${formatPesos(total.toString())} supera el presupuesto de ${formatPesos(request.budget_atomic)}`);
   }
