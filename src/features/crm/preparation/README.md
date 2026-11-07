@@ -1,6 +1,6 @@
 # Preparación del CRM · TRA-53
 
-Primer entregable de Nano, anterior al bootstrap de Next.js. Sigue el brief v2,
+Primer entregable de Nano, iniciado antes del bootstrap de Next.js. Sigue el brief v2,
 secciones 5, 8, 9 y 10. Rama: `feat/TRA-53-crm-preparacion`.
 
 ## Qué se puede revisar ahora
@@ -71,9 +71,9 @@ Este cambio no implementa estas reglas ni aplica migraciones.
 
 ## Pendientes de coordinación
 
-1. Tomás: bootstrap, versión fijada de Zod y contratos comunes. No se modifican
-   `package.json`, lockfile, auth, configuración ni migraciones en este cambio.
-2. Nano: después del bootstrap, conectar estos schemas a
+1. El bootstrap de TRA-24 ya está integrado desde `origin/main`, con Zod 4.6.7.
+   Tomás continúa con los contratos comunes de Plataforma.
+2. Nano: conectar estos schemas a
    `src/features/crm/server/public.ts` con `server-only` y respuestas `Result<T>`.
    No hay un endpoint mock que simule éxito de escrituras sin persistir.
 3. Consumidores: acordar selección de oportunidad cuando falta `deal_id` y hay

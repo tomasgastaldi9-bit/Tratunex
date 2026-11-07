@@ -178,8 +178,8 @@ Nano integra los estilos globales y mantiene esta base. Cada responsable crea
 sus pantallas con las mismas primitivas y presenta los cambios compartidos
 para revisión de un consumidor según el flujo del repositorio.
 
-Con el bootstrap, los estilos se importan una vez desde el layout global.
-El alias `@/` debe apuntar a `src/` según la configuración que publique Tomás.
+Los estilos ya se importan una vez desde `src/app/layout.tsx`.
+El alias `@/` apunta a `src/` en el bootstrap de Tomás.
 
 ```tsx
 import "@/components/ui/tokens.css";
