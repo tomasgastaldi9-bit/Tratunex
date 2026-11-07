@@ -1,15 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { actionCtxSchema, ctxSchema } from "../../../contracts/common";
+import type { Ctx, Result } from "../../../contracts/common";
+import type { ContactDTO } from "../../../contracts/crm";
 import {
   checkPurchasePolicyInputSchema,
+  comparatorRankingSchema,
   createPurchaseRequestOutputSchema,
   decidePurchasePolicy,
+  POLICY_DECISION_LABELS,
   purchasePolicySchema,
   purchaseRequestInputSchema,
   purchaseRequestSchema,
+  quoteForRankingSchema,
+  RANK_QUOTES_MAX,
   rankQuotesInputSchema,
   rankQuotesOutputSchema,
+  RULES_EXPLANATION_PREFIX,
 } from "../../../contracts/purchases";
 import type {
   CheckPurchasePolicy,
@@ -17,10 +24,15 @@ import type {
   GetPurchasePolicy,
   GetPurchaseRequest,
   PurchasePolicy,
+  QuoteForRanking,
   RankQuotes,
+  RankSupplierQuotes,
   SavePurchasePolicy,
 } from "../../../contracts/purchases";
+// Solo el TIPO de la cotización de Voz: la función real llega por deps (desde public.ts).
+import type { ComparatorQuote } from "../../voice/server/quote-import";
 import { buildRankingSummary, explainRanking } from "./explain";
+import { PROVEEDOR_SIN_NOMBRE, toQuoteForRanking } from "./quotes-source";
 import { rankQuotesByRules, todayInArgentina } from "./ranking";
 import { fail, logError, translateSaveError } from "./save-errors";
 
@@ -32,6 +44,13 @@ import { fail, logError, translateSaveError } from "./save-errors";
  */
 
 const LECTURA_NO_DISPONIBLE = "No pudimos leer los datos de compras. Probá de nuevo en un rato.";
+/** El comparador acepta explicaciones de hasta 4000 caracteres (comparatorRankingSchema). */
+const EXPLICACION_MAX = 4000;
+
+/** Corta la explicación a 4000 caracteres (terminando en "…") para que un texto largo no frene la comparación. */
+function recortarExplicacion(texto: string): string {
+  return texto.length <= EXPLICACION_MAX ? texto : `${texto.slice(0, EXPLICACION_MAX - 1)}…`;
+}
 const GUARDADO_NO_DISPONIBLE = "No pudimos guardar. Revisá tu conexión y probá de nuevo.";
 
 /**
@@ -67,16 +86,50 @@ function toDateText(value: unknown): string | null {
 
 type ReadPolicy = { ok: true; policy: PurchasePolicy | null } | { ok: false; result: ReturnType<typeof fail> };
 
+/** listSupplierQuotes de Voz (Bautista): las cotizaciones guardadas de una compra. */
+export type ListSupplierQuotesDep = (
+  ctx: Ctx,
+  input: { purchase_request_id: string },
+) => Promise<Result<{ items: ComparatorQuote[] }>>;
+
+/** getContact del CRM (Nano). De la respuesta solo usamos el nombre y la organización. */
+export type GetContactDep = (
+  ctx: Ctx,
+  input: { contact_id: string },
+) => Promise<Result<{ contact: Pick<ContactDTO, "name" | "organization"> }>>;
+
 /**
- * Lo que necesita rankQuotes para pedirle la explicación a Claude. Se puede
- * reemplazar en las pruebas para que nunca llamen a la API real.
+ * Lo que necesita rankQuotes de afuera: la explicación de Claude y, si no le
+ * pasan cotizaciones, las funciones de Voz y del CRM para leerlas. Se puede
+ * reemplazar en las pruebas para que nunca llamen a la API ni a otros módulos.
+ * Las reales se conectan en public.ts.
  */
 export type PurchaseServiceDeps = {
   /** Devuelve la clave de Claude. Si no se pasa, se lee ANTHROPIC_API_KEY del servidor. */
   getApiKey?: () => string | undefined;
   /** El fetch para llamar a Claude. Si no se pasa, el fetch normal. */
   fetchImpl?: typeof fetch;
+  /** Para leer las cotizaciones de la compra (tabla supplier_quotes). */
+  listSupplierQuotes?: ListSupplierQuotesDep;
+  /** Para buscar el nombre de cada proveedor. */
+  getContact?: GetContactDep;
 };
+
+/**
+ * Pasa las cotizaciones de Voz a la forma del ranking y las revisa con el
+ * contrato. Devuelve null si algo vino raro (por ejemplo, un precio que no es
+ * un número entero): con plata no adivinamos.
+ */
+function toRankingQuotes(items: ComparatorQuote[], names: Map<string, string>): QuoteForRanking[] | null {
+  try {
+    const quotes = items.map((item) => toQuoteForRanking(item, names.get(item.supplier_contact_id) ?? PROVEEDOR_SIN_NOMBRE));
+    const parsed = z.array(quoteForRankingSchema).safeParse(quotes);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    // BigInt tira un error si el precio no es un número entero.
+    return null;
+  }
+}
 
 export function createPurchaseService(getClient: () => Promise<SupabaseClient>, deps: PurchaseServiceDeps = {}) {
   /** Lee las reglas de la empresa (o null si no hay). Lo usan getPurchasePolicy y checkPurchasePolicy. */
@@ -287,6 +340,56 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     };
   };
 
+  /**
+   * Lee las cotizaciones guardadas de la compra (Voz) y el nombre de cada
+   * proveedor (CRM), y las pasa a la forma del ranking.
+   */
+  async function loadQuotes(ctx: Ctx, purchaseRequestId: string): Promise<Result<QuoteForRanking[]>> {
+    const { listSupplierQuotes, getContact } = deps;
+    if (!listSupplierQuotes || !getContact) {
+      // Falta conectar Voz o el CRM (eso se hace en public.ts): es un error nuestro, no de la persona.
+      logError("rankQuotes sin listSupplierQuotes/getContact conectados", new Error("faltan dependencias"));
+      return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, false);
+    }
+
+    let listed: Result<{ items: ComparatorQuote[] }>;
+    try {
+      listed = await listSupplierQuotes(ctx, { purchase_request_id: purchaseRequestId });
+    } catch (error) {
+      logError("excepción al leer las cotizaciones de la compra", error);
+      return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+    }
+    // Si Voz devolvió un error, lo pasamos tal cual (no lo convertimos en "no hay cotizaciones").
+    if (!listed.ok) return listed;
+
+    const items = listed.data.items;
+    if (items.length === 0) return fail("NOT_FOUND", "Todavía no hay cotizaciones para esta compra.", false);
+    // Más de las que entran en el ranking: avisamos en vez de recortar en silencio.
+    if (items.length > RANK_QUOTES_MAX) {
+      return fail("VALIDATION_ERROR", `Hay más de ${RANK_QUOTES_MAX} cotizaciones; filtrá antes de comparar.`, false);
+    }
+
+    // Un pedido al CRM por proveedor distinto (todos a la vez). Mostramos la
+    // organización y, si no tiene, el nombre del contacto. Si el CRM falla, no
+    // frenamos la comparación: queda "Proveedor sin nombre".
+    const supplierIds = Array.from(new Set(items.map((item) => item.supplier_contact_id)));
+    const names = new Map<string, string>();
+    await Promise.all(
+      supplierIds.map(async (contactId) => {
+        try {
+          const contact = await getContact(ctx, { contact_id: contactId });
+          if (contact.ok) names.set(contactId, contact.data.contact.organization ?? contact.data.contact.name);
+        } catch (error) {
+          logError("excepción al leer el nombre de un proveedor", error);
+        }
+      }),
+    );
+
+    const quotes = toRankingQuotes(items, names);
+    if (!quotes) return fail("PROVIDER_ERROR", "Las cotizaciones guardadas tienen un formato inesperado.", false);
+    return { ok: true, data: quotes };
+  }
+
   const rankQuotes: RankQuotes = async (ctx, input) => {
     const parsedCtx = ctxSchema.safeParse(ctx);
     if (!parsedCtx.success) {
@@ -303,6 +406,16 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     if (!read.ok) return read;
     const request = read.data.purchase_request;
 
+    // Si no nos pasaron las cotizaciones, las leemos de supplier_quotes (decisión 20 del README).
+    let quotes: QuoteForRanking[];
+    if (parsedInput.data.quotes) {
+      quotes = parsedInput.data.quotes;
+    } else {
+      const loaded = await loadQuotes(parsedCtx.data, parsedInput.data.purchase_request_id);
+      if (!loaded.ok) return loaded;
+      quotes = loaded.data;
+    }
+
     let policy: ReadPolicy;
     try {
       const client = await getClient();
@@ -317,13 +430,13 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     // El orden lo decide la regla (ranking.ts), con la fecha de hoy en Argentina.
     const { ranking, recommended_quote_id } = rankQuotesByRules({
       request,
-      quotes: parsedInput.data.quotes,
+      quotes,
       policy: policy.policy,
       today: todayInArgentina(),
     });
 
     // La IA solo explica; si falla, explainRanking usa el texto de reglas (nunca tira error).
-    const resumen = buildRankingSummary({ request, quotes: parsedInput.data.quotes, ranking, recommended_quote_id });
+    const resumen = buildRankingSummary({ request, quotes, ranking, recommended_quote_id });
     const explanation = await explainRanking(resumen, {
       apiKey: deps.getApiKey ? deps.getApiKey() : process.env.ANTHROPIC_API_KEY,
       fetchImpl: deps.fetchImpl ?? fetch,
@@ -339,5 +452,44 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
     return { ok: true, data: output.data };
   };
 
-  return { createPurchaseRequest, getPurchaseRequest, getPurchasePolicy, savePurchasePolicy, checkPurchasePolicy, rankQuotes };
+  /**
+   * Puerto para el comparador de Nano (decisión 21 del README): lee las
+   * cotizaciones de la compra, las ordena con rankQuotes y devuelve la forma
+   * EXACTA de comparatorRankingSchema (un motivo de texto por cotización).
+   */
+  const rankSupplierQuotes: RankSupplierQuotes = async (ctx, input) => {
+    // Sin "quotes": rankQuotes las lee de supplier_quotes.
+    const ranked = await rankQuotes(ctx, { purchase_request_id: input?.purchase_request_id });
+    if (!ranked.ok) return ranked;
+    const { ranking, recommended_quote_id, explanation, explanation_source } = ranked.data;
+
+    // Si ninguna sirve no hay recomendada: error explícito con el porqué.
+    if (recommended_quote_id === null) return fail("NOT_FOUND", explanation, false);
+
+    const output = comparatorRankingSchema.safeParse({
+      ranking: ranking.map((rank) => ({
+        quote_id: rank.quote_id,
+        // Un solo texto: los motivos unidos con " · " (y, si califica, qué haría el agente al pagar).
+        reason: rank.eligible
+          ? rank.reasons.join(" · ") + (rank.policy ? ` · ${POLICY_DECISION_LABELS[rank.policy.decision]}` : "")
+          : `No califica: ${rank.reasons.join(" · ")}`,
+      })),
+      recommended_quote_id,
+      // No hacemos pasar una explicación de reglas por una de IA: la rotulamos.
+      // Se corta DESPUÉS de agregar el rótulo, así el total nunca pasa de 4000.
+      explanation: recortarExplicacion(explanation_source === "ai" ? explanation : RULES_EXPLANATION_PREFIX + explanation),
+    });
+    if (!output.success) return fail("PROVIDER_ERROR", "No pudimos armar la comparación de cotizaciones.", false);
+    return { ok: true, data: output.data };
+  };
+
+  return {
+    createPurchaseRequest,
+    getPurchaseRequest,
+    getPurchasePolicy,
+    savePurchasePolicy,
+    checkPurchasePolicy,
+    rankQuotes,
+    rankSupplierQuotes,
+  };
 }

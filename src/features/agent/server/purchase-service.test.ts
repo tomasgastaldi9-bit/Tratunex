@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { pesosToAtomic } from "../../../contracts/purchases";
-import { createPurchaseService, type PurchaseServiceDeps } from "./purchase-service";
+import { comparatorRankingSchema, pesosToAtomic, RULES_EXPLANATION_PREFIX } from "../../../contracts/purchases";
+import type { ComparatorQuote } from "../../voice/server/quote-import";
+import { createPurchaseService, type GetContactDep, type ListSupplierQuotesDep, type PurchaseServiceDeps } from "./purchase-service";
 
 // Espiamos console.error: el servicio anota los errores raros en el log del servidor.
 let consoleError: MockInstance<typeof console.error>;
@@ -337,5 +338,201 @@ describe("rankQuotes", () => {
     const { service } = fakeClient({ tables: tables(), deps: { getApiKey: () => "k", fetchImpl: fetchImpl as unknown as typeof fetch } });
     expect(await service.rankQuotes(ctx, input)).toMatchObject({ ok: true, data: { explanation: "Conviene Descartables Sur.", explanation_source: "ai" } });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUY-03 (2): rankQuotes lee las cotizaciones de supplier_quotes y el puerto
+// rankSupplierQuotes para el comparador de Nano. Voz y CRM son falsos.
+// ---------------------------------------------------------------------------
+
+// Una cotización como la entrega listSupplierQuotes de Voz (precio en centavos de pesos).
+function storedQuote(over: Partial<ComparatorQuote> = {}): ComparatorQuote {
+  return {
+    id: "q-sirve",
+    company_id: company,
+    purchase_request_id: requestId,
+    supplier_contact_id: supplier,
+    // 18000 centavos = 180 pesos por unidad → 500 × 180 = $ 90.000 (dentro del presupuesto).
+    unit_price: { amount_atomic: "18000", currency: "ARS", decimals: 2 },
+    can_supply: "yes",
+    available_quantity: 1000,
+    minimum_order_quantity: null,
+    // Plazo desconocido a propósito: así la prueba no depende de la fecha de hoy.
+    lead_time_days: null,
+    lead_time_text: null,
+    price_includes_vat: "unknown",
+    delivery_included: "unknown",
+    accepts_argt: "yes",
+    payment_terms: null,
+    notes: null,
+    summary: "Cotización de prueba.",
+    source: { kind: "call", call_id: "77777777-7777-4777-8777-777777777777", transport: "web" },
+    created_at: "2026-11-07T12:00:00Z",
+    ...over,
+  };
+}
+
+// Tres cotizaciones: la que sirve, una que no puede entregar (otro proveedor) y una en dólares (mismo proveedor).
+const storedQuotes = [
+  storedQuote(),
+  storedQuote({ id: "q-no-puede", supplier_contact_id: otherSupplier, unit_price: { amount_atomic: "15000", currency: "ARS", decimals: 2 }, can_supply: "no" }),
+  storedQuote({ id: "q-dolares", unit_price: { amount_atomic: "15000", currency: "USD", decimals: 2 } }),
+];
+
+const contactNames: Record<string, { name: string; organization: string | null }> = {
+  [supplier]: { name: "Ana", organization: "Descartables Sur" },
+  [otherSupplier]: { name: "Beto Pérez", organization: null },
+};
+
+/** Arma el servicio con Voz y CRM falsos (y sin clave de Claude, salvo que se pida). */
+function quotesService(opts: { list?: ListSupplierQuotesDep; contact?: GetContactDep; apiKey?: string; fetchImpl?: typeof fetch } = {}) {
+  const listSupplierQuotes = vi.fn<ListSupplierQuotesDep>(opts.list ?? (async () => ({ ok: true, data: { items: storedQuotes } })));
+  const getContact = vi.fn<GetContactDep>(
+    opts.contact ??
+      (async (_ctx, { contact_id }) =>
+        contactNames[contact_id]
+          ? { ok: true, data: { contact: contactNames[contact_id] } }
+          : { ok: false, error: { code: "NOT_FOUND", message: "No existe", retryable: false } }),
+  );
+  const client = fakeClient({
+    tables: { purchase_requests: { data: savedRequest, error: null }, purchase_policies: { data: policy, error: null } },
+    deps: {
+      getApiKey: () => opts.apiKey,
+      fetchImpl: opts.fetchImpl ?? (vi.fn() as unknown as typeof fetch),
+      listSupplierQuotes,
+      getContact,
+    },
+  });
+  return { ...client, listSupplierQuotes, getContact };
+}
+
+describe("rankQuotes sin quotes (lee supplier_quotes)", () => {
+  it("lee las cotizaciones de la compra en Voz y el nombre de cada proveedor en el CRM", async () => {
+    const { service, listSupplierQuotes, getContact } = quotesService();
+    const r = await service.rankQuotes(ctx, { purchase_request_id: requestId });
+
+    expect(listSupplierQuotes).toHaveBeenCalledWith(ctx, { purchase_request_id: requestId });
+    // Un pedido por proveedor distinto (dos cotizaciones son del mismo).
+    expect(getContact).toHaveBeenCalledTimes(2);
+    expect(r).toMatchObject({
+      ok: true,
+      data: {
+        recommended_quote_id: "q-sirve",
+        ranking: [
+          // Organización si tiene; si no, el nombre del contacto.
+          { quote_id: "q-sirve", supplier_name: "Descartables Sur", eligible: true, total_atomic: pesosToAtomic(90000), policy: { decision: "auto_pay" } },
+          { quote_id: "q-no-puede", supplier_name: "Beto Pérez", eligible: false, reasons: ["Tiene 0 de 500"] },
+          { quote_id: "q-dolares", supplier_name: "Descartables Sur", eligible: false, total_atomic: null, reasons: ["No dio precio en pesos"] },
+        ],
+      },
+    });
+  });
+
+  it("si el CRM falla (error o excepción), usa \"Proveedor sin nombre\" y el ranking sigue", async () => {
+    const conError = quotesService({ contact: async () => ({ ok: false, error: { code: "PROVIDER_UNAVAILABLE", message: "x", retryable: true } }) });
+    const a = await conError.service.rankQuotes(ctx, { purchase_request_id: requestId });
+    expect(a.ok).toBe(true);
+    if (a.ok) expect(a.data.ranking.map((q) => q.supplier_name)).toEqual(["Proveedor sin nombre", "Proveedor sin nombre", "Proveedor sin nombre"]);
+
+    const conExcepcion = quotesService({
+      contact: async () => {
+        throw new Error("boom");
+      },
+    });
+    const b = await conExcepcion.service.rankQuotes(ctx, { purchase_request_id: requestId });
+    expect(b).toMatchObject({ ok: true, data: { recommended_quote_id: "q-sirve" } });
+    if (b.ok) expect(new Set(b.data.ranking.map((q) => q.supplier_name))).toEqual(new Set(["Proveedor sin nombre"]));
+  });
+
+  it("sin cotizaciones guardadas → NOT_FOUND", async () => {
+    const { service } = quotesService({ list: async () => ({ ok: true, data: { items: [] } }) });
+    expect(await service.rankQuotes(ctx, { purchase_request_id: requestId })).toEqual({
+      ok: false,
+      error: { code: "NOT_FOUND", message: "Todavía no hay cotizaciones para esta compra.", retryable: false },
+    });
+  });
+
+  it("más de 20 cotizaciones → VALIDATION_ERROR (no se recorta en silencio)", async () => {
+    const items = Array.from({ length: 21 }, (_, i) => storedQuote({ id: `q-${i}` }));
+    const { service, getContact } = quotesService({ list: async () => ({ ok: true, data: { items } }) });
+    expect(await service.rankQuotes(ctx, { purchase_request_id: requestId })).toEqual({
+      ok: false,
+      error: { code: "VALIDATION_ERROR", message: "Hay más de 20 cotizaciones; filtrá antes de comparar.", retryable: false },
+    });
+    expect(getContact).not.toHaveBeenCalled();
+  });
+
+  it("si Voz devuelve un error, rankQuotes devuelve el mismo error", async () => {
+    const vozError = { ok: false as const, error: { code: "PROVIDER_UNAVAILABLE" as const, message: "Voz no respondió", retryable: true } };
+    const { service } = quotesService({ list: async () => vozError });
+    expect(await service.rankQuotes(ctx, { purchase_request_id: requestId })).toEqual(vozError);
+  });
+
+  it("si le pasan quotes, no lee Voz ni el CRM (como antes)", async () => {
+    const { service, listSupplierQuotes, getContact } = quotesService();
+    const quotes = [{ quote_id: "q-1", supplier_contact_id: supplier, supplier_name: "Descartables Sur", unit_price_atomic: pesosToAtomic(180), available_quantity: null, delivery_days: null, accepts_argt: "yes" as const, origin: "web" as const }];
+    expect(await service.rankQuotes(ctx, { purchase_request_id: requestId, quotes })).toMatchObject({ ok: true, data: { recommended_quote_id: "q-1" } });
+    expect(listSupplierQuotes).not.toHaveBeenCalled();
+    expect(getContact).not.toHaveBeenCalled();
+  });
+});
+
+describe("rankSupplierQuotes (puerto del comparador)", () => {
+  it("devuelve la forma estricta del comparador, con el prefijo \"sin IA\" si explicaron las reglas", async () => {
+    const { service } = quotesService();
+    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    expect(r.data.ranking).toEqual([
+      { quote_id: "q-sirve", reason: "El precio total más bajo · Acepta ARGt · Paga solo" },
+      { quote_id: "q-no-puede", reason: "No califica: Tiene 0 de 500" },
+      { quote_id: "q-dolares", reason: "No califica: No dio precio en pesos" },
+    ]);
+    expect(r.data.recommended_quote_id).toBe("q-sirve");
+    expect(r.data.explanation.startsWith(RULES_EXPLANATION_PREFIX)).toBe(true);
+    // Exactamente las claves que valida el comparador (estricto: ni una de más).
+    expect(Object.keys(r.data).sort()).toEqual(["explanation", "ranking", "recommended_quote_id"]);
+    expect(comparatorRankingSchema.safeParse(r.data).success).toBe(true);
+  });
+
+  it("si la explicación la escribió la IA, va tal cual (sin prefijo)", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: "Conviene Descartables Sur." }] })));
+    const { service } = quotesService({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    expect(await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId })).toMatchObject({
+      ok: true,
+      data: { recommended_quote_id: "q-sirve", explanation: "Conviene Descartables Sur." },
+    });
+  });
+
+  it("una explicación de más de 4000 caracteres se corta a 4000 (con \"…\") y no frena la comparación", async () => {
+    const larga = "x".repeat(5000);
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: larga }] })));
+    const { service } = quotesService({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.explanation).toBe(`${"x".repeat(3999)}…`);
+    expect(r.data.explanation).toHaveLength(4000);
+    expect(comparatorRankingSchema.safeParse(r.data).success).toBe(true);
+  });
+
+  it("si ninguna sirve → NOT_FOUND con la explicación como mensaje", async () => {
+    const items = [storedQuote({ can_supply: "no" })];
+    const { service } = quotesService({ list: async () => ({ ok: true, data: { items } }) });
+    const ranked = await service.rankQuotes(ctx, { purchase_request_id: requestId });
+    expect(ranked).toMatchObject({ ok: true, data: { recommended_quote_id: null } });
+    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
+    expect(r).toMatchObject({ ok: false, error: { code: "NOT_FOUND", retryable: false } });
+    if (!r.ok && ranked.ok) expect(r.error.message).toBe(ranked.data.explanation);
+  });
+
+  it("si rankQuotes falla, devuelve el mismo error", async () => {
+    const vozError = { ok: false as const, error: { code: "PROVIDER_UNAVAILABLE" as const, message: "Voz no respondió", retryable: true } };
+    const { service } = quotesService({ list: async () => vozError });
+    expect(await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId })).toEqual(vozError);
+    // Una compra inválida también llega como el error de rankQuotes.
+    expect(await service.rankSupplierQuotes(ctx, { purchase_request_id: "no-es-uuid" })).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
   });
 });
