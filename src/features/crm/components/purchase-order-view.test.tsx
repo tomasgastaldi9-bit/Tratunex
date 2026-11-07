@@ -71,9 +71,19 @@ describe("ORD03: lectura de órdenes y aprobación humana", () => {
       explorer_url: `https://arbiscan.io/tx/${hash}`, amount_atomic: order.amount_atomic!, chain: "arbitrum", token: "ARGt" };
     const unknown = renderToStaticMarkup(<PurchaseOrderView company={company} order={approved} payment={payment} paymentAvailable />);
     expect(unknown).toContain("Verificación pendiente");
+    expect(unknown).toContain("Un hash preparado no demuestra que la transacción haya sido enviada.");
     expect(unknown).not.toContain("Pagada");
     const confirmed = renderToStaticMarkup(<PurchaseOrderView company={company} order={approved} payment={{ ...payment, status: "confirmed" }} paymentAvailable />);
     expect(confirmed).toContain("Pagada");
     expect(confirmed).toContain(`href="https://arbiscan.io/tx/${hash}"`);
+  });
+  it("un fallo al consultar pagos no se presenta como ausencia de pago y bloquea el botón", () => {
+    const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={order} paymentAvailable paymentLookupFailed />);
+    expect(html).toContain("No se pudo consultar el estado del pago");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Aprobar y pagar<\/button>/);
+  });
+  it("advierte que la intención de pago no se cancela luego de aprobar", () => {
+    const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={order} paymentAvailable />);
+    expect(html).toContain("Una vez iniciado, el intento no se puede cancelar desde la aplicación");
   });
 });
