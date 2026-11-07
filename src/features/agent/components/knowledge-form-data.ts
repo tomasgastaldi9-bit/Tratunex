@@ -143,6 +143,20 @@ export function knowledgeFieldErrors(error: ZodError): KnowledgeFieldErrors {
   return errores;
 }
 
+/**
+ * El título del Alert cuando no se pudo guardar por datos mal cargados.
+ *  - Si hay al menos un campo de un ítem marcado, el título manda a mirarlos.
+ *  - Si el ÚNICO error es el de la lista entera ("_list": demasiados ítems,
+ *    se pasó del máximo o datos ilegibles), no hay ningún campo marcado:
+ *    decir "Revisá los campos marcados" confundiría. Usamos ese mensaje como título.
+ */
+export const KNOWLEDGE_FIELDS_TITLE = "Revisá los campos marcados.";
+
+export function knowledgeFailureTitle(errores: KnowledgeFieldErrors): string {
+  const hayCampoMarcado = Object.keys(errores).some((clave) => clave !== "_list");
+  return !hayCampoMarcado && errores._list !== undefined ? errores._list : KNOWLEDGE_FIELDS_TITLE;
+}
+
 // ---------------------------------------------------------------------------
 // Aviso de "guardamos": viaja en la dirección (?saved=3&created=1)
 // ---------------------------------------------------------------------------

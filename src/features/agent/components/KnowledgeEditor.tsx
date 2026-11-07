@@ -122,11 +122,16 @@ export function KnowledgeEditor({ initialItems, baseVersion, actionId, canEdit }
 
   const formRef = useRef<HTMLFormElement>(null);
   const idContador = useId();
+  const idMotivo = useId();
 
   const lista = items.map((item) => item.datos);
   const usados = knowledgeTextLength(lista);
   const tono = knowledgeCounterTone(usados);
   const excedido = tono === "danger";
+  // Guardar una lista vacía cuando nunca hubo conocimiento crearía una versión
+  // nueva sin ningún cambio real. Pero si ya había ítems y la persona los sacó
+  // todos, vaciar el conocimiento SÍ es un cambio: ahí el botón sigue disponible.
+  const nadaQueGuardar = initialItems.length === 0 && items.length === 0;
 
   // Después de cada respuesta con error, llevamos el foco al primer campo con
   // error (o al botón, si el error es general) para que la persona sepa dónde seguir.
@@ -276,21 +281,34 @@ export function KnowledgeEditor({ initialItems, baseVersion, actionId, canEdit }
           la lista entera (demasiados ítems): qué pasó, arriba del botón. */}
       {!pending && state.message && (
         <Alert tone="danger" title={state.message}>
-          {state.fieldErrors._list}
+          {/* Si el título ya es este mismo mensaje, no lo repetimos. */}
+          {state.fieldErrors._list !== state.message ? state.fieldErrors._list : null}
         </Alert>
       )}
 
       {/* Si no es admin, no hay botón: no tendría sentido apretarlo. */}
       {canEdit && (
-        <div>
+        <div className="flex flex-col items-start gap-2">
+          {/* Motivo pegado al botón. Sin aria-live: el aviso de arriba ya es la
+              única zona "en vivo" de este mensaje; acá se lee al llegar al botón. */}
+          {excedido && (
+            <p id={idMotivo} className="text-xs leading-snug font-bold text-danger">
+              Te pasaste del máximo. Acortá textos o sacá ítems.
+            </p>
+          )}
+          {nadaQueGuardar && (
+            <p id={idMotivo} className="text-xs leading-snug text-ink-muted">
+              Agregá al menos un producto o una pregunta para guardar.
+            </p>
+          )}
           <Button
             type="submit"
             variant="primary"
             loading={pending}
             // Si se pasó del máximo no se puede guardar (el aviso de arriba dice qué hacer).
-            disabled={excedido}
-            // Al llegar al botón con el teclado, el lector de pantalla también lee el contador.
-            aria-describedby={idContador}
+            disabled={excedido || nadaQueGuardar}
+            // Al llegar al botón con el teclado, el lector de pantalla también lee el contador y el motivo.
+            aria-describedby={excedido || nadaQueGuardar ? `${idContador} ${idMotivo}` : idContador}
           >
             {pending ? "Guardando…" : "Guardar conocimiento"}
           </Button>
