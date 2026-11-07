@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tratunex · Sistema de diseño</title>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./components.css" />
+    <link rel="stylesheet" href="./library.css" />
+    <script src="./library.js" defer></script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Ir al contenido</a>
+    <aside class="library-sidebar">
+      <a href="../../features/crm/prototype/index.html" class="library-brand"><span aria-hidden="true">t.</span> tratunex</a>
+      <p class="library-nav-label">DISEÑO COMPARTIDO</p>
+      <nav aria-label="Secciones de la guía">
+        <a href="#fundamentos">Fundamentos</a>
+        <a href="#componentes">Componentes</a>
+        <a href="#patrones">Patrones por módulo</a>
+        <a href="#implementacion">Implementación</a>
+      </nav>
+      <a class="library-back" href="../../features/crm/prototype/index.html">← Volver al CRM</a>
+      <div class="library-version"><strong>Interfaz v1</strong><span>Referencia para el equipo</span></div>
+    </aside>
+    <div class="library-workspace">
+      <header class="library-topbar"><span>Tratunex <span aria-hidden="true">/</span> Sistema de diseño</span><a href="./README.md">Guía de implementación ↗</a></header>
+      <main id="main" class="library-main">
+        <div class="library-page-heading">
+          <div><span class="library-eyebrow">BASE VISUAL COMPARTIDA</span><h1>Sistema de diseño</h1><p>Los mismos colores, componentes y patrones en cada parte de Tratunex.</p></div>
+          <a class="button button-primary" href="../../features/crm/prototype/index.html">Explorar el CRM →</a>
+        </div>
+
+        <section id="fundamentos" class="library-section" aria-labelledby="foundations-title">
+          <div class="library-section-heading"><h2 id="foundations-title">Fundamentos</h2><p>Inter, verde bosque y superficies claras.</p></div>
+          <div class="library-palette">
+            <div class="library-swatch"><div style="background:var(--color-primary)"></div><strong>Acción principal</strong><code>#216e4e</code></div>
+            <div class="library-swatch"><div style="background:var(--color-text)"></div><strong>Texto</strong><code>#172b25</code></div>
+            <div class="library-swatch"><div style="background:var(--color-bg)"></div><strong>Fondo</strong><code>#f6f7f4</code></div>
+            <div class="library-swatch"><div style="background:var(--color-surface)"></div><strong>Superficie</strong><code>#ffffff</code></div>
+            <div class="library-swatch"><div style="background:var(--color-success-soft)"></div><strong>Confirmación</strong><code>#e8f3ec</code></div>
+            <div class="library-swatch"><div style="background:var(--color-warning-soft)"></div><strong>Atención</strong><code>#fff5df</code></div>
+          </div>
+          <div class="library-grid library-foundations-grid">
+            <article class="panel">
+              <h3>Tipografía</h3>
+              <div class="type-row"><span class="type-title">Pipeline</span><code>30 / 600</code></div>
+              <div class="type-row"><span class="type-section">Próximas acciones</span><code>18 / 600</code></div>
+              <div class="type-row"><span>El seguimiento de cada contacto.</span><code>14 / 400</code></div>
+              <div class="type-row"><span class="type-label">Fecha de seguimiento</span><code>13 / 600</code></div>
+              <div class="type-row"><span class="type-meta">Hora de Argentina · UTC−3</span><code>12 / 400</code></div>
+            </article>
+            <article class="panel">
+              <h3>Espacio y forma</h3>
+              <p class="library-muted">Escala de 4 px para mantener el mismo ritmo entre módulos.</p>
+              <div class="space-scale" aria-label="Escala de espaciado de 4, 8, 12, 16, 24 y 32 píxeles">
+                <div><i style="width:4px"></i><span>4</span></div><div><i style="width:8px"></i><span>8</span></div><div><i style="width:12px"></i><span>12</span></div><div><i style="width:16px"></i><span>16</span></div><div><i style="width:24px"></i><span>24</span></div><div><i style="width:32px"></i><span>32</span></div>
+              </div>
+              <div class="radius-examples"><div style="border-radius:6px">6 px<small>Estados</small></div><div style="border-radius:10px">10 px<small>Controles</small></div><div style="border-radius:14px">14 px<small>Paneles</small></div></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="componentes" class="library-section" aria-labelledby="components-title">
+          <div class="library-section-heading"><h2 id="components-title">Componentes</h2><p>Usá estas variantes para conservar la jerarquía visual.</p></div>
+          <div class="library-grid">
+            <article class="panel">
+              <h3>Acciones</h3>
+              <div class="example-row"><button class="button button-primary" data-example="Guardar cambios">Guardar cambios</button><button class="button button-secondary" data-example="Cancelar">Cancelar</button></div>
+              <div class="example-row"><button class="button button-danger" data-example="Eliminar ejemplo">Eliminar</button><button class="button" disabled>Procesando…</button></div>
+              <p id="action-feedback" class="field-help" role="status">Probá las variantes para ver su respuesta local.</p>
+              <code class="library-code">button button-primary</code>
+            </article>
+            <article class="panel">
+              <h3>Estados</h3>
+              <div class="example-row"><span class="badge badge-green">Finalizada</span><span class="badge badge-blue">En curso</span><span class="badge badge-amber">Estado desconocido</span><span class="badge badge-red">Fallida</span><span class="badge">Pendiente</span></div>
+              <div class="example-row"><span class="badge">Mock</span><span class="badge badge-blue">Voz web</span><span class="badge">Teléfono real</span></div>
+              <p class="field-help">El estado y el modo de integración tienen etiquetas propias.</p>
+              <code class="library-code">badge badge-amber</code>
+            </article>
+            <article class="panel">
+              <h3>Campos</h3>
+              <label class="field-label" for="example-contact">Nombre del contacto</label><input id="example-contact" placeholder="Nombre y apellido" />
+              <label class="field-label field-spaced" for="example-phone">Teléfono</label><input id="example-phone" value="202 555 0100" aria-invalid="true" aria-describedby="phone-error" />
+              <p id="phone-error" class="field-error">Ingresá el código de país y el teléfono con formato +12025550100.</p>
+              <code class="library-code">field-label · aria-invalid · field-error</code>
+            </article>
+            <article class="panel">
+              <h3>Mensajes</h3>
+              <div class="alert alert-success"><strong>Cambios guardados.</strong> La configuración está actualizada.</div>
+              <div class="alert alert-warning"><strong>Estado de llamada desconocido.</strong> Verificá el intento antes de volver a llamar.</div>
+              <div class="alert alert-danger"><strong>Error al cargar las tareas.</strong> Volvé a intentar.</div>
+              <code class="library-code">alert alert-warning</code>
+            </article>
+          </div>
+        </section>
+
+        <section id="patrones" class="library-section" aria-labelledby="patterns-title">
+          <div class="library-section-heading"><h2 id="patterns-title">Patrones por módulo</h2><p>Ejemplos con datos ficticios para trasladar el diseño a cada dominio.</p></div>
+          <div class="panel library-pattern-panel">
+            <div class="tabs" role="tablist" aria-label="Módulos de ejemplo">
+              <button id="tab-agent" class="tab" role="tab" aria-selected="true" aria-controls="pattern-agent" data-pattern="agent">Agente · Vale</button>
+              <button id="tab-prospects" class="tab" role="tab" aria-selected="false" aria-controls="pattern-prospects" data-pattern="prospects" tabindex="-1">Prospección · Tomás</button>
+              <button id="tab-calls" class="tab" role="tab" aria-selected="false" aria-controls="pattern-calls" data-pattern="calls" tabindex="-1">Llamadas · Bautista</button>
+            </div>
+            <section id="pattern-agent" role="tabpanel" aria-labelledby="tab-agent" class="pattern-body">
+              <div class="pattern-heading"><div><h3>Contexto de la empresa</h3><p>Información que el agente utiliza en cada conversación.</p></div><span class="badge">Mock</span></div>
+              <form id="example-agent-form">
+                <div class="library-grid form-grid">
+                  <div><label class="field-label" for="agent-company">Empresa</label><input id="agent-company" name="company" value="Distribuidora Prisma Ficticia" required /></div>
+                  <div><label class="field-label" for="agent-industry">Rubro</label><select id="agent-industry" name="industry"><option>Distribución de insumos</option><option>Agencia de marketing</option><option>Servicios profesionales</option></select></div>
+                </div>
+                <label class="field-label field-spaced" for="agent-description">Qué ofrece la empresa</label><textarea id="agent-description" name="description" required>Distribuidora ficticia de insumos para oficinas. El objetivo de la llamada de ejemplo es conocer las necesidades del contacto y acordar un próximo paso.</textarea>
+                <p class="field-help">Incluí la propuesta de valor y los criterios que ayudan a identificar interés.</p>
+                <div class="form-footer"><p id="form-feedback" role="status" class="library-muted">Vista de ejemplo editable.</p><button class="button button-primary" type="submit">Guardar ejemplo</button></div>
+              </form>
+            </section>
+            <section id="pattern-prospects" role="tabpanel" aria-labelledby="tab-prospects" class="pattern-body" hidden>
+              <div class="pattern-heading"><div><h3>Prospectos</h3><p>Revisá la fuente y elegí qué contactos incorporar.</p></div><span class="badge">Mock</span></div>
+              <div class="pattern-toolbar"><label class="library-search"><span class="field-label">Buscar en los ejemplos</span><input type="search" id="example-search" placeholder="Empresa o rubro" /></label><span id="prospect-count" class="library-muted" role="status">3 prospectos ficticios</span></div>
+              <div class="library-table-scroll" tabindex="0" role="region" aria-label="Tabla de prospectos desplazable">
+                <table class="library-table"><thead><tr><th>Empresa</th><th>Rubro</th><th>Fuente</th><th>Estado</th></tr></thead><tbody id="example-prospects">
+                  <tr><td><strong>Oficinas Norte Ficticias</strong><span>Alicia Demo</span></td><td>Servicios</td><td>CSV ficticio</td><td><span class="badge badge-blue">Por revisar</span></td></tr>
+                  <tr><td><strong>Estudio Ronda Ficticio</strong><span>Bruno Demo</span></td><td>Profesionales</td><td>Web ficticia</td><td><span class="badge badge-green">Importado</span></td></tr>
+                  <tr><td><strong>Taller Lumen Ficticio</strong><span>Clara Demo</span></td><td>Industria</td><td>CSV ficticio</td><td><span class="badge">Existente</span></td></tr>
+                </tbody></table>
+              </div>
+              <p id="prospect-empty" class="library-empty" role="status" hidden>La búsqueda no coincide con estos ejemplos.</p>
+            </section>
+            <section id="pattern-calls" role="tabpanel" aria-labelledby="tab-calls" class="pattern-body" hidden>
+              <div class="pattern-heading"><div><h3>Detalle de llamada</h3><p>Hugo Demo · Espacio Marea Ficticio</p></div><span class="badge">Mock</span></div>
+              <div class="alert alert-warning"><strong>Estado desconocido.</strong> El intento necesita verificarse antes de iniciar otra llamada.</div>
+              <dl class="call-facts"><div><dt>Inicio</dt><dd>7 nov · 11:59</dd></div><div><dt>Modo</dt><dd>Mock</dd></div><div><dt>Resultado</dt><dd>Pendiente de confirmación</dd></div></dl>
+              <div class="call-summary-example"><h4>Resultado anterior</h4><p>El intento previo terminó con un fallo técnico antes de conversar con el contacto.</p><span class="badge badge-red">Fallida</span></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="implementacion" class="library-section" aria-labelledby="implementation-title">
+          <div class="library-section-heading"><h2 id="implementation-title">Implementación compartida</h2><p>Tokens y primitivas disponibles en <code>src/components/ui/</code>.</p></div>
+          <div class="library-grid">
+            <article class="panel"><h3>Importá los estilos base</h3><pre><code>import "@/components/ui/tokens.css";
+import "@/components/ui/components.css";</code></pre><p class="library-muted">Estos estilos ya se importan una vez desde el layout global.</p><a href="./README.md">Leer medidas y reglas de implementación →</a></article>
+            <article class="panel"><h3>Componé cada pantalla</h3><ul class="implementation-list"><li>Un encabezado con título y acción principal.</li><li>Paneles de formulario para configurar el agente.</li><li>Tablas para prospección, llamadas y tareas.</li><li>Detalle con contenido principal y próxima acción.</li><li>Los mismos estados de carga, vacío, error y permisos.</li></ul></article>
+          </div>
+        </section>
+      </main>
+      <footer class="library-footer">Tratunex · Interfaz v1 <span>Componentes compartidos · Nano</span></footer>
+    </div>
+  </body>
+</html>
