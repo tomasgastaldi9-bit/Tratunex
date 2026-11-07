@@ -37,5 +37,7 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_URL=$(jq -r .API_URL <<< "$status")" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(jq -r .PUBLISHABLE_KEY <<< "$status")" >> "$GITHUB_ENV"
           echo "LOCAL_SUPABASE_SERVICE_ROLE_KEY=$(jq -r .SERVICE_ROLE_KEY <<< "$status")" >> "$GITHUB_ENV"
+          echo "SUPABASE_SECRET_KEY=$(jq -r .SERVICE_ROLE_KEY <<< "$status")" >> "$GITHUB_ENV"
+          echo "DISCOVERY_MODE=mock" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100" >> "$GITHUB_ENV"
       - run: npm run test:e2e
