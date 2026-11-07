@@ -54,6 +54,8 @@ export function Select({
   hint,
   error,
   id,
+  // Lo sacamos aparte para pasárselo a Field, que lo SUMA a la ayuda y al error.
+  "aria-describedby": describedBy,
   required,
   options,
   placeholder,
@@ -76,6 +78,7 @@ export function Select({
       error={error}
       required={required}
       id={id}
+      describedBy={describedBy}
       className={className}
     >
       {(propsCampo) => (
