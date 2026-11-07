@@ -22,6 +22,14 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 - `company_id`, actor y `action_id` llegan en el contexto del servidor, nunca en el input.
 - `NormalizedCallResultV1Schema`: sin conversación con una persona (buzón, desconocido o fallo técnico) el resultado es `not_assessed`, sin score, sin calificación y sin pedido de no contacto.
 
+## Pantallas y API (TRA-49)
+
+- `/calls`: lista de llamadas de la empresa activa con estado, cliente potencial, próximo llamado y modo.
+- `/calls/[id]`: resultado, grabación, transcripción y datos técnicos.
+- `GET /api/voice/calls?contact_id=&cursor=&limit=` → `Result<{ items, next_cursor }>` (máx. 50 por página). Es lo que usa el CRM para el historial de un contacto.
+- `POST /api/voice/calls` con header `Idempotency-Key` (una clave nueva por clic) y cuerpo `StartCallInput` → `Result<{ call }>`, HTTP 202.
+- En `mock` las pantallas muestran llamadas de ejemplo rotuladas como "Datos de prueba"; en `live` leen la tabla `calls` con la sesión del usuario (RLS). Resultado, grabación y transcripción aparecen cuando VOZ-07 guarde el reporte procesado.
+
 ## Análisis de fin de llamada (TRA-47)
 
 `server/call-analysis.ts` convierte el `end-of-call-report` de Vapi en un `CallResultV1` normalizado.

@@ -76,7 +76,33 @@ export const DispatchDueCallsInputSchema = z.object({
   limit: z.number().int().positive().max(5),
 }).strict();
 
+// Detalle de una llamada para las pantallas de Voz y el historial del CRM.
+// Los campos de resultado quedan en null hasta que Voz procese el reporte final.
+export const CallDetailDTOSchema = CallDTOSchema.extend({
+  ended_at: UtcSchema.nullable(),
+  ended_reason: z.string().min(1).nullable(),
+  recording_url: WebUrlSchema.nullable(),
+  transcript: z.string().nullable(),
+  result: CallResultV1Schema.nullable(),
+});
+
+// En la lista no viaja la transcripción completa.
+export const CallListItemSchema = CallDetailDTOSchema.omit({ transcript: true });
+
+export const ListCallsInputSchema = z.object({
+  contact_id: IdSchema.optional(),
+  cursor: z.string().min(1).max(200).optional(),
+  limit: z.number().int().positive().max(50).optional(),
+}).strict();
+
+export const GetCallInputSchema = z.object({ call_id: IdSchema }).strict();
+
 export const StartCallDataSchema = z.object({ call: CallDTOSchema });
+export const ListCallsDataSchema = z.object({
+  items: z.array(CallListItemSchema),
+  next_cursor: z.string().nullable(),
+});
+export const GetCallDataSchema = z.object({ call: CallDetailDTOSchema });
 export const DispatchDueCallsDataSchema = z.object({
   processed: z.number().int().nonnegative(),
   pending: z.number().int().nonnegative(),
@@ -87,6 +113,8 @@ export const DispatchDueCallsDataSchema = z.object({
 export const voiceOperationSchemas = {
   startCall: { input: StartCallInputSchema, data: StartCallDataSchema },
   dispatchDueCalls: { input: DispatchDueCallsInputSchema, data: DispatchDueCallsDataSchema },
+  listCalls: { input: ListCallsInputSchema, data: ListCallsDataSchema },
+  getCall: { input: GetCallInputSchema, data: GetCallDataSchema },
 } as const;
 
 export type NextAction = z.infer<typeof NextActionSchema>;
@@ -98,3 +126,9 @@ export type StartCallInput = z.infer<typeof StartCallInputSchema>;
 export type DispatchDueCallsInput = z.infer<typeof DispatchDueCallsInputSchema>;
 export type StartCallData = z.infer<typeof StartCallDataSchema>;
 export type DispatchDueCallsData = z.infer<typeof DispatchDueCallsDataSchema>;
+export type CallDetailDTO = z.infer<typeof CallDetailDTOSchema>;
+export type CallListItem = z.infer<typeof CallListItemSchema>;
+export type ListCallsInput = z.infer<typeof ListCallsInputSchema>;
+export type GetCallInput = z.infer<typeof GetCallInputSchema>;
+export type ListCallsData = z.infer<typeof ListCallsDataSchema>;
+export type GetCallData = z.infer<typeof GetCallDataSchema>;
