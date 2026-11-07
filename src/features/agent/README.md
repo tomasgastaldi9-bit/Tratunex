@@ -151,3 +151,14 @@ Montos dentro de los JSON: como texto (`"100000000000000000000000"`), nunca como
 | BUY-02 Reglas | `/agent/rules` | `src/app/agent/rules/**`, `src/features/agent/components/PolicyForm.tsx`, `policy-form-data.ts` (+ test) |
 | Ambos (servidor) | — | `src/features/agent/server/purchase-service.ts` (+ test), `public.ts` |
 | Ambos (base) | — | migración `…_add_purchases.sql` + `supabase/tests/database/purchases.test.sql` |
+
+## BUY-03: elegir el mejor proveedor y explicarlo
+
+Contrato: `rankQuotes(ctx, { purchase_request_id, quotes })` en `src/contracts/purchases.ts`.
+
+17. **Las cotizaciones las manda quien las tiene.** La tabla `supplier_quotes` es de Bautista/Nano y todavía no existe; para no bloquearnos, `rankQuotes` recibe la lista (`quotes`) en vez de leerla. Este módulo lee la compra (`purchase_requests`) y las reglas de pago, y decide.
+18. **El orden lo decide una regla, no la IA** (así nunca "inventa" un ganador):
+    - **No califica** (va al final, con su motivo): sin precio; total (precio × cantidad) mayor al presupuesto; no acepta ARGt (`accepts_argt = "no"`); stock conocido menor a la cantidad; plazo conocido que llega después de la fecha pedida (contando días desde hoy en hora de Argentina).
+    - **Entre las que califican:** menor total; si empatan, menor plazo (desconocido al final); si empatan, acepta ARGt `"yes"` antes que `"unknown"`; si empatan, llamada antes que web antes que ejemplo.
+    - La recomendada es la primera que califica (o ninguna). A cada una que califica se le calcula qué haría el agente al pagarla con `decidePurchasePolicy`.
+19. **La IA solo explica.** Claude Haiku 5.5 (`claude-haiku-5-5`) escribe 2-3 frases en castellano a partir de un resumen en JSON del ranking (solo esos datos, sin inventar). Se llama con `fetch` a `https://api.anthropic.com/v1/messages` (sin librerías nuevas), con la clave `ANTHROPIC_API_KEY` del servidor y un tiempo máximo. **Si no hay clave, tarda, falla o rechaza, se usa una explicación armada con reglas** y `explanation_source = "rules"` (la pantalla lo rotula "sin IA"). La IA nunca hace fallar al ranking.

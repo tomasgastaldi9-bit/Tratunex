@@ -6,6 +6,7 @@ import type {
   CreatePurchaseRequest,
   GetPurchasePolicy,
   GetPurchaseRequest,
+  RankQuotes,
   SavePurchasePolicy,
 } from "@/contracts/purchases";
 import { createRequestSupabaseClient } from "@/lib/supabase/request";
@@ -65,3 +66,13 @@ export const savePurchasePolicy: SavePurchasePolicy = (ctx, input) =>
 /** Decide si un pago se hace solo, necesita aprobación o se rechaza. La llama payInvoice (Tomás). */
 export const checkPurchasePolicy: CheckPurchasePolicy = (ctx, input) =>
   purchaseReadService.checkPurchasePolicy(ctx, input);
+
+/**
+ * Ordena las cotizaciones de una compra, recomienda una y lo explica (BUY-03).
+ * ESQUELETO: responde un error explícito hasta que la tarea de BUY-03 lo
+ * implemente, sin cambiar la firma (src/contracts/purchases.ts).
+ */
+export const rankQuotes: RankQuotes = async () => ({
+  ok: false,
+  error: { code: "PROVIDER_ERROR", message: "Esta función todavía no está implementada", retryable: false },
+});

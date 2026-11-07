@@ -250,3 +250,89 @@ export type CheckPurchasePolicy = (
   ctx: Ctx,
   input: CheckPurchasePolicyInput,
 ) => Promise<Result<PolicyCheck>>;
+
+// ---------------------------------------------------------------------------
+// BUY-03: elegir el mejor proveedor y explicarlo (rankQuotes)
+// ---------------------------------------------------------------------------
+
+/** De dónde salió la cotización. "example" = dato de prueba rotulado (brief v3 §4). */
+export const quoteOriginSchema = z.enum(["call", "web", "example"]);
+export type QuoteOrigin = z.infer<typeof quoteOriginSchema>;
+
+export const QUOTE_ORIGIN_LABELS: Record<QuoteOrigin, string> = {
+  call: "Llamada",
+  web: "Web",
+  example: "Datos de prueba",
+};
+
+/** Sí / no / no se sabe (igual que lo que extrae la llamada de Bautista). */
+export const yesNoUnknownSchema = z.enum(["yes", "no", "unknown"]);
+export type YesNoUnknown = z.infer<typeof yesNoUnknownSchema>;
+
+/**
+ * Una cotización tal como la necesita el ranking. La guarda y la manda quien
+ * tiene las cotizaciones (Nano en el comparador): este módulo no es dueño de
+ * supplier_quotes, solo decide cuál conviene.
+ */
+export const quoteForRankingSchema = z.object({
+  quote_id: z.string().trim().min(1),
+  supplier_contact_id: z.uuid(),
+  supplier_name: z.string().trim().min(1).max(120),
+  /** Precio por unidad en unidades mínimas de ARGt. null = no dio precio. */
+  unit_price_atomic: atomicAmountSchema.nullable(),
+  /** Cuántas puede entregar. null = no lo sabemos. */
+  available_quantity: z.number().int().min(0).nullable(),
+  /** En cuántos días entrega. null = no lo sabemos. */
+  delivery_days: z.number().int().min(0).max(365).nullable(),
+  accepts_argt: yesNoUnknownSchema,
+  origin: quoteOriginSchema,
+});
+export type QuoteForRanking = z.infer<typeof quoteForRankingSchema>;
+
+export const RANK_QUOTES_MAX = 20;
+
+export const rankQuotesInputSchema = z.object({
+  purchase_request_id: z.uuid(),
+  quotes: z
+    .array(quoteForRankingSchema)
+    .min(1, "Hace falta al menos una cotización")
+    .max(RANK_QUOTES_MAX, `Mandá como máximo ${RANK_QUOTES_MAX} cotizaciones`),
+});
+export type RankQuotesInput = z.infer<typeof rankQuotesInputSchema>;
+
+/** Una cotización ya ordenada, con el porqué. */
+export const quoteRankSchema = z.object({
+  quote_id: z.string(),
+  supplier_contact_id: z.string(),
+  supplier_name: z.string(),
+  /** 1 = la mejor. Las que no califican van al final. */
+  position: z.number().int().min(1),
+  /** false si no sirve para esta compra (sin precio, se pasa del presupuesto, etc.). */
+  eligible: z.boolean(),
+  /** Precio unitario × cantidad pedida. null si no dio precio. */
+  total_atomic: atomicAmountSchema.nullable(),
+  /** Motivos en castellano, para mostrarle al dueño. */
+  reasons: z.array(z.string()),
+  /** Qué haría el agente al pagarla según las reglas (null si no califica). */
+  policy: z.object({ decision: policyDecisionSchema, reason: z.string() }).nullable(),
+});
+export type QuoteRank = z.infer<typeof quoteRankSchema>;
+
+export const rankQuotesOutputSchema = z.object({
+  ranking: z.array(quoteRankSchema),
+  /** La recomendada (la primera que califica), o null si ninguna sirve. */
+  recommended_quote_id: z.string().nullable(),
+  /** 2-3 frases: por qué esa, qué regla aplicó y si paga solo o pide aprobación. */
+  explanation: z.string(),
+  /** "ai" = la escribió Claude; "rules" = respaldo armado con reglas (sin IA). */
+  explanation_source: z.enum(["ai", "rules"]),
+});
+export type RankQuotesOutput = z.infer<typeof rankQuotesOutputSchema>;
+
+/**
+ * Ordena las cotizaciones de una compra, recomienda una y explica por qué.
+ * Errores: VALIDATION_ERROR, NOT_FOUND (la compra no es de la empresa),
+ * PROVIDER_UNAVAILABLE (la base no respondió). Si la IA falla, NO es un error:
+ * se usa la explicación de respaldo y explanation_source = "rules".
+ */
+export type RankQuotes = (ctx: Ctx, input: RankQuotesInput) => Promise<Result<RankQuotesOutput>>;
