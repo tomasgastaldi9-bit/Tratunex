@@ -100,7 +100,7 @@ export async function handleVapiWebhook(
     });
     return {
       status: 200,
-      body: { received: true, stored: true, duplicate: result.duplicate, resolved: result.resolved },
+      body: { received: true, stored: true, event_type: type, duplicate: result.duplicate, resolved: result.resolved },
     };
   } catch {
     return { status: 500, body: { error: "No se pudo guardar el aviso" } };

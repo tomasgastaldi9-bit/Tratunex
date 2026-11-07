@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "properties": {
+    "spoke_with_person": {
+      "type": "boolean",
+      "description": "true solo si conversó una persona real. false si atendió un contestador, una máquina o nadie."
+    },
+    "is_potential_client": {
+      "type": "string",
+      "enum": ["yes", "no", "unknown"],
+      "description": "Si cumple los criterios de cliente potencial de la empresa."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["interested", "not_interested", "callback_requested", "wants_to_buy", "not_assessed"]
+    },
+    "do_not_contact_requested": {
+      "type": "boolean",
+      "description": "true solo si pidió explícitamente que no lo vuelvan a llamar."
+    },
+    "score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Qué tan buen prospecto es, de 0 a 100."
+    },
+    "callback_day": {
+      "type": "string",
+      "enum": [
+        "no_especificado",
+        "hoy",
+        "manana",
+        "pasado_manana",
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo",
+        "fecha_exacta"
+      ],
+      "description": "Día que pidió para volver a llamar, tal como lo dijo. fecha_exacta si dijo una fecha con número."
+    },
+    "callback_date": {
+      "type": "string",
+      "description": "Solo si callback_day es fecha_exacta: AAAA-MM-DD."
+    },
+    "callback_time": {
+      "type": "string",
+      "description": "Hora que pidió, 24 h, HH:mm. Omitir si no dijo hora."
+    },
+    "summary": {
+      "type": "string",
+      "description": "Resumen en español de 3 a 5 líneas: quién atendió, qué dijo y qué sigue."
+    }
+  },
+  "required": ["spoke_with_person", "is_potential_client", "outcome", "do_not_contact_requested", "summary"]
+}

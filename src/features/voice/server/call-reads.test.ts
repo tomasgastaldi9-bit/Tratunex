@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CallListItemSchema, GetCallDataSchema, ListCallsDataSchema } from "../../../contracts/voice";
-import { callDetailFixtures } from "../fixtures";
+import { callDetailFixtures, callResultFixtures } from "../fixtures";
 import {
   createMockCallReader,
   createSupabaseCallReader,
@@ -88,6 +88,9 @@ describe("supabase call reader", () => {
     objective: "Presentar la empresa",
     agent_version: 2,
     ended_reason: "customer-ended-call",
+    ended_at: null,
+    recording_url: null,
+    result: null,
     created_at: "2026-11-07T15:00:00+00:00",
     updated_at: "2026-11-07T15:02:00+00:00",
   };
@@ -119,6 +122,32 @@ describe("supabase call reader", () => {
     expect(result.data.items).toHaveLength(1);
     expect(CallListItemSchema.parse(result.data.items[0])).toMatchObject({ created_at: "2026-11-07T15:00:00.000Z", result: null });
     expect(result.data.next_cursor).not.toBeNull();
+  });
+
+  it("returns the processed result, transcript and recording of a call", async () => {
+    const result = { ...callResultFixtures.interested, company_id: company, call_id: row.id, contact_id: contactA, deal_id: null };
+    const processed = {
+      ...row,
+      ended_at: "2026-11-07T15:02:00+00:00",
+      recording_url: "https://storage.vapi.ai/rec-1.wav",
+      transcript: "Agente: Hola",
+      result,
+    };
+    const { client, calls } = fakeClient([processed]);
+    const loaded = await createSupabaseCallReader(client).get(ctx, { call_id: row.id });
+
+    expect(calls.find((call) => call[0] === "select")?.[1]).toContain("transcript");
+    expect(loaded).toMatchObject({
+      ok: true,
+      data: {
+        call: {
+          ended_at: "2026-11-07T15:02:00.000Z",
+          recording_url: "https://storage.vapi.ai/rec-1.wav",
+          transcript: "Agente: Hola",
+          result: { outcome: "interested", call_id: row.id },
+        },
+      },
+    });
   });
 
   it("maps database errors and missing calls", async () => {

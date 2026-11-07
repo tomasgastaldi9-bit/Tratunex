@@ -67,7 +67,7 @@ describe("handleVapiWebhook", () => {
     const first = await handleVapiWebhook({ authorization, rawBody: endOfCall }, { secret, store });
     const resend = await handleVapiWebhook({ authorization, rawBody: endOfCall }, { secret, store });
 
-    expect(first).toStrictEqual({ status: 200, body: { received: true, stored: true, duplicate: false, resolved: true } });
+    expect(first).toStrictEqual({ status: 200, body: { received: true, stored: true, event_type: "end-of-call-report", duplicate: false, resolved: true } });
     expect(resend).toMatchObject({ status: 200, body: { duplicate: true } });
     expect(store.saved).toHaveLength(1);
     expect(store.saved[0]).toMatchObject({ provider_call_id: "vapi-call-1", event_type: "end-of-call-report" });

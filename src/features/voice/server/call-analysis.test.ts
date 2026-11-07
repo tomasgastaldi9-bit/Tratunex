@@ -185,3 +185,11 @@ describe("normalizeEndOfCallReport", () => {
     expect(normalizeEndOfCallReport({ message: { type: "status-update" } }, call, options)).toMatchObject({ ok: false });
   });
 });
+
+describe("Vapi configuration files", () => {
+  it("keeps the JSON schema to paste in Vapi identical to the one the code expects", async () => {
+    const { callAnalysisJsonSchema } = await import("./call-analysis");
+    const json = (await import("../vapi/call-analysis.schema.json")).default;
+    expect(json).toStrictEqual(JSON.parse(JSON.stringify(callAnalysisJsonSchema)));
+  });
+});

@@ -1,5 +1,5 @@
 begin;
-select plan(9);
+select plan(12);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'a@example.test'),
@@ -28,11 +28,21 @@ select throws_ok(
   $$insert into public.calls (company_id, contact_id, action_id, provider, provider_call_id, transport) values ('22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444', 'start-call:b2', 'vapi', 'vapi-call-a1', 'phone')$$,
   '23505', null, 'a Vapi call id belongs to a single internal call'
 );
+select throws_ok(
+  $$update public.calls set recording_url = 'javascript:alert(1)' where id = 'a0000000-0000-4000-8000-000000000001'$$,
+  '23514', null, 'recording urls must be http or https'
+);
+select throws_ok(
+  $$update public.calls set result = '"texto"' where id = 'a0000000-0000-4000-8000-000000000001'$$,
+  '23514', null, 'a call result must be a JSON object'
+);
+update public.calls set result = '{"outcome": "interested"}', transcript = 'Hola' where id = 'a0000000-0000-4000-8000-000000000001';
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
 select is((select count(*) from public.calls), 1::bigint, 'A sees only the calls of its company');
 select is((select count(*) from public.calls where company_id = '22222222-2222-4222-8222-222222222222'), 0::bigint, 'A cannot read B calls by company');
+select is((select result->>'outcome' from public.calls where id = 'a0000000-0000-4000-8000-000000000001'), 'interested', 'A reads the processed result of its own call');
 select throws_ok(
   $$insert into public.calls (company_id, contact_id, action_id, transport) values ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333', 'start-call:a2', 'mock')$$,
   '42501', null, 'users cannot create calls directly'
