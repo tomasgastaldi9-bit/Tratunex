@@ -5,6 +5,7 @@ import {
   DEMO_QUOTE_REQUEST,
   QUOTE_END_CALL_MESSAGE,
   QUOTE_END_CALL_PHRASES,
+  QUOTE_CLOSING_MESSAGE,
   QUOTE_MAX_DURATION_SECONDS,
   QUOTE_OUTPUT_NAME,
   QuoteCallExtractionSchema,
@@ -89,7 +90,8 @@ describe("lo que dice el asistente", () => {
       expect(prompt).toContain(ask);
     }
     expect(prompt).toContain("no afirmes datos que no te dio el proveedor");
-    expect(prompt).toContain("menos de 30 segundos");
+    expect(prompt).toContain("menos de 45 segundos");
+    expect(prompt).toContain("agradecé la respuesta anterior");
   });
 
   it("pregunta el precio por la unidad de la compra", () => {
@@ -103,9 +105,13 @@ describe("lo que dice el asistente", () => {
 
   it("confirma precio y plazo antes de despedirse, y la despedida es la frase que corta", () => {
     const confirm = prompt.indexOf("repetí precio y plazo");
+    const closing = prompt.indexOf(`"${QUOTE_CLOSING_MESSAGE}"`);
     const goodbye = prompt.indexOf(`"${QUOTE_END_CALL_MESSAGE}"`);
     expect(confirm).toBeGreaterThan(-1);
-    expect(goodbye).toBeGreaterThan(confirm);
+    expect(closing).toBeGreaterThan(confirm);
+    expect(goodbye).toBeGreaterThan(closing);
+    expect(QUOTE_CLOSING_MESSAGE).toContain("por mensaje");
+    expect(QUOTE_CLOSING_MESSAGE).toContain("otros proveedores");
   });
 
   it("se despide con una frase que corta la llamada, de varias palabras", () => {
