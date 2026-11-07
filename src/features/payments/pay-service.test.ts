@@ -36,4 +36,22 @@ describe("orquestación del pago", () => {
     expect(deps.reconcile).toHaveBeenCalledWith(identity);
     expect(deps.readPayment).toHaveBeenCalledWith(ctx, order_id);
   });
+  it("muestra el pago guardado si la red no permite consultar el nonce, sin reclamar ni transmitir", async () => {
+    const deps = ports(); deps.getPendingNonce.mockRejectedValue(new Error("RPC unavailable"));
+    expect(await payInvoiceWithPorts(ctx, { order_id }, deps)).toEqual({ ok: true, data: { payment } });
+    expect(deps.claim).not.toHaveBeenCalled();
+    expect(deps.submit).not.toHaveBeenCalled();
+    expect(deps.readPayment).toHaveBeenCalledWith(ctx, order_id);
+  });
+  it("no expone estado guardado si falla la autorización", async () => {
+    const deps = ports(); deps.verifySession.mockRejectedValue(new Error("session unavailable"));
+    expect((await payInvoiceWithPorts(ctx, { order_id }, deps)).ok).toBe(false);
+    expect(deps.readPayment).not.toHaveBeenCalled();
+  });
+  it("muestra el pago persistido cuando la orden ya no admite un nuevo pago", async () => {
+    const deps = ports(); deps.getOrderVersion.mockRejectedValue(new Error("order no longer approved"));
+    expect(await payInvoiceWithPorts(ctx, { order_id }, deps)).toEqual({ ok: true, data: { payment } });
+    expect(deps.claim).not.toHaveBeenCalled();
+    expect(deps.submit).not.toHaveBeenCalled();
+  });
 });

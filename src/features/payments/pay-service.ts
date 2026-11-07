@@ -13,8 +13,17 @@ export async function payInvoiceWithPorts(ctx: ActionCtx, input: { order_id: str
   if (!contextSchema.safeParse(ctx).success || !inputSchema.safeParse(input).success) return { ok: false, error: { code: "VALIDATION_ERROR", message: "Contexto u orden inválidos.", retryable: false } };
   try {
     if (!await ports.verifySession(ctx)) return { ok: false, error: { code: "FORBIDDEN", message: "No tenés acceso a esta empresa.", retryable: false } };
-    const orderVersion = await ports.getOrderVersion(ctx, input.order_id);
-    const pendingNonce = await ports.getPendingNonce();
+    let orderVersion: number;
+    let pendingNonce: number;
+    try {
+      orderVersion = await ports.getOrderVersion(ctx, input.order_id);
+      pendingNonce = await ports.getPendingNonce();
+    } catch {
+      // Failed preconditions cannot authorize a claim, but an authenticated
+      // user may still inspect the last durable observation without a transfer.
+      const saved = OrderPaymentSchema.safeParse(await ports.readPayment(ctx, input.order_id));
+      return saved.success ? { ok: true, data: { payment: saved.data } } : unavailable();
+    }
     if (!Number.isSafeInteger(orderVersion) || orderVersion < 1 || !Number.isSafeInteger(pendingNonce) || pendingNonce < 0) return unavailable();
     const claim = await ports.claim(ctx, { order_id: input.order_id, orderVersion, pendingNonce });
     if (!claim.ok || claim.identity.companyId !== ctx.company_id || claim.identity.orderId !== input.order_id) return unavailable();
