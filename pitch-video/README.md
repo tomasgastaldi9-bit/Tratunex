@@ -27,9 +27,10 @@ Es el mismo video, pero frena al final de cada escena y sigue cuando vos querés
 - **Abrir:** en el deploy, `/pitch/index.html` (por ejemplo https://tratunex-mvp.vercel.app/pitch/index.html). En una compu, doble clic en `Presentar.cmd` (o `npm run present`): abre http://localhost:5180/pitch/.
 - **El primer clic o → pone pantalla completa** (F la saca y la vuelve a poner).
 - **Llena toda la pantalla** en 16:9 y 16:10. En proyectores 4:3 deja franjas para no cortar texto.
-- **→, espacio, Enter, AvPág o clic:** reproduce la escena siguiente y frena. Sirve con un clicker de presentaciones.
-- **←, RePág:** vuelve a la escena anterior.
+- **→, espacio, Enter, AvPág o clic:** reproduce la sección siguiente y se queda quieta al final. Nunca avanza sola. Si apretás mientras una sección se está reproduciendo, la termina de golpe. Sirve con un clicker de presentaciones.
+- **←, RePág:** vuelve a la sección anterior.
 - **Inicio:** vuelve al principio (pantalla negra).
+- **Al final** se queda en el cierre: no vuelve a empezar sola ni con →.
 
 Son 10 paradas: gancho, marca, los 5 pasos (el pago frena una vez más antes de "Pago confirmado"), lo que viene y cierre.
 Necesita internet (la letra y los sonidos se bajan de Google Fonts y remotion.media).
