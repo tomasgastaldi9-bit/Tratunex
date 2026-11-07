@@ -96,6 +96,17 @@ export async function postOrderPayment(order: PurchaseOrder, action_id: string, 
   return parsed.data;
 }
 
+export async function postResumeOrderPayment(order: PurchaseOrder, action_id: string): Promise<Result<OrderPayResult>> {
+  const response = await fetch(`/api/crm/orders/${order.id}/resume-payment`, { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": action_id }, body: JSON.stringify({ action_id, input: {} }) });
+  const parsed = payResponse.safeParse(await response.json() as unknown);
+  if (!parsed.success) throw new Error("El servicio no confirmó un estado de pago válido.");
+  if (parsed.data.ok && (!response.ok || !sameOrder(parsed.data.data.order, order) || parsed.data.data.order.status !== "approved"
+    || parsed.data.data.order.amount_atomic !== order.amount_atomic || parsed.data.data.order.wallet?.address.toLowerCase() !== order.wallet?.address.toLowerCase()
+    || (parsed.data.data.payment !== null && !validOrderPayment(parsed.data.data.payment, parsed.data.data.order)))) throw new Error("El servicio no confirmó el pago correspondiente a esta orden.");
+  return parsed.data;
+}
+
 export async function refreshOrderSnapshot(order: PurchaseOrder, action_id: string, expected_version: number): Promise<Result<{ order: PurchaseOrder }>> {
   const response = await post(`/api/crm/orders/${order.id}/refresh`, action_id, expected_version);
   const parsed = orderResponse.safeParse(response.payload);
@@ -114,6 +125,14 @@ export const paymentIntentKey = (order: PurchaseOrder) => `tratunex-order-paymen
 export function parseOrderPaymentIntent(value: string | null): OrderPaymentIntent | null {
   if (!value) return null;
   try { const parsed = intentSchema.safeParse(JSON.parse(value)); return parsed.success ? parsed.data : null; } catch { return null; }
+}
+
+/** Continue only the same browser action after checking that no reservation is visible. */
+export function canResumeOrderPayment(order: PurchaseOrder, stored: string | null, payment: OrderPayment | null | undefined, paymentAvailable: boolean): boolean {
+  const intent = parseOrderPaymentIntent(stored);
+  if (!paymentAvailable || payment || order.quote_source === "example") return false;
+  if (order.status === "awaiting_approval") return !!intent && intent.expected_version === order.version && paymentBlockedReason(order, true, null) === null;
+  return order.status === "approved" && (!intent || order.version === intent.expected_version + 1 || order.version === intent.expected_version);
 }
 
 export function readOrderPaymentIntent(key: string): string | null {

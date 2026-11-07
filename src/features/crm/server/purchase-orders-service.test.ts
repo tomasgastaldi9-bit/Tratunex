@@ -87,4 +87,20 @@ describe("ORD-03 servicio persistido y pago desconectado por defecto", () => {
     const payInvoice = vi.fn(async () => ({ ok: true, data: { payment: { ...payment, amount_atomic: "1" } } }) as const);
     expect(await createPurchaseOrdersCrm(execute(), { availability: "ready", payInvoice }).approveAndPayPurchaseOrder(ctx, { order_id: id, expected_version: 1 })).toMatchObject({ ok: false, error: { code: "PROVIDER_ERROR" } });
   });
+  it("permite continuar una orden ya aprobada sin volver a aprobarla", async () => {
+    const rpc = execute();
+    const payInvoice = vi.fn(async () => ({ ok: true, data: { payment } }) as const);
+    const crm = createPurchaseOrdersCrm(rpc, { availability: "ready", payInvoice });
+    expect(await crm.resumeApprovedPayment(ctx, { order_id: id })).toMatchObject({ ok: true, data: { order, payment } });
+    expect(rpc).toHaveBeenCalledWith({ company_id: ctx.company_id, actor_id: ctx.actor_id, actor_type: ctx.actor_type }, "getPurchaseOrder", { order_id: id });
+    expect(payInvoice).toHaveBeenCalledWith(ctx, { order_id: id });
+  });
+  it("no continúa si la orden no está aprobada o si el servicio no está listo", async () => {
+    const rpc = execute(); rpc.mockResolvedValueOnce({ data: { ok: true, data: { order: pending } }, error: null });
+    const payInvoice = vi.fn();
+    const crm = createPurchaseOrdersCrm(rpc, { availability: "ready", payInvoice });
+    expect((await crm.resumeApprovedPayment(ctx, { order_id: id })).ok).toBe(false);
+    expect(payInvoice).not.toHaveBeenCalled();
+    expect((await createPurchaseOrdersCrm(execute()).resumeApprovedPayment(ctx, { order_id: id })).ok).toBe(false);
+  });
 });

@@ -4,7 +4,7 @@ import { createPublicClient, http, type Hex } from "viem";
 import { arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { getCompanyContext } from "@/features/platform/server/public";
-import { getPurchaseOrder } from "@/features/crm/server/public";
+import { getPaymentOrder } from "@/features/crm/server/order-payment-read-public";
 import { getPublicEnv, getServerEnv } from "@/lib/env";
 import { OrderPaymentSchema } from "@/contracts/purchase-orders";
 import type { ActionCtx, Ctx } from "@/contracts/common";
@@ -39,7 +39,7 @@ export function createPaymentPorts() {
       return current.ok && current.data.actor_type === "user" && current.data.actor_id === ctx.actor_id && current.data.company_id === ctx.company_id;
     },
     getOrderVersion: async (ctx: ActionCtx, id: string) => {
-      const result = await getPurchaseOrder(ctx, { order_id: id });
+      const result = await getPaymentOrder(ctx, { order_id: id });
       if (!result.ok || result.data.order.status !== "approved") throw new Error("Orden no disponible para pago.");
       return result.data.order.version;
     },

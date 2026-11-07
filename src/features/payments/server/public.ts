@@ -1,7 +1,7 @@
 import "server-only";
 
-// Intentionally disabled until transactional authorization and reconciliation are implemented.
-export { payInvoiceUnavailable as payInvoice } from "../pay-invoice-port";
+// Live transfers remain disabled unless PAYMENT_ENABLED is explicitly set.
+export { payInvoice, paymentEnabled } from "./pay-invoice";
 export { getOrderPayment } from "./read-payment";
 export { reconcileOrderPayment } from "./reconcile-payment";
 export type { PaymentDTO } from "../pay-invoice-port";

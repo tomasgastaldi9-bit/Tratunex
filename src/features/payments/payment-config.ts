@@ -1,5 +1,12 @@
 import { privateKeyToAccount } from "viem/accounts";
 import { TWIN_ARGT_ARBITRUM } from "./wallet-check";
+import { parsePublicEnv, parseServerEnv } from "../../lib/env";
+
+/** Configuration readiness only; it does not assert network or database health. */
+export function paymentConfigured(env: Record<string, string | undefined>): boolean {
+  if (env.PAYMENT_ENABLED !== "true" || !env.SUPABASE_SECRET_KEY || !parsePaymentConfig(env).ok) return false;
+  try { parsePublicEnv(env); parseServerEnv(env); return true; } catch { return false; }
+}
 
 /** Internal only: never serialize or log the parsed result. */
 export function parsePaymentConfig(env: Record<string, string | undefined>): { ok: true; rpcUrl: string; privateKey: `0x${string}`; encryptionKey: Uint8Array; limits: { gas: bigint; maxFeePerGas: bigint; maxPriorityFeePerGas: bigint; maxTotalFee: bigint } } | { ok: false } {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PurchaseOrderSchema, type OrderPayment } from "../../../contracts/purchase-orders";
 import { formatOrderArgt, formatOrderQuoted, orderPaymentPresentation, parseOrderPaymentIntent, paymentBlockedReason,
-  paymentIntentKey, postOrderPayment, readOrderPaymentIntent, refreshOrderSnapshot, storeOrderPaymentIntent, reconcileOrderPayment } from "./purchase-order-client";
+  paymentIntentKey, postOrderPayment, readOrderPaymentIntent, refreshOrderSnapshot, storeOrderPaymentIntent, reconcileOrderPayment, canResumeOrderPayment, postResumeOrderPayment } from "./purchase-order-client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -61,6 +61,14 @@ describe("ORD03: peticiones manuales con autoridad de servidor", () => {
     expect(url).toBe(`/api/crm/orders/${order.id}/payment-status`);
     expect(JSON.parse(String(options.body))).toEqual({ action_id: `reconcile:${order.id}`, input: {} });
   });
+  it("retoma una aprobación persistida sin pedir al navegador monto ni destino", async () => {
+    const fetcher = vi.fn(async () => Response.json({ ok: true, data: { order: approved, payment } }));
+    vi.stubGlobal("fetch", fetcher);
+    expect((await postResumeOrderPayment(approved, "resume-1")).ok).toBe(true);
+    const [url, options] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(`/api/crm/orders/${approved.id}/resume-payment`);
+    expect(JSON.parse(String(options.body))).toEqual({ action_id: "resume-1", input: {} });
+  });
   it("pagar envía solo expected_version y conserva action_id", async () => {
     const fetcher = vi.fn(async () => Response.json({ ok: true, data: { order: approved, payment } }));
     vi.stubGlobal("fetch", fetcher);
@@ -102,6 +110,15 @@ describe("ORD03: peticiones manuales con autoridad de servidor", () => {
 });
 
 describe("ORD03: intención ambigua se conserva para consultar, nunca habilita pagos", () => {
+  it("permite continuar solo la acción guardada si no hay una reserva visible", () => {
+    const saved = JSON.stringify({ action_id: "stable-pay", expected_version: 1 });
+    expect(canResumeOrderPayment(approved, saved, null, true)).toBe(true);
+    expect(canResumeOrderPayment(approved, null, null, true)).toBe(true);
+    expect(canResumeOrderPayment(order, saved, null, true)).toBe(true);
+    expect(canResumeOrderPayment(approved, saved, payment, true)).toBe(false);
+    expect(canResumeOrderPayment(order, "invalid", null, true)).toBe(false);
+    expect(canResumeOrderPayment(approved, saved, null, false)).toBe(false);
+  });
   it("persiste solo la identidad y versión, sin importes o credenciales", () => {
     const values = new Map<string, string>();
     vi.stubGlobal("sessionStorage", { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });

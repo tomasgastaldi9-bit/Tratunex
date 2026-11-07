@@ -8,7 +8,7 @@ import { Button } from "../../../components/ui/Button";
 import type { OrderPayment, PurchaseOrder } from "../../../contracts/purchase-orders";
 import { clearContactAction, contactActionId } from "./contact-action-client";
 import { orderPaymentPresentation, paymentBlockedReason, paymentIntentKey, postOrderPayment, readOrderPaymentIntent,
-  refreshOrderSnapshot, storeOrderPaymentIntent, validOrderPayment, reconcileOrderPayment, type OrderPayResult } from "./purchase-order-client";
+  refreshOrderSnapshot, storeOrderPaymentIntent, validOrderPayment, reconcileOrderPayment, canResumeOrderPayment, parseOrderPaymentIntent, postResumeOrderPayment, type OrderPayResult } from "./purchase-order-client";
 
 function subscribePaymentIntent(listener: () => void) {
   window.addEventListener("order-payment-intent", listener);
@@ -35,6 +35,7 @@ export function PurchaseOrderActions({ order, payment, paymentAvailable }: {
   const shownPayment = payment ?? returned?.payment;
   const reason = paymentBlockedReason(shownOrder, paymentAvailable, shownPayment);
   const receipt = validOrderPayment(shownPayment, shownOrder);
+  const canResume = canResumeOrderPayment(shownOrder, storedIntent, shownPayment, paymentAvailable);
 
   async function approveAndPay() {
     if (busy.current || paymentAttempted || refreshUncertain || reason) return;
@@ -80,6 +81,22 @@ export function PurchaseOrderActions({ order, payment, paymentAvailable }: {
     } finally { busy.current = false; setPending(null); }
   }
 
+  async function resumePayment() {
+    const intent = parseOrderPaymentIntent(storedIntent);
+    if (busy.current || !canResume || refreshUncertain) return;
+    busy.current = true; setPending("pay"); setPayError(null);
+    try {
+      const action_id = intent?.action_id ?? await contactActionId(`${order.company_id}:order-resume:${order.id}`, { order_id: order.id });
+      if (!intent) storeOrderPaymentIntent(key, { action_id, expected_version: order.version });
+      const result = order.status === "approved" ? await postResumeOrderPayment(order, action_id)
+        : await postOrderPayment(order, action_id, intent!.expected_version);
+      if (!result.ok) setPayError(result.error.message);
+      else setReturned(result.data);
+      router.refresh();
+    } catch { setPayError("No pudimos confirmar el resultado. Conservamos la misma acción; consultá su estado."); }
+    finally { busy.current = false; setPending(null); }
+  }
+
   async function updatePaymentStatus() {
     if (busy.current) return;
     busy.current = true; setPending("status"); setPayError(null);
@@ -107,6 +124,8 @@ export function PurchaseOrderActions({ order, payment, paymentAvailable }: {
     {paymentAttempted && !receipt && <Alert tone="warning" title="Verificación pendiente">
       Hay un intento registrado para esta orden. La consulta de estado conserva su identidad y sus datos.
     </Alert>}
+    {canResume && <Button variant="secondary" loading={pending === "pay"} disabled={pending !== null || refreshUncertain}
+      onClick={() => void resumePayment()}>{shownOrder.status === "approved" ? "Continuar pago aprobado" : "Reintentar aprobación y pago"}</Button>}
     <div className="flex flex-wrap gap-2.5">
       <Button variant="secondary" icon={RefreshCw} disabled={pending !== null} onClick={() => void updatePaymentStatus()}>Consultar estado del pago</Button>
       {shownOrder.status === "awaiting_approval" && !shownPayment && !paymentAttempted && <Button variant="ghost" loading={pending === "refresh"}

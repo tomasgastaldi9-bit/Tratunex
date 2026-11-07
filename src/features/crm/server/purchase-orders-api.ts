@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ApprovePurchaseOrderInputSchema, CreatePurchaseOrderInputSchema, PurchaseOrderListInputSchema, RefreshPurchaseOrderInputSchema } from "../../../contracts/purchase-orders";
 import { getCompanyContext } from "../../platform/server/public";
-import { approveAndPayPurchaseOrder, createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, refreshPurchaseOrder } from "./purchase-orders-public";
+import { approveAndPayPurchaseOrder, createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, refreshPurchaseOrder, resumeApprovedPayment } from "./purchase-orders-public";
 import { crmJson, handleCrmMutation } from "./http";
 import { crmFailure } from "./persistent-crm";
 import { reconcileOrderPayment } from "@/features/payments/server/public";
@@ -33,3 +33,5 @@ export const refreshOrderRequest = (request: Request, order_id: string) => handl
   });
 export const reconcileOrderPaymentRequest = (request: Request, order_id: string) => handleCrmMutation(request, z.object({}).strict(), context,
   (ctx) => reconcileOrderPayment({ company_id: ctx.company_id, actor_id: ctx.actor_id, actor_type: ctx.actor_type }, { order_id }));
+export const resumeOrderPaymentRequest = (request: Request, order_id: string) => handleCrmMutation(request, z.object({}).strict(), context,
+  (ctx) => resumeApprovedPayment(ctx, { order_id }));
