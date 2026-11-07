@@ -44,7 +44,7 @@ export function parseProspectCsv(text: string): CsvParseResult {
     const phone_e164 = /^\+[1-9]\d{6,14}$/.test(normalized) ? normalized : null;
     if (!phone_e164) errors.push("Indicá el teléfono con código de país, por ejemplo +54.");
     const web = (cells[index("web")] ?? "").trim(); let website: string | null = null;
-    if (web) { try { const url = new URL(web); if (!['http:', 'https:'].includes(url.protocol)) throw new Error(); website = url.href; } catch { errors.push("La web debe ser una URL http o https válida."); } }
+    if (web) { try { const url = new URL(web); if (!['http:', 'https:'].includes(url.protocol)) throw new Error(); website = url.href; if (url.hostname.toLowerCase().split(".").some((label) => label.startsWith("xn--"))) errors.push("El CRM todavía no admite dominios internacionalizados."); } catch { errors.push("La web debe ser una URL http o https válida."); } }
     return { row: idx + 1, name, phone_e164, website, errors };
   }) };
 }

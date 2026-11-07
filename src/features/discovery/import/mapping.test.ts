@@ -13,6 +13,7 @@ describe("mapeo para CRM", () => {
     expect(result).toMatchObject({ ok: true, data: { name: "Demo", phone_e164: "+12025550123", source: { kind: "firecrawl", url: "https://demo.example/contact" } } });
     expect(toContactInput({ ...candidate, phone: null }, "live")).toMatchObject({ ok: false });
     expect(toContactInput(candidate, "mock")).toMatchObject({ ok: false });
+    expect(toContactInput({ ...candidate, website: "https://españa.example" }, "live")).toMatchObject({ ok: false });
     expect(toContactInput({ ...candidate, phone: "0351 123 4567" }, "live")).toMatchObject({ ok: false });
   });
   it("el mock no duplica el mismo contacto y conserva do_not_contact", async () => {

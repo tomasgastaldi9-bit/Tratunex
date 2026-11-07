@@ -27,4 +27,7 @@ describe("CSV de prospectos", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.rows[0].errors).toContain("La web debe ser una URL http o https válida.");
   });
-});
+  it("señala dominios internacionalizados que el CRM todavía rechaza", () => {
+    const result = parseProspectCsv("nombre,telefono,web\nUno,+12025550123,https://españa.example");
+    expect(result.ok && result.rows[0].errors).toContain("El CRM todavía no admite dominios internacionalizados.");
+  });});
