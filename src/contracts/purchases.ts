@@ -45,8 +45,19 @@ export function formatPesos(atomic: string): string {
   return `$ ${atomicToPesos(atomic).toLocaleString("es-AR")}`;
 }
 
-/** Compara dos montos de texto sin pasar por números con coma. */
+/** true si el texto es un entero sin signo ("100", no "1.5" ni "-3"). */
+function esEntero(valor: string): boolean {
+  return /^\d+$/.test(valor);
+}
+
+/**
+ * Compara dos montos de texto sin pasar por números con coma.
+ * Si alguno no es un entero válido devuelve false en vez de explotar:
+ * BigInt("1.5") tira un error, y Zod igual corre estas comprobaciones aunque
+ * la del formato ya haya fallado (ese error ya lo reporta el regex).
+ */
 function mayor(a: string, b: string): boolean {
+  if (!esEntero(a) || !esEntero(b)) return false;
   return BigInt(a) > BigInt(b);
 }
 

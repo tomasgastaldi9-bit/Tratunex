@@ -99,3 +99,17 @@ describe("decidePurchasePolicy", () => {
     expect(decidePurchasePolicy(sinFiltro, pesosToAtomic(10), PROVEEDOR_B).decision).toBe("auto_pay");
   });
 });
+
+describe("montos mal escritos", () => {
+  it("un monto con coma o negativo da error de validación, no una excepción", () => {
+    expect(() => purchaseRequestInputSchema.safeParse({
+      product: "Vasos", quantity: 1, unit: "", needed_by: "2026-11-09", budget_atomic: "1.5", zone: "",
+    })).not.toThrow();
+    expect(purchaseRequestInputSchema.safeParse({
+      product: "Vasos", quantity: 1, unit: "", needed_by: "2026-11-09", budget_atomic: "-3", zone: "",
+    }).success).toBe(false);
+    expect(() => purchasePolicySchema.safeParse({
+      max_per_purchase_atomic: "1.5", auto_pay_limit_atomic: "abc", only_allowed_suppliers: false, allowed_supplier_ids: [],
+    })).not.toThrow();
+  });
+});
