@@ -3,7 +3,7 @@ import type { ZodError } from "zod";
 /**
  * Lógica "pura" del formulario del perfil de empresa: sin React, sin base de
  * datos y sin "use client". Por eso se puede probar con Vitest (ver el .test.ts
- * de al lado) y la usan tanto la acción del servidor como el formulario.
+ * de al lado) y la usan la acción del servidor, la página y el formulario.
  *
  * Ojo: si algún día este archivo necesita importar un VALOR de otro archivo,
  * usá una ruta relativa (../../../contracts/agent) y no "@/": Vitest no
@@ -57,10 +57,17 @@ export type ProfileFieldErrors = Partial<Record<ProfileFieldName, string>>;
 /**
  * Lee un campo de texto del formulario. Si no vino (o vino un archivo en vez
  * de texto), devuelve "" para que la validación diga qué falta.
+ *
+ * Los saltos de línea los dejamos siempre como "\n". ¿Por qué? En la pantalla,
+ * el límite de caracteres (maxLength) cuenta un Enter como 1 caracter, pero al
+ * ENVIAR el formulario el navegador lo manda como "\r\n" (2 caracteres). Sin
+ * esto, un texto de 600 caracteres con Enters llegaría con más de 600, la
+ * validación lo rechazaría aunque en pantalla entraba justo, y además
+ * guardaríamos los "\r" de más.
  */
 function texto(formData: FormData, nombre: ProfileFieldName): string {
   const valor = formData.get(nombre);
-  return typeof valor === "string" ? valor : "";
+  return typeof valor === "string" ? valor.replace(/\r\n/g, "\n") : "";
 }
 
 /**
@@ -126,4 +133,74 @@ export function profileFieldErrors(error: ZodError): ProfileFieldErrors {
   }
 
   return errores;
+}
+
+// ---------------------------------------------------------------------------
+// action_id: qué identificador lleva cada guardado (README del módulo, "action_id")
+// ---------------------------------------------------------------------------
+//
+// Estas funciones NO crean el id nuevo ellas mismas: lo piden con "nuevoId",
+// una función que les pasamos. En la app le pasamos () => crypto.randomUUID();
+// en los tests, una que devuelve siempre el mismo texto. Así la prueba puede
+// saber exactamente qué id esperar (un UUID al azar no se puede adivinar).
+
+/**
+ * El action_id de ESTE envío: el que vino en el campo oculto del formulario.
+ * El navegador lo puede mandar vacío (o no mandarlo); sin action_id la base no
+ * puede evitar duplicados, así que en ese caso usamos uno nuevo.
+ */
+export function actionIdForSubmission(actionIdDelFormulario: string, nuevoId: () => string): string {
+  return actionIdDelFormulario.trim() === "" ? nuevoId() : actionIdDelFormulario;
+}
+
+/**
+ * Qué action_id tiene que usar el PRÓXIMO intento después de un error:
+ *  - retryable true (la base no respondió): el MISMO, para reintentar sin
+ *    duplicar. Si en realidad se había guardado, la base devuelve lo mismo.
+ *  - retryable false (datos, permisos, conflicto): uno NUEVO, porque el
+ *    próximo intento va a ser otro pedido distinto.
+ */
+export function actionIdAfterError(
+  error: { retryable: boolean },
+  actionIdActual: string,
+  nuevoId: () => string,
+): string {
+  return error.retryable ? actionIdActual : nuevoId();
+}
+
+// ---------------------------------------------------------------------------
+// Aviso de "guardamos": viaja en la dirección (?saved=3&created=1)
+// ---------------------------------------------------------------------------
+//
+// Después de guardar, la acción redirige a la página con dos datos en la
+// dirección. Quien ARMA la dirección (savedProfileUrl, en la acción) y quien la
+// LEE (readSavedNotice, en la página) están acá juntos a propósito: si un día
+// cambia un nombre, se cambian los dos a la vez y no se desincronizan.
+
+/** Lo que pasó al guardar: qué versión quedó y si se creó una nueva. */
+export type SavedNotice = { version: number; created: boolean };
+
+/** Arma la dirección a la que vuelve la acción después de guardar bien. */
+export function savedProfileUrl({ version, created }: SavedNotice): string {
+  return `/agent/profile?saved=${version}&created=${created ? 1 : 0}`;
+}
+
+/**
+ * Lee el aviso de la dirección (lo contrario de savedProfileUrl).
+ * Devuelve null si no hay aviso o si algo no tiene la forma esperada: la
+ * dirección la puede escribir cualquiera a mano, así que no confiamos en ella.
+ *  - saved: un número entero desde 1.
+ *  - created: "1" (se creó una versión nueva) o "0" (no había cambios).
+ */
+export function readSavedNotice(params: Record<string, string | string[] | undefined>): SavedNotice | null {
+  const { saved, created } = params;
+  // Si el dato vino repetido (?saved=1&saved=2) llega como lista: no lo aceptamos.
+  if (typeof saved !== "string" || typeof created !== "string") return null;
+
+  const version = Number(saved);
+  if (!Number.isSafeInteger(version) || version < 1) return null;
+
+  if (created === "1") return { version, created: true };
+  if (created === "0") return { version, created: false };
+  return null;
 }

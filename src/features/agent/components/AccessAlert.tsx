@@ -33,15 +33,25 @@ export function AccessAlert({ code }: { code: ErrorCode }) {
   }
 
   // FORBIDDEN: no inició sesión, o no es miembro de esa empresa.
+  // getCompanyContext no nos dice cuál de los dos pasó, así que ofrecemos las
+  // dos salidas: iniciar sesión (la principal) o elegir otra empresa (por si
+  // ya inició sesión pero eligió una empresa de la que no es parte).
   if (code === "FORBIDDEN") {
     return (
       <Alert
         tone="warning"
         title="Iniciá sesión para ver tu agente"
         action={
-          <Link href="/login" className={buttonStyles({ size: "sm" })}>
-            Iniciar sesión
-          </Link>
+          // Alert recibe una sola "action": juntamos los dos botones en un div.
+          // flex-wrap: en el celular, si no entran uno al lado del otro, el segundo baja.
+          <div className="flex flex-wrap gap-2.5">
+            <Link href="/login" className={buttonStyles({ size: "sm" })}>
+              Iniciar sesión
+            </Link>
+            <Link href="/login/companies" className={buttonStyles({ variant: "secondary", size: "sm" })}>
+              Elegir otra empresa
+            </Link>
+          </div>
         }
       />
     );
