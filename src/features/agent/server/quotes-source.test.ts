@@ -43,9 +43,22 @@ describe("toQuoteForRanking", () => {
       delivery_days: 4,
       accepts_argt: "yes",
       origin: "call",
+      price_includes_vat: "unknown",
     });
     // Y es una cotización válida para rankQuotes.
     expect(quoteForRankingSchema.safeParse(q).success).toBe(true);
+  });
+
+  it('el IVA se suma solo si cotizó sin IVA ("no"); "yes" y "unknown" quedan igual', () => {
+    const cuando = (vat: "yes" | "no" | "unknown") =>
+      toQuoteForRanking(comparatorQuote({ unit_price: { amount_atomic: "8500", currency: "ARS", decimals: 2 }, price_includes_vat: vat }), "X");
+    // 8500 centavos = 85 pesos = 85e18; con 21 % de IVA = 102,85e18.
+    expect(cuando("no").unit_price_atomic).toBe("102850000000000000000");
+    expect(cuando("no").price_includes_vat).toBe("no");
+    expect(cuando("yes").unit_price_atomic).toBe("85000000000000000000");
+    expect(cuando("unknown").unit_price_atomic).toBe("85000000000000000000");
+    // Sin precio en pesos sigue null, aunque diga "no".
+    expect(toQuoteForRanking(comparatorQuote({ unit_price: null, price_includes_vat: "no" }), "X").unit_price_atomic).toBeNull();
   });
 
   it("en dólares o sin precio queda sin precio en pesos (null)", () => {

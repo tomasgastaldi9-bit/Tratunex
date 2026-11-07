@@ -278,7 +278,11 @@ export const quoteForRankingSchema = z.object({
   quote_id: z.string().trim().min(1),
   supplier_contact_id: z.uuid(),
   supplier_name: z.string().trim().min(1).max(120),
-  /** Precio por unidad en unidades mínimas de ARGt. null = no dio precio. */
+  /**
+   * Precio FINAL por unidad (con IVA si el proveedor lo cotizó sin IVA) en
+   * unidades mínimas de ARGt. null = no dio precio. Quien arma la cotización
+   * usa finalUnitPriceAtomic para que todos comparen igual.
+   */
   unit_price_atomic: atomicAmountSchema.nullable(),
   /** Cuántas puede entregar. null = no lo sabemos. */
   available_quantity: z.number().int().min(0).nullable(),
@@ -286,8 +290,28 @@ export const quoteForRankingSchema = z.object({
   delivery_days: z.number().int().min(0).max(365).nullable(),
   accepts_argt: yesNoUnknownSchema,
   origin: quoteOriginSchema,
+  /**
+   * Opcional: si el precio que DIO el proveedor incluía IVA. Solo informa los
+   * motivos ("se sumó el IVA", "no aclaró el IVA"); el precio de arriba ya
+   * viene final. Sin este campo, el ranking no menciona el IVA.
+   */
+  price_includes_vat: yesNoUnknownSchema.optional(),
 });
 export type QuoteForRanking = z.infer<typeof quoteForRankingSchema>;
+
+/** IVA general de Argentina, en por ciento. */
+export const ARGENTINA_VAT_PERCENT = 21;
+
+/**
+ * Precio final por unidad para comparar (pitch: "precio final con IVA").
+ * Si el proveedor cotizó SIN IVA ("no"), le suma el 21 %; si lo incluía
+ * ("yes") o no aclaró ("unknown"), lo deja como vino. Todo con BigInt: con 18
+ * decimales, × 121 / 100 es exacto (no hay redondeo).
+ */
+export function finalUnitPriceAtomic(unitPriceAtomic: string, priceIncludesVat: YesNoUnknown): string {
+  if (priceIncludesVat !== "no") return unitPriceAtomic;
+  return ((BigInt(unitPriceAtomic) * BigInt(100 + ARGENTINA_VAT_PERCENT)) / BigInt(100)).toString();
+}
 
 export const RANK_QUOTES_MAX = 20;
 

@@ -189,6 +189,30 @@ describe("rankQuotesByRules", () => {
   });
 });
 
+describe("motivos de IVA", () => {
+  it("agrega un motivo según price_includes_vat", () => {
+    const r = rank([
+      quote({ quote_id: "a", price_includes_vat: "no" }),
+      quote({ quote_id: "b", price_includes_vat: "yes" }),
+      quote({ quote_id: "c", price_includes_vat: "unknown" }),
+    ]).ranking;
+    const motivos = (id: string) => r.find((x) => x.quote_id === id)?.reasons ?? [];
+    expect(motivos("a")).toContain("Se sumó el IVA (21 %) al precio");
+    expect(motivos("b")).toContain("El precio incluye IVA");
+    expect(motivos("c")).toContain("No aclaró si el precio incluye IVA");
+  });
+
+  it("sin price_includes_vat no menciona el IVA", () => {
+    const [primera] = rank([quote()]).ranking;
+    expect(primera?.reasons.some((m) => m.includes("IVA"))).toBe(false);
+  });
+
+  it("no cambia el orden ni el total: el precio ya viene final", () => {
+    const { ranking } = rank([quote({ quote_id: "a", price_includes_vat: "no", unit_price_atomic: pesosToAtomic(200) })]);
+    expect(ranking[0]?.total_atomic).toBe((BigInt(pesosToAtomic(200)) * BigInt(500)).toString());
+  });
+});
+
 describe("todayInArgentina", () => {
   it("usa la fecha de Buenos Aires, no la de UTC", () => {
     // 02:30 UTC del 8 = 23:30 del 7 en Argentina.

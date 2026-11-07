@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   atomicToPesos,
   decidePurchasePolicy,
+  finalUnitPriceAtomic,
   formatPesos,
   pesosToAtomic,
   purchasePolicySchema,
@@ -111,5 +112,17 @@ describe("montos mal escritos", () => {
     expect(() => purchasePolicySchema.safeParse({
       max_per_purchase_atomic: "1.5", auto_pay_limit_atomic: "abc", only_allowed_suppliers: false, allowed_supplier_ids: [],
     })).not.toThrow();
+  });
+});
+
+describe("finalUnitPriceAtomic (IVA)", () => {
+  it("suma el 21 % solo si el proveedor cotizó sin IVA, sin redondeos", () => {
+    expect(finalUnitPriceAtomic(pesosToAtomic(85), "no")).toBe("102850000000000000000");
+    expect(finalUnitPriceAtomic(pesosToAtomic(95), "yes")).toBe(pesosToAtomic(95));
+    expect(finalUnitPriceAtomic(pesosToAtomic(95), "unknown")).toBe(pesosToAtomic(95));
+  });
+
+  it("con IVA sumado, $85 + IVA ya no le gana a $95 con IVA", () => {
+    expect(BigInt(finalUnitPriceAtomic(pesosToAtomic(85), "no")) > BigInt(pesosToAtomic(95))).toBe(true);
   });
 });

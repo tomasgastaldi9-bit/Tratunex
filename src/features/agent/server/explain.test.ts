@@ -75,6 +75,31 @@ describe("explainByRules", () => {
   });
 });
 
+describe("IVA en el resumen y la explicación", () => {
+  const conIva = (vat: "yes" | "no" | "unknown") => summaryFor([{ ...quotes[1]!, price_includes_vat: vat }]);
+
+  it("el resumen trae iva solo si la cotización tiene el dato", () => {
+    expect(conIva("no").recomendada?.iva).toBe("sumado");
+    expect(conIva("yes").recomendada?.iva).toBe("incluido");
+    expect(conIva("unknown").recomendada?.iva).toBe("sin aclarar");
+    expect("iva" in resumen.recomendada!).toBe(false);
+  });
+
+  it('el respaldo dice "precio final" cuando hay dato de IVA', () => {
+    const texto = explainByRules(conIva("yes"));
+    expect(texto).toContain("el precio final más bajo");
+    expect(texto).not.toContain("precio total");
+  });
+
+  it("Claude recibe la indicación de comparar precios finales con IVA", async () => {
+    const fetchImpl = vi.fn(async () => claudeResponse({ stop_reason: "end_turn", content: [{ type: "text", text: "ok" }] }));
+    await explainWithClaude(conIva("no"), { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const body = JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(body.system).toContain("precios finales con IVA");
+    expect(body.messages[0].content).toContain('"iva":"sumado"');
+  });
+});
+
 describe("explainWithClaude / explainRanking", () => {
   it("éxito: manda headers y body correctos y toma solo los bloques de texto", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () =>

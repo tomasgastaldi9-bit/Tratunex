@@ -139,6 +139,13 @@ function compareEligible(a: Evaluated, b: Evaluated): number {
   return ORIGIN_ORDER[a.quote.origin] - ORIGIN_ORDER[b.quote.origin];
 }
 
+/** Motivo sobre el IVA (solo si la cotización trae el dato; el precio ya viene final). */
+const IVA_REASONS = {
+  no: "Se sumó el IVA (21 %) al precio",
+  yes: "El precio incluye IVA",
+  unknown: "No aclaró si el precio incluye IVA",
+} as const;
+
 /** Motivos cortos y positivos de una que califica, para mostrarle al dueño. */
 function positiveReasons(item: Evaluated, lowestTotal: bigint | null): string[] {
   const reasons: string[] = [];
@@ -146,6 +153,7 @@ function positiveReasons(item: Evaluated, lowestTotal: bigint | null): string[] 
   if (item.quote.delivery_days !== null) reasons.push(`Entrega en ${dias(item.quote.delivery_days)}`);
   reasons.push(item.quote.accepts_argt === "yes" ? "Acepta ARGt" : "No confirmó si acepta ARGt");
   if (item.quote.origin === "example") reasons.push("Cotización de prueba");
+  if (item.quote.price_includes_vat !== undefined) reasons.push(IVA_REASONS[item.quote.price_includes_vat]);
   return reasons;
 }
 
