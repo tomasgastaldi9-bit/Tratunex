@@ -1,0 +1,34 @@
+{
+  "name": "tratunex-pitch-video",
+  "private": true,
+  "description": "Video de fondo para el pitch de Tratunex (Remotion)",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render Pitch out/tratunex-pitch.mp4",
+    "present": "vite build && vite preview --open",
+    "present:serve": "vite build && vite preview",
+    "build:web": "vite build --outDir ../../public/pitch --emptyOutDir"
+  },
+  "dependencies": {
+    "@remotion/animation-utils": "4.0.541",
+    "@remotion/cli": "4.0.541",
+    "@remotion/google-fonts": "4.0.541",
+    "@remotion/layout-utils": "4.0.541",
+    "@remotion/media": "4.0.541",
+    "@remotion/motion-blur": "4.0.541",
+    "@remotion/noise": "4.0.541",
+    "@remotion/paths": "4.0.541",
+    "@remotion/player": "4.0.541",
+    "@remotion/shapes": "4.0.541",
+    "@remotion/transitions": "4.0.541",
+    "@types/react": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.541",
+    "typescript": "7.0.2",
+    "vite": "8.3.6"
+  },
+  "devDependencies": {
+    "@types/react-dom": "19.3.0"
+  }
+}
