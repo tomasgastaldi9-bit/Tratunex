@@ -75,7 +75,7 @@ const server = http.createServer(async (request, response) => {
     }
     if (url.pathname === "/auth/v1/.well-known/jwks.json") return send(response, 200, { keys: [] });
     const actor = { role: claims.role, id: claims.sub };
-    const rpc = new Map([["/rest/v1/rpc/contacts_execute", "contacts_execute"], ["/rest/v1/rpc/suppliers_execute", "suppliers_execute"]]).get(url.pathname);
+    const rpc = new Map([["/rest/v1/rpc/contacts_execute", "contacts_execute"], ["/rest/v1/rpc/suppliers_execute", "suppliers_execute"], ["/rest/v1/rpc/orders_execute", "orders_execute"]]).get(url.pathname);
     if (rpc && request.method === "POST") {
       const output = await asActor(actor, `select public.${rpc}(${quote(JSON.stringify(body.p_ctx))}::jsonb,
         ${quote(body.p_operation)},${quote(JSON.stringify(body.p_input))}::jsonb)::text`);
