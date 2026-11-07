@@ -111,3 +111,43 @@ Siguen [`docs/DESIGN.md`](../../../docs/DESIGN.md) y usan solo el kit `src/compo
 ## Modo
 
 El perfil se guarda en la base real (Supabase). Sin variables de Supabase, la pantalla muestra un error explícito: nunca datos inventados.
+
+## Compras (brief v3: BUY-01 a 03)
+
+El brief v3 cambió el producto a un **agente de compras** que paga en ARGt. Este módulo suma la parte del dueño: qué necesita comprar y con qué reglas paga el agente. Contrato: [`src/contracts/purchases.ts`](../../contracts/purchases.ts).
+
+Decisiones (aprobadas por Vale):
+
+12. **Las reglas de pago son una por empresa** (`/agent/rules`), no una por compra: así `checkPurchasePolicy(ctx, { amount_atomic, supplier_contact_id })` (la que llama el pago de Tomás) no necesita la compra.
+13. **Proveedores permitidos = lista elegida del CRM** (ids de contactos de `listContacts`), con un interruptor para apagar el filtro.
+14. **La regla vive en un solo lugar:** `decidePurchasePolicy` en el contrato. La usan el servidor antes de pagar y la pantalla para mostrar "así decide el agente". Orden: sin reglas → pide aprobación; supera el máximo → rechaza; proveedor no permitido → rechaza; supera lo que paga solo → pide aprobación; si no → paga solo.
+15. **Plata siempre como texto entero** en unidades mínimas de ARGt (18 decimales, `amount_atomic`); en la base `numeric(78,0)`. La persona escribe pesos enteros (1 ARGt ≈ 1 peso) y se convierte con `pesosToAtomic`.
+16. **Quién hace qué:** cualquier miembro puede crear una compra; solo los admin cambian las reglas de pago. La base es la que decide.
+
+### Tablas
+
+`public.purchase_requests` (una fila por compra): `id uuid`, `company_id`, `product text`, `quantity integer > 0`, `unit text`, `needed_by date`, `budget_atomic numeric(78,0) > 0`, `zone text`, `status text` (`'open'`), `created_by`, `created_at`.
+
+`public.purchase_policies` (una fila por empresa, `company_id` es la clave): `max_per_purchase_atomic numeric(78,0)`, `auto_pay_limit_atomic numeric(78,0)` (≤ máximo), `only_allowed_suppliers boolean`, `allowed_supplier_ids uuid[]` (contactos del CRM de la misma empresa), `updated_by`, `updated_at`.
+
+Ambas: RLS de lectura para miembros, sin escrituras directas (solo por las funciones), `anon` sin acceso.
+
+### Funciones SQL
+
+```sql
+-- Cualquier miembro. Idempotente ('purchase.create_request'). Devuelve {"purchase_request": {...}, "created": bool}.
+public.create_purchase_request(p_company_id uuid, p_action_id text, p_request jsonb) returns jsonb
+-- Solo admin. Idempotente ('purchase.save_policy'). Crea o reemplaza la fila de la empresa. Devuelve {"policy": {...}}.
+public.save_purchase_policy(p_company_id uuid, p_action_id text, p_policy jsonb) returns jsonb
+```
+
+Montos dentro de los JSON: como texto (`"100000000000000000000000"`), nunca como número. Errores con los mismos prefijos que el resto del módulo (`FORBIDDEN:`/42501, `CONFLICT:`, `VALIDATION_ERROR:`).
+
+### Mapa de archivos
+
+| Ticket | Página | Archivos |
+|---|---|---|
+| BUY-01 Nueva compra | `/purchases/new` | `src/app/purchases/new/**`, `src/features/agent/components/PurchaseRequestForm.tsx`, `purchase-form-data.ts` (+ test) |
+| BUY-02 Reglas | `/agent/rules` | `src/app/agent/rules/**`, `src/features/agent/components/PolicyForm.tsx`, `policy-form-data.ts` (+ test) |
+| Ambos (servidor) | — | `src/features/agent/server/purchase-service.ts` (+ test), `public.ts` |
+| Ambos (base) | — | migración `…_add_purchases.sql` + `supabase/tests/database/purchases.test.sql` |
