@@ -69,10 +69,7 @@ export const checkPurchasePolicy: CheckPurchasePolicy = (ctx, input) =>
 
 /**
  * Ordena las cotizaciones de una compra, recomienda una y lo explica (BUY-03).
- * ESQUELETO: responde un error explícito hasta que la tarea de BUY-03 lo
- * implemente, sin cambiar la firma (src/contracts/purchases.ts).
+ * Solo lee (la compra y las reglas), por eso usa el cliente de solo lectura.
+ * La explicación con IA usa ANTHROPIC_API_KEY del servidor; sin clave, usa reglas.
  */
-export const rankQuotes: RankQuotes = async () => ({
-  ok: false,
-  error: { code: "PROVIDER_ERROR", message: "Esta función todavía no está implementada", retryable: false },
-});
+export const rankQuotes: RankQuotes = (ctx, input) => purchaseReadService.rankQuotes(ctx, input);
