@@ -30,7 +30,7 @@ function setup(reserve: Awaited<ReturnType<DialStore["reserveCall"]>>, dialResul
     markDialed: vi.fn(async () => ({ ok: true as const, data: null })),
     markNotDialed: vi.fn(async () => ({ ok: true as const, data: null })),
   };
-  const dial = vi.fn(async (_request: QuoteDialRequest) => dialResult);
+  const dial = vi.fn<(request: QuoteDialRequest) => Promise<Result<{ provider_call_id: string }>>>(async () => dialResult);
   const deps: QuoteDialDeps = {
     store,
     dial,
