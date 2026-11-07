@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 // Ruta relativa (y no "@/"): Vitest no entiende el alias "@/" en este proyecto.
-import { saveCompanyProfileInputSchema } from "../../../contracts/agent";
-import { profileFieldErrors, readProfileForm } from "./profile-form-data";
+import { PROFILE_TEXT_MAX, saveCompanyProfileInputSchema } from "../../../contracts/agent";
+import {
+  actionIdAfterError,
+  actionIdForSubmission,
+  profileFieldErrors,
+  readProfileForm,
+  readSavedNotice,
+  savedProfileUrl,
+} from "./profile-form-data";
 
 // Los campos de un formulario válido, como los manda el navegador: todo es texto.
 // Cada prueba cambia solo lo que le interesa.
@@ -82,6 +89,95 @@ describe("readProfileForm", () => {
     delete sinDias.days;
     const { input } = readProfileForm(armarFormulario(sinDias));
     expect(input.profile.call_window.days).toEqual([]);
+  });
+
+  it("cambia los saltos de línea \\r\\n por \\n (así un texto que entraba en pantalla no se pasa del máximo)", () => {
+    // En pantalla esto tiene justo el máximo (600): el Enter cuenta como 1.
+    const enPantalla = `${"a".repeat(PROFILE_TEXT_MAX / 2 - 1)}\n${"b".repeat(PROFILE_TEXT_MAX / 2)}`;
+    expect(enPantalla.length).toBe(PROFILE_TEXT_MAX);
+    // Pero el navegador lo ENVÍA con "\r\n": 1 caracter más.
+    const comoLoEnvia = enPantalla.replace(/\n/g, "\r\n");
+    expect(comoLoEnvia.length).toBe(PROFILE_TEXT_MAX + 1);
+
+    const { input } = readProfileForm(armarFormulario({ ...CAMPOS_VALIDOS, offering: comoLoEnvia }));
+
+    expect(input.profile.offering).toBe(enPantalla);
+    expect(input.profile.offering).not.toContain("\r");
+    // Y pasa la validación del contrato, como en la pantalla.
+    expect(saveCompanyProfileInputSchema.safeParse(input).success).toBe(true);
+    // Sin el arreglo (con el "\r\n" tal cual llegó) la validación lo rechazaría.
+    const sinArreglo = { ...input, profile: { ...input.profile, offering: comoLoEnvia } };
+    expect(saveCompanyProfileInputSchema.safeParse(sinArreglo).success).toBe(false);
+  });
+});
+
+describe("action_id", () => {
+  // Un "creador de ids" falso: siempre devuelve el mismo texto, así sabemos
+  // qué esperar. vi.fn además cuenta cuántas veces lo llamaron.
+  const nuevoId = () => vi.fn(() => "id-nuevo");
+
+  describe("actionIdForSubmission", () => {
+    it("usa el action_id que vino en el formulario", () => {
+      const crear = nuevoId();
+      expect(actionIdForSubmission("id-del-formulario", crear)).toBe("id-del-formulario");
+      expect(crear).not.toHaveBeenCalled();
+    });
+
+    it("crea uno nuevo si vino vacío o solo con espacios", () => {
+      expect(actionIdForSubmission("", nuevoId())).toBe("id-nuevo");
+      expect(actionIdForSubmission("   ", nuevoId())).toBe("id-nuevo");
+    });
+  });
+
+  describe("actionIdAfterError", () => {
+    it("conserva el MISMO action_id si el error se puede reintentar (retryable true)", () => {
+      const crear = nuevoId();
+      expect(actionIdAfterError({ retryable: true }, "id-actual", crear)).toBe("id-actual");
+      expect(crear).not.toHaveBeenCalled();
+    });
+
+    it("usa uno NUEVO si el error no se arregla reintentando (retryable false)", () => {
+      const crear = nuevoId();
+      expect(actionIdAfterError({ retryable: false }, "id-actual", crear)).toBe("id-nuevo");
+      expect(crear).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe("aviso de guardado en la dirección", () => {
+  /** Hace lo que hace Next: toma lo que va después del "?" y lo convierte en un objeto. */
+  function parametrosDe(direccion: string): Record<string, string> {
+    return Object.fromEntries(new URL(direccion, "http://localhost").searchParams);
+  }
+
+  it("arma la dirección con la versión y si se creó (1) o no (0)", () => {
+    expect(savedProfileUrl({ version: 3, created: true })).toBe("/agent/profile?saved=3&created=1");
+    expect(savedProfileUrl({ version: 3, created: false })).toBe("/agent/profile?saved=3&created=0");
+  });
+
+  it("lee de vuelta exactamente lo que armó savedProfileUrl", () => {
+    for (const aviso of [
+      { version: 1, created: true },
+      { version: 7, created: false },
+    ]) {
+      expect(readSavedNotice(parametrosDe(savedProfileUrl(aviso)))).toEqual(aviso);
+    }
+  });
+
+  it("devuelve null si no hay aviso", () => {
+    expect(readSavedNotice({})).toBeNull();
+    expect(readSavedNotice({ saved: "3" })).toBeNull();
+  });
+
+  it("devuelve null si la versión no es un entero desde 1", () => {
+    for (const saved of ["0", "-1", "1.5", "abc", ""]) {
+      expect(readSavedNotice({ saved, created: "1" })).toBeNull();
+    }
+  });
+
+  it("devuelve null si created no es 1 ni 0, o si un dato vino repetido", () => {
+    expect(readSavedNotice({ saved: "3", created: "si" })).toBeNull();
+    expect(readSavedNotice({ saved: ["3", "4"], created: "1" })).toBeNull();
   });
 });
 

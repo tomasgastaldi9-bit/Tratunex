@@ -6,8 +6,11 @@
 import { redirect } from "next/navigation";
 import { saveCompanyProfileInputSchema } from "@/contracts/agent";
 import {
+  actionIdAfterError,
+  actionIdForSubmission,
   profileFieldErrors,
   readProfileForm,
+  savedProfileUrl,
   type ProfileFieldErrors,
   type ProfileFormValues,
 } from "@/features/agent/components/profile-form-data";
@@ -36,14 +39,13 @@ export type SaveProfileState = {
 };
 
 /**
- * Qué action_id usar después de un error (README del módulo, "action_id"):
- *  - retryable true (la base no respondió): el MISMO, para reintentar sin
- *    duplicar. Si en realidad se había guardado, la base devuelve lo mismo.
- *  - retryable false (datos, permisos, conflicto): uno NUEVO.
+ * Cómo se crea un action_id nuevo. Las reglas de CUÁNDO usar uno nuevo están
+ * en profile-form-data.ts (actionIdForSubmission y actionIdAfterError), con
+ * sus tests; acá solo les pasamos esta función para que lo creen.
+ * (Va con flecha para llamarla siempre como crypto.randomUUID(): en algunos
+ * lugares, como el navegador, pasarla "suelta", sin el crypto adelante, falla.)
  */
-function siguienteActionId(error: { retryable: boolean }, actionIdActual: string): string {
-  return error.retryable ? actionIdActual : crypto.randomUUID();
-}
+const nuevoActionId = () => crypto.randomUUID();
 
 /**
  * Guarda el perfil de empresa. La usa ProfileForm con useActionState:
@@ -57,17 +59,17 @@ export async function saveProfileAction(prevState: SaveProfileState, formData: F
   // 1. Leer y validar lo que mandó el formulario.
   const { action_id: actionIdDelFormulario, input } = readProfileForm(formData);
   // El action_id viene de un campo oculto, pero el navegador puede mandarlo
-  // vacío (o no mandarlo). Sin action_id la base no puede evitar duplicados,
-  // así que en ese caso armamos uno nuevo acá, del lado del servidor.
-  const action_id = actionIdDelFormulario.trim() === "" ? crypto.randomUUID() : actionIdDelFormulario;
+  // vacío (o no mandarlo). En ese caso armamos uno nuevo acá, del lado del servidor.
+  const action_id = actionIdForSubmission(actionIdDelFormulario, nuevoActionId);
   const validado = saveCompanyProfileInputSchema.safeParse(input);
   if (!validado.success) {
     return {
       message: "Revisá los campos marcados.",
       fieldErrors: profileFieldErrors(validado.error),
       values: input.profile,
-      // Los datos estaban mal: el próximo intento es otro pedido, con otro action_id.
-      action_id: crypto.randomUUID(),
+      // Los datos estaban mal: es un error que NO se arregla reintentando igual
+      // (retryable false), así que el próximo intento lleva otro action_id.
+      action_id: actionIdAfterError({ retryable: false }, action_id, nuevoActionId),
       attempt,
     };
   }
@@ -80,7 +82,7 @@ export async function saveProfileAction(prevState: SaveProfileState, formData: F
       message: contexto.error.message,
       fieldErrors: {},
       values: input.profile,
-      action_id: siguienteActionId(contexto.error, action_id),
+      action_id: actionIdAfterError(contexto.error, action_id, nuevoActionId),
       attempt,
     };
   }
@@ -92,13 +94,14 @@ export async function saveProfileAction(prevState: SaveProfileState, formData: F
       message: guardado.error.message,
       fieldErrors: {},
       values: input.profile,
-      action_id: siguienteActionId(guardado.error, action_id),
+      action_id: actionIdAfterError(guardado.error, action_id, nuevoActionId),
       attempt,
     };
   }
 
-  // 4. ¡Listo! Volvemos a la misma página contando qué pasó. La página arma un
-  //    action_id nuevo para el próximo guardado. Ojo: redirect "corta" la función
-  //    a propósito (lanza un aviso especial que Next atrapa); no hay que envolverlo en try.
-  redirect(`/agent/profile?saved=${guardado.data.version}&created=${guardado.data.created ? 1 : 0}`);
+  // 4. ¡Listo! Volvemos a la misma página contando qué pasó (?saved=N&created=1 o 0;
+  //    la página lo lee con readSavedNotice). La página arma un action_id nuevo
+  //    para el próximo guardado. Ojo: redirect "corta" la función a propósito
+  //    (lanza un aviso especial que Next atrapa); no hay que envolverlo en try.
+  redirect(savedProfileUrl(guardado.data));
 }

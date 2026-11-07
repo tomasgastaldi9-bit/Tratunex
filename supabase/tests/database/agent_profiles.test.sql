@@ -4,7 +4,7 @@
 -- Todo corre dentro de una transacción y al final se hace rollback: así las
 -- pruebas no dejan basura en la base y se pueden correr las veces que sea.
 begin;
-select plan(33);
+select plan(34);
 
 -- ---------------------------------------------------------------------------
 -- Datos de prueba (se cargan con el rol del test, que puede escribir todo)
@@ -271,6 +271,19 @@ select throws_ok(
   '42501',
   'FORBIDDEN: only company admins can edit the agent',
   'B no puede guardar en Empresa A'
+);
+
+-- En SU empresa (Empresa B), B es admin, pero Empresa B todavía no tiene
+-- ninguna versión. Si B manda base_version 1 (como si estuviera editando una
+-- versión 1 que no existe), está desactualizado: tiene que dar CONFLICT.
+select throws_ok(
+  $$select public.save_agent_profile(
+    '22222222-2222-4222-8222-222222222222', 'save-b-stale', 1,
+    '{"industry":"agency","offering":"Campañas de publicidad","target_customer":"Comercios de barrio","value_proposition":"Más clientes en un mes","zone":"","tone":"formal","call_window":{"days":[1,2,3],"start":"10:00","end":"17:00"}}'::jsonb
+  )$$,
+  'P0001',
+  'CONFLICT: stale base version',
+  'sin versiones y con base_version 1 da CONFLICT'
 );
 
 -- ---------------------------------------------------------------------------

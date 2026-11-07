@@ -18,7 +18,7 @@ El dashboard donde cada empresa "entrena" a su agente de voz: qué vende, a qui�
 
 | Ticket | Página | Archivos |
 |---|---|---|
-| AGT-01 Perfil | `/agent`, `/agent/profile` | `src/app/agent/layout.tsx`, `src/app/agent/page.tsx`, `src/app/agent/profile/**`, `src/features/agent/components/ProfileForm.tsx`, `src/features/agent/components/DayPicker.tsx`, `src/features/agent/server/**`, migración y test de `agent_profiles` |
+| AGT-01 Perfil | `/agent`, `/agent/profile` | `src/app/agent/layout.tsx`, `src/app/agent/page.tsx`, `src/app/agent/profile/**`, `src/features/agent/components/ProfileForm.tsx`, `src/features/agent/components/DayPicker.tsx`, `src/features/agent/components/AccessAlert.tsx`, `src/features/agent/components/profile-form-data.ts` (+ `profile-form-data.test.ts`), `src/features/agent/server/**`, `src/contracts/agent.test.ts`, migración y test de `agent_profiles` |
 | AGT-02 Conocimiento | `/agent/knowledge` | `src/app/agent/knowledge/**`, tabla `knowledge_items` |
 | AGT-03 Instrucciones | `/agent/instructions` | `src/app/agent/instructions/**`, columna `instructions` (ya existe) |
 | AGT-04 Criterios | `/agent/criteria` | `src/app/agent/criteria/**`, columna `criteria` (ya existe) |
