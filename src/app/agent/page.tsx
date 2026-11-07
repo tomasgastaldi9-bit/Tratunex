@@ -82,17 +82,15 @@ export default async function AgentPage() {
         ]}
         action={
           // Si no puede editar, no la invitamos a "completar" ni a "editar"
-          // algo que después no va a poder guardar: solo a mirarlo. Por eso
-          // también es secundario (gris): no es la acción principal para ella.
+          // algo que después no va a poder guardar. Tampoco ponemos un botón
+          // gris: sobre esta tarjeta gris no se distinguiría (regla "nada gris
+          // sobre gris" de docs/DESIGN.md). Para mirar el perfil ya tiene el
+          // botón "Abrir" en la lista de abajo.
           puedeEditar ? (
             <Link href="/agent/profile" className={buttonStyles()}>
               {tienePerfil ? "Editar perfil" : "Completar perfil"}
             </Link>
-          ) : (
-            <Link href="/agent/profile" className={buttonStyles({ variant: "secondary" })}>
-              Ver perfil
-            </Link>
-          )
+          ) : undefined
         }
       />
 
