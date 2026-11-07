@@ -201,3 +201,19 @@ export type GetContactData = z.infer<typeof GetContactDataSchema>;
 export type RecordCallResultData = z.infer<typeof RecordCallResultDataSchema>;
 export type FollowupData = z.infer<typeof FollowupDataSchema>;
 export type ClaimDueFollowupsData = z.infer<typeof ClaimDueFollowupsDataSchema>;
+
+// CRM-03: edición explícita por ID; upsert conserva su firma para importadores.
+export const UpdateContactInputSchema = UpsertContactInputSchema.extend({ contact_id: IdSchema });
+export const ContactListInputSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: IdSchema.optional(),
+  query: z.string().trim().min(1).max(100).optional(),
+  source: z.enum(["csv", "firecrawl", "manual"]).optional(),
+  do_not_contact: z.enum(["true", "false"]).optional(),
+}).strict();
+export const ContactPageSchema = z.object({
+  items: z.array(ContactDTOSchema), next_cursor: IdSchema.nullable(),
+});
+export type UpdateContactInput = z.infer<typeof UpdateContactInputSchema>;
+export type ContactListInput = z.infer<typeof ContactListInputSchema>;
+export type ContactPage = z.infer<typeof ContactPageSchema>;
