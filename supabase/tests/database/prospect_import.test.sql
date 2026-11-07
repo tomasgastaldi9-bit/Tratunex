@@ -1,0 +1,15 @@
+begin;
+select plan(5);
+insert into auth.users(id,email) values ('f1000000-0000-4000-8000-000000000001','import-a@example.test');
+insert into public.companies(id,name) values ('f2000000-0000-4000-8000-000000000001','Import A'),('f2000000-0000-4000-8000-000000000002','Import B');
+insert into public.company_members(company_id,user_id,role) values ('f2000000-0000-4000-8000-000000000001','f1000000-0000-4000-8000-000000000001','admin');
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.reserve_prospect_import('f2000000-0000-4000-8000-000000000001','batch','[{"name":"A"}]')$$,'first reservation');
+select lives_ok($$select public.reserve_prospect_import('f2000000-0000-4000-8000-000000000001','batch','[{"name":"A"}]')$$,'same batch can retry');
+select throws_ok($$select public.reserve_prospect_import('f2000000-0000-4000-8000-000000000001','batch','[{"name":"B"}]')$$,'P0001','CONFLICT: action id was reused with different input','changed batch is rejected');
+select throws_ok($$select public.reserve_prospect_import('f2000000-0000-4000-8000-000000000002','batch','[{"name":"A"}]')$$,'P0001','FORBIDDEN: Empresa no disponible','other company is rejected');
+select is(has_function_privilege('anon','public.reserve_prospect_import(uuid,text,jsonb)','EXECUTE'),false,'anonymous cannot reserve');
+reset role;
+select * from finish();
+rollback;
