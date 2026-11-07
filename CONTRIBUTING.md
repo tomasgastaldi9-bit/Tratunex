@@ -5,8 +5,8 @@ El alcance, el stack y los contratos están en [`docs/brief/00_GENERAL.md`](docs
 ## Flujo corto
 
 1. Elige un issue asignado en el proyecto **Tratunex MVP** de Linear. Asegúrate de que tenga criterios de aceptación, dominio responsable y dependencias claras.
-2. Revisa `git status --short --branch`. Conserva tus cambios locales; empieza desde una copia limpia y actualizada de `main`.
-3. Crea una rama por issue: `feat/TRA-123-descripcion`, `fix/TRA-123-descripcion`, `docs/TRA-123-descripcion` o `chore/TRA-123-descripcion`, usando el ID real del issue.
+2. Revisa `git status --short --branch` y conserva tus cambios locales. Al empezar una tarea nueva, ejecuta `git fetch origin`; esto actualiza las referencias remotas sin modificar tu rama ni tus archivos locales.
+3. Crea una rama por issue directamente desde la referencia recién actualizada: `git switch -c docs/TRA-123-descripcion origin/main` (ajusta el prefijo según el trabajo). Usa el ID real del issue. Si tienes cambios locales pendientes, resuélvelos o guárdalos de forma segura antes de cambiar de rama; no los mezcles con la tarea nueva.
 4. Mantén los commits pequeños y descriptivos, con prefijos como `feat:`, `fix:`, `docs:`, `chore:`, `test:` o `refactor:`.
 5. Abre un pull request con el issue de Linear enlazado. Completa la plantilla, incluye la evidencia de verificación y solicita revisión a alguien distinto del autor.
 6. Después del merge, Linear pasa a **Done**. GitHub usa squash merge y elimina automáticamente la rama mergeada.

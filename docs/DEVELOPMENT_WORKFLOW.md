@@ -24,15 +24,15 @@ Etiqueta cada issue con un dominio: `Domain: Business & Discovery`, `Domain: Voi
 
 ## Ramas y commits
 
-1. Antes de cambiar de rama, revisa `git status --short --branch`, la rama actual y los últimos commits. No descartes trabajo local que no sea tuyo.
-2. Actualiza tu referencia a `origin/main` y crea una rama corta por issue:
-   - `feat/TRA-123-descripcion`
-   - `fix/TRA-123-descripcion`
-   - `docs/TRA-123-descripcion`
-   - `chore/TRA-123-descripcion`
-3. Usa el identificador real del issue, minúsculas en la descripción y guiones para separar palabras.
-4. Prefiere commits pequeños, enfocados y con prefijos Conventional Commits: `feat:`, `fix:`, `docs:`, `chore:`, `test:` o `refactor:`.
-5. No integres directo a `main`. Todos los cambios, incluidos docs y configuración, entran por pull request.
+1. Antes de cambiar de rama, revisa `git status --short --branch`, la rama actual y los últimos commits. Conserva cualquier cambio local; no descartes trabajo que no sea tuyo.
+2. Al iniciar cada tarea nueva, ejecuta `git fetch origin`. Esto descarga los últimos commits y actualiza las referencias remotas (incluida `origin/main`) sin cambiar tu rama actual ni tocar tus archivos.
+3. Crea una rama corta por issue directamente desde la referencia recién actualizada, nunca desde una copia local posiblemente desactualizada de `main`:
+   - `git switch -c docs/TRA-123-descripcion origin/main`
+   - Ajusta el prefijo (`feat/`, `fix/` o `chore/`) según el trabajo.
+   Si el árbol de trabajo tiene cambios pendientes, guárdalos o termínalos de forma segura antes de cambiar de rama; no los incorpores accidentalmente a la tarea nueva.
+4. Usa el identificador real del issue, minúsculas en la descripción y guiones para separar palabras.
+5. Prefiere commits pequeños, enfocados y con prefijos Conventional Commits: `feat:`, `fix:`, `docs:`, `chore:`, `test:` o `refactor:`.
+6. No integres directo a `main`. Todos los cambios, incluidos docs y configuración, entran por pull request.
 
 ## Pull requests y revisión
 
