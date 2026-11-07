@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Alert } from "@/components/ui/Alert";
+import { buttonStyles } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatPesos } from "@/contracts/purchases";
 import { AccessAlert } from "@/features/agent/components/AccessAlert";
@@ -60,7 +62,20 @@ export default async function NewPurchasePage({ searchParams }: NewPurchasePageP
       {encabezado}
 
       {creada?.ok === true && (
-        <Alert tone="success" title="Creamos la compra">
+        <Alert
+          tone="success"
+          title="Creamos la compra"
+          action={
+            // Próximo paso de la demo: el comparador de Nano para ESTA compra
+            // (lee purchase_request_id de la dirección).
+            <Link
+              href={`/orders/quotes?purchase_request_id=${creada.data.purchase_request.id}`}
+              className={buttonStyles({ size: "sm" })}
+            >
+              Ver cotizaciones
+            </Link>
+          }
+        >
           {/* dl = "lista de datos": cada dato con su nombre (dt) y su valor (dd).
               flex-wrap: en el celular, si el valor es largo, baja a otra línea. */}
           <dl className="flex flex-col gap-1">
