@@ -314,9 +314,10 @@ export const quoteRankSchema = z.object({
   /** Motivos en castellano, para mostrarle al dueño. */
   reasons: z.array(z.string()),
   /**
-   * Qué haría el agente al pagarla según las reglas. null solo si no dio
-   * precio (no hay monto para evaluar). Si las reglas la rechazan, viene con
-   * "rejected" y la cotización no califica.
+   * Qué haría el agente al pagarla según las reglas. null si no se llegó a
+   * evaluar: no dio precio o ya la descartó otra regla (presupuesto, ARGt,
+   * stock o plazo). Si las reglas de pago la rechazan, viene con "rejected"
+   * y la cotización no califica.
    */
   policy: z.object({ decision: policyDecisionSchema, reason: z.string() }).nullable(),
 });
