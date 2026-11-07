@@ -1,19 +1,29 @@
 # Tratunex
 
-Plataforma para que cualquier empresa prospecte clientes en frío con un agente de voz que llama por teléfono, detecta si hay un cliente potencial y deja cada llamada transcripta, resumida y clasificada en un CRM con seguimiento automático.
+Agente de compras para pymes: busca proveedores, les pide cotización (incluso llamándolos), elige el mejor según las reglas del dueño, explica por qué y le paga en pesos digitales (**ARGt de Twin**) dentro de límites de gasto.
 
-## Alcance del MVP
+## Alcance del MVP (HackaTwin, 7/11)
 
-Cada empresa entrena a su agente desde un dashboard (contexto, conocimiento, instrucciones y criterios), busca o importa prospectos, los llama con Vapi + Twilio y gestiona el resultado en un pipeline de 7 etapas. Los seguimientos ("llamame el jueves") se ejecutan solos desde un cron. La demo muestra dos empresas de rubros distintos con el mismo sistema. La aplicación todavía no está implementada.
+El dueño carga qué necesita y sus reglas; el agente busca proveedores (Firecrawl), pide cotizaciones (llamadas con Vapi + Twilio), compara y recomienda con IA, y paga en ARGt con una transacción verificable. La cotización ARS/USDT viene de la API pública de Belo. Detalle en [`docs/BRIEF.md`](docs/BRIEF.md).
+
+## Pagos onchain (track de Twin)
+
+| Dato | Valor |
+|---|---|
+| Token | ARGt (Twin Stablecoin, ERC-20, 18 decimales) |
+| Red | _a completar (PAY-01)_ |
+| Contrato del token | _a completar (PAY-01)_ |
+| Billetera del agente (pública) | _a completar (PAY-01)_ |
+| Transacción de la demo | _hash y link al explorer (PAY-03)_ |
 
 ## Equipo
 
 | Integrante | Responsabilidad |
 |---|---|
-| Tomás | Plataforma (repo, auth, multi-empresa, cron, deploy) y prospección |
-| Vale | Dashboard de entrenamiento del agente |
-| Bautista | Voz, número y llamadas |
-| Nano | CRM, pipeline y seguimiento |
+| Tomás | Pagos en Twin, prospección de proveedores, plataforma y deploy |
+| Vale | Necesidad de compra, reglas del dueño y elección con IA |
+| Bautista | Cotización por llamada (voz) y precio de Belo |
+| Nano | Proveedores, comparador de cotizaciones y órdenes de compra |
 
 ## Documentación del proyecto
 
