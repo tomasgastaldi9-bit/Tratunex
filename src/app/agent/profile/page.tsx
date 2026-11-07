@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Alert } from "@/components/ui/Alert";
-import { buttonStyles } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DEFAULT_CALL_WINDOW, DEFAULT_TONE } from "@/contracts/agent";
-import type { ErrorCode } from "@/contracts/common";
+import { AccessAlert } from "@/features/agent/components/AccessAlert";
 import { ProfileForm } from "@/features/agent/components/ProfileForm";
 import type { ProfileFormValues } from "@/features/agent/components/profile-form-data";
 import { getAgentProfile } from "@/features/agent/server/public";
@@ -27,47 +25,6 @@ type ProfilePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-/**
- * Aviso cuando no pudimos saber quién es la persona o de qué empresa.
- * (La misma regla está en /agent.)
- */
-function AvisoDeAcceso({ code }: { code: ErrorCode }) {
-  // VALIDATION_ERROR: no hay una empresa elegida (o la cookie no sirve).
-  if (code === "VALIDATION_ERROR") {
-    return (
-      <Alert
-        tone="warning"
-        title="Elegí una empresa para seguir"
-        action={
-          <Link href="/login/companies" className={buttonStyles({ size: "sm" })}>
-            Elegir empresa
-          </Link>
-        }
-      />
-    );
-  }
-  // FORBIDDEN: no inició sesión, o no es miembro de esa empresa.
-  if (code === "FORBIDDEN") {
-    return (
-      <Alert
-        tone="warning"
-        title="Iniciá sesión para ver tu agente"
-        action={
-          <Link href="/login" className={buttonStyles({ size: "sm" })}>
-            Iniciar sesión
-          </Link>
-        }
-      />
-    );
-  }
-  // Cualquier otro (por ejemplo, el servicio de acceso no respondió).
-  return (
-    <Alert tone="danger" title="No pudimos comprobar tu acceso">
-      Probá de nuevo en un rato.
-    </Alert>
-  );
-}
-
 /** Lee la versión guardada de la dirección. Solo acepta un número entero desde 1. */
 function leerVersionGuardada(valor: string | string[] | undefined): number | null {
   if (typeof valor !== "string") return null;
@@ -89,7 +46,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     return (
       <>
         {encabezado}
-        <AvisoDeAcceso code={contexto.error.code} />
+        <AccessAlert code={contexto.error.code} />
       </>
     );
   }
@@ -150,6 +107,12 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       )}
 
       <ProfileForm
+        // key={actionId}: después de guardar, la acción redirige a esta misma
+        // página y React reutilizaría el formulario que ya estaba (con el
+        // action_id viejo y los valores de antes). Como cada vez que se arma la
+        // página hay un actionId nuevo, la key cambia y React arma un
+        // formulario nuevo, con la versión recién guardada y otro action_id.
+        key={actionId}
         initialValues={valoresIniciales}
         baseVersion={current?.version ?? null}
         actionId={actionId}

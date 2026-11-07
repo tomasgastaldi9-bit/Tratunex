@@ -55,7 +55,11 @@ export async function saveProfileAction(prevState: SaveProfileState, formData: F
   const attempt = (typeof prevState?.attempt === "number" ? prevState.attempt : 0) + 1;
 
   // 1. Leer y validar lo que mandó el formulario.
-  const { action_id, input } = readProfileForm(formData);
+  const { action_id: actionIdDelFormulario, input } = readProfileForm(formData);
+  // El action_id viene de un campo oculto, pero el navegador puede mandarlo
+  // vacío (o no mandarlo). Sin action_id la base no puede evitar duplicados,
+  // así que en ese caso armamos uno nuevo acá, del lado del servidor.
+  const action_id = actionIdDelFormulario.trim() === "" ? crypto.randomUUID() : actionIdDelFormulario;
   const validado = saveCompanyProfileInputSchema.safeParse(input);
   if (!validado.success) {
     return {

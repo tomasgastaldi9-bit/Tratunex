@@ -7,7 +7,7 @@ import { buttonStyles } from "@/components/ui/Button";
 import { ListItem } from "@/components/ui/ListItem";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProgressCard } from "@/components/ui/ProgressCard";
-import type { ErrorCode } from "@/contracts/common";
+import { AccessAlert } from "@/features/agent/components/AccessAlert";
 import { getAgentProfile } from "@/features/agent/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
 
@@ -22,48 +22,6 @@ export const metadata: Metadata = {
   title: "Agente · Tratunex",
 };
 
-/**
- * Aviso cuando no pudimos saber quién es la persona o de qué empresa:
- * qué pasó y qué hacer, con un botón para resolverlo cuando se puede.
- * (La misma regla está en /agent/profile.)
- */
-function AvisoDeAcceso({ code }: { code: ErrorCode }) {
-  // VALIDATION_ERROR: no hay una empresa elegida (o la cookie no sirve).
-  if (code === "VALIDATION_ERROR") {
-    return (
-      <Alert
-        tone="warning"
-        title="Elegí una empresa para seguir"
-        action={
-          <Link href="/login/companies" className={buttonStyles({ size: "sm" })}>
-            Elegir empresa
-          </Link>
-        }
-      />
-    );
-  }
-  // FORBIDDEN: no inició sesión, o no es miembro de esa empresa.
-  if (code === "FORBIDDEN") {
-    return (
-      <Alert
-        tone="warning"
-        title="Iniciá sesión para ver tu agente"
-        action={
-          <Link href="/login" className={buttonStyles({ size: "sm" })}>
-            Iniciar sesión
-          </Link>
-        }
-      />
-    );
-  }
-  // Cualquier otro (por ejemplo, el servicio de acceso no respondió): es un error nuestro.
-  return (
-    <Alert tone="danger" title="No pudimos comprobar tu acceso">
-      Probá de nuevo en un rato.
-    </Alert>
-  );
-}
-
 export default async function AgentPage() {
   const encabezado = (
     <PageHeader title="Agente" description="Lo que tu agente sabe de tu empresa y cómo habla en cada llamada." />
@@ -76,7 +34,7 @@ export default async function AgentPage() {
     return (
       <>
         {encabezado}
-        <AvisoDeAcceso code={contexto.error.code} />
+        <AccessAlert code={contexto.error.code} />
       </>
     );
   }

@@ -40,8 +40,11 @@ export function ProfileForm({ initialValues, baseVersion, actionId, canEdit }: P
   //  - state: la última respuesta (al principio, lo que le pasamos acá abajo).
   //  - formAction: lo que va en <form action>; llama a saveProfileAction.
   //  - pending: true mientras el servidor está guardando.
-  // Si guardar sale bien, la acción redirige y Next vuelve a armar este
-  // formulario desde cero con los datos nuevos de la página (otro actionId).
+  // Ojo: useActionState usa este estado inicial UNA sola vez, cuando el
+  // formulario aparece. Si después cambian los props (otro actionId), no se
+  // entera solo. Por eso la página le pone key={actionId} a <ProfileForm>:
+  // cada vez que la página se arma de nuevo (por ejemplo, después de guardar),
+  // la key cambia y React arma este formulario desde cero con los datos nuevos.
   const estadoInicial: SaveProfileState = {
     message: null,
     fieldErrors: {},
