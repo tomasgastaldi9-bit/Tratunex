@@ -29,6 +29,31 @@ describe("ORD02: adaptación exacta al contrato público BUY03", () => {
       accepts_argt: row.quote.accepts_argt, origin: "example",
     })) });
   });
+  it("acorta solo la etiqueta del ranking y conserva el nombre completo y la identidad de la fila", () => {
+    const rows = structuredClone(example.rows);
+    const fullName = "A".repeat(121);
+    rows[0].supplier.name = fullName;
+    const prepared = prepareQuoteRankingInput(example.purchase.id, rows);
+    if (!prepared.ok || example.recommendation.status !== "ready") throw new Error("Falta fixture");
+    const label = `${"A".repeat(119)}…`;
+    expect(prepared.data.quotes[0]).toMatchObject({ supplier_name: label,
+      quote_id: rows[0].quote.id, supplier_contact_id: rows[0].supplier.id,
+      unit_price_atomic: quotePriceForRanking(rows[0].quote.unit_price),
+    });
+    const ranking = structuredClone(example.recommendation.data);
+    ranking.ranking[0].supplier_name = label;
+    expect(rankingMatchesComparison(ranking, prepared.data, rows, example.purchase.quantity)).toBe(true);
+    expect(rows[0].supplier.name).toBe(fullName);
+  });
+  it("no corta un par UTF-16 al limitar la etiqueta a 120 unidades", () => {
+    const rows = structuredClone(example.rows);
+    rows[0].supplier.name = `${"A".repeat(118)}😀B`;
+    const prepared = prepareQuoteRankingInput(example.purchase.id, rows);
+    if (!prepared.ok) throw new Error("Falta input");
+    expect(prepared.data.quotes[0].supplier_name).toBe(`${"A".repeat(118)}…`);
+    expect(prepared.data.quotes[0].supplier_name.length).toBeLessThanOrEqual(120);
+    expect(rows[0].supplier.name).toBe(`${"A".repeat(118)}😀B`);
+  });
   it("no valida como elegible una cotización cuyo proveedor declaró que no puede abastecer", () => {
     const rows = structuredClone(example.rows);
     rows[0].quote.can_supply = "no";

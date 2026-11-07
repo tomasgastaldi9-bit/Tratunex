@@ -12,11 +12,16 @@ export function quotePriceForRanking(price: QuoteMoney | null): string | null {
   return (BigInt(price.amount_atomic) * BigInt(10) ** BigInt(18 - price.decimals)).toString();
 }
 
+function rankingSupplierLabel(name: string): string {
+  if (name.length <= 120) return name;
+  return `${name.slice(0, 119).replace(/[\uD800-\uDBFF]$/, "")}…`;
+}
+
 export function prepareQuoteRankingInput(purchase_request_id: string, rows: QuoteComparisonRow[]): Result<RankQuotesInput> {
   if (rows.length > RANK_QUOTES_MAX) return crmFailure("VALIDATION_ERROR",
     `El ranking admite hasta ${RANK_QUOTES_MAX} cotizaciones por compra. No se evaluó una selección parcial.`);
   const input = rankQuotesInputSchema.safeParse({ purchase_request_id, quotes: rows.map(({ quote, supplier }) => ({
-    quote_id: quote.id, supplier_contact_id: quote.supplier_contact_id, supplier_name: supplier.name,
+    quote_id: quote.id, supplier_contact_id: quote.supplier_contact_id, supplier_name: rankingSupplierLabel(supplier.name),
     unit_price_atomic: quotePriceForRanking(quote.unit_price), available_quantity: quote.available_quantity,
     delivery_days: quote.lead_time_days, accepts_argt: quote.accepts_argt, origin: quote.source.kind,
   })) });

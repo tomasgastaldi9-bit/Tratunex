@@ -70,6 +70,10 @@ origen. BUY-03 no recibe `can_supply`, mínimos, IVA ni costo de entrega; la
 pantalla los conserva visibles para la revisión humana. Si devuelve elegible
 una cotización que declaró `can_supply: no`, la recomendación se representa
 como incompatible, sin inventar un stock.
+BUY-03 limita la etiqueta de proveedor a 120 unidades UTF-16. Para nombres CRM
+más largos se envía una etiqueta con elipsis sin dividir pares sustitutos;
+el UUID y el nombre completo de la fila se conservan. La etiqueta no identifica
+ni autoriza al proveedor: para eso se utiliza su UUID.
 
 ## Ranking y límites
 
