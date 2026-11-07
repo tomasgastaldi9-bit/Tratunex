@@ -73,10 +73,10 @@ export const Need: React.FC<{dur: number}> = ({dur}) => (
 			<Card badge={TEST}>
 				<CardTitle>Nueva compra</CardTitle>
 				<div style={{display: 'flex', flexDirection: 'column', gap: 24}}>
-					<Field label="Qué necesitás" value="500 vasos descartables" delay={36} />
+					<Field label="Qué necesitás" value="10 kg de café en grano tostado" delay={36} />
 					<div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24}}>
 						<Field label="Para cuándo" value="El lunes" delay={74} />
-						<Field label="Presupuesto" value="$ 150.000" delay={92} />
+						<Field label="Presupuesto" value="$ 320.000" delay={92} />
 					</div>
 				</div>
 				<DrawLine delay={122} style={{margin: '36px 0 28px'}} />
@@ -87,7 +87,7 @@ export const Need: React.FC<{dur: number}> = ({dur}) => (
 					<div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0'}}>
 						<div style={{fontSize: 38, fontWeight: 500, color: c.muted}}>Paga solo hasta</div>
 						<div style={{fontSize: 46, fontWeight: 700}}>
-							$ <CountUp to={120000} delay={146} />
+							$ <CountUp to={300000} delay={146} />
 						</div>
 					</div>
 				</Appear>
@@ -169,8 +169,8 @@ export const Search: React.FC<{dur: number}> = ({dur}) => {
 					<CardTitle>Proveedores</CardTitle>
 					<div style={{border: `2px solid ${c.line}`, borderRadius: 12, padding: '20px 26px', display: 'flex', alignItems: 'center', gap: 20}}>
 						<Magnifier />
-						<div style={{fontSize: 40, fontWeight: 600, flex: 1, whiteSpace: 'nowrap'}}>
-							<Typewriter text="vasos descartables" delay={30} caret={false} />
+						<div style={{fontSize: 34, fontWeight: 600, flex: 1, whiteSpace: 'nowrap'}}>
+							<Typewriter text="café en grano tostado" delay={30} caret={false} />
 						</div>
 						<SearchStatus doneAt={found} />
 					</div>
@@ -199,7 +199,7 @@ export const Search: React.FC<{dur: number}> = ({dur}) => {
 
 const CONNECT = 64;
 const AGENT_TALK: [number, number] = [84, 150];
-const SUPPLIER_TALK: [number, number] = [164, 214];
+const SUPPLIER_TALK: [number, number] = [164, 228];
 const SAVED = 238;
 
 const Waveform: React.FC = () => {
@@ -285,7 +285,7 @@ export const Call: React.FC<{dur: number}> = ({dur}) => (
 		step={3}
 		kicker="Paso 3 · Llamada con Vapi"
 		title={['Llama y pide', 'cotización.']}
-		subtitle="Habla con el proveedor y anota precio y entrega."
+		subtitle="Pregunta stock, precio con IVA y si cobra en ARGt."
 	>
 		<CardIn delay={16}>
 			<Card badge={TEST}>
@@ -304,13 +304,13 @@ export const Call: React.FC<{dur: number}> = ({dur}) => (
 					<Waveform />
 				</div>
 				<div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
-					<Bubble who="Agente" text="Hola, necesito 500 vasos para el lunes. ¿Qué precio tienen?" delay={AGENT_TALK[0]} />
-					<Bubble who="Proveedor" text="Son $ 118.000 con envío. Llegan el viernes." delay={SUPPLIER_TALK[0]} right />
+					<Bubble who="Agente" text="¿Tenés café en grano tostado? Necesito 10 kilos para el lunes en Palermo." delay={AGENT_TALK[0]} />
+					<Bubble who="Proveedor" text="Sí, llego el lunes. Sale $ 28.500 el kilo con IVA, y te cobro en ARGt." delay={SUPPLIER_TALK[0]} right />
 				</div>
 				<Appear delay={SAVED + 6} y={20}>
-					<div style={{display: 'flex', alignItems: 'center', gap: 16, marginTop: 26, paddingTop: 22, borderTop: `2px solid ${c.line}`, fontSize: 38, fontWeight: 700}}>
+					<div style={{display: 'flex', alignItems: 'center', gap: 16, marginTop: 26, paddingTop: 22, borderTop: `2px solid ${c.line}`, fontSize: 34, fontWeight: 700}}>
 						<Check delay={SAVED + 10} size={44} />
-						Precio $ 118.000 · Entrega el viernes
+						$ 28.500 el kilo · Lunes · Cobra en ARGt
 					</div>
 				</Appear>
 			</Card>
@@ -326,9 +326,9 @@ const ROW_H = 112;
 
 type Quote = {l: string; price: number; when: string; start: number; end: number; note: string};
 const QUOTES: Quote[] = [
-	{l: 'B', price: 109000, when: 'Entrega el martes', start: 0, end: 1, note: 'Llega tarde'},
-	{l: 'C', price: 162000, when: 'Entrega el lunes', start: 1, end: 2, note: 'Supera el presupuesto'},
-	{l: 'A', price: 118000, when: 'Entrega el viernes', start: 2, end: 0, note: ''},
+	{l: 'B', price: 260000, when: '$ 26.000/kg · miércoles', start: 0, end: 1, note: 'Llega tarde'},
+	{l: 'C', price: 310000, when: '$ 31.000/kg · lunes', start: 1, end: 2, note: 'No cobra en ARGt'},
+	{l: 'A', price: 285000, when: '$ 28.500/kg · lunes', start: 2, end: 0, note: ''},
 ];
 
 const QuoteRow: React.FC<{q: Quote}> = ({q}) => {
@@ -403,9 +403,9 @@ export const Compare: React.FC<{dur: number}> = ({dur}) => (
 						<Label>Por qué</Label>
 						<div style={{fontSize: 34, fontWeight: 500, lineHeight: 1.35, marginTop: 8, minHeight: 138}}>
 							<Typewriter
-								text="Elegí a Proveedor A: llega antes del lunes y entra en tu presupuesto. B es más barato, pero llega tarde."
+								text="Elegí a Proveedor A: llega el lunes, cobra en ARGt y entra en tu presupuesto. B es más barato, pero llega el miércoles."
 								delay={192}
-								cps={44}
+								cps={50}
 							/>
 						</div>
 					</div>
@@ -489,7 +489,7 @@ export const Pay: React.FC<{dur: number}> = ({dur}) => (
 				<div style={{background: c.ink, color: '#ffffff', borderRadius: 14, padding: '28px 36px'}}>
 					<div style={{display: 'flex', alignItems: 'baseline', gap: 20}}>
 						<div style={{fontSize: 108, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1}}>
-							<CountUp to={118000} delay={28} dur={40} />
+							<CountUp to={285000} delay={28} dur={40} />
 						</div>
 						<div style={{fontSize: 50, fontWeight: 700, color: c.gray400}}>ARGt</div>
 					</div>
@@ -500,10 +500,10 @@ export const Pay: React.FC<{dur: number}> = ({dur}) => (
 				<SendBar />
 				<PayRow label="Tus reglas" delay={76}>
 					<Check delay={96} size={44} />
-					<span style={{color: c.success}}>Bajo $ 120.000: paga solo</span>
+					<span style={{color: c.success}}>Bajo $ 300.000: paga solo</span>
 				</PayRow>
 				<PayRow label="Equivalente según Belo" delay={92}>
-					≈ <CountUp to={71.43} delay={98} dur={30} decimals={2} /> USDT
+					≈ <CountUp to={172.52} delay={98} dur={30} decimals={2} /> USDT
 				</PayRow>
 				<PayRow label="Red" delay={108}>
 					Arbitrum One
@@ -571,7 +571,7 @@ const PayTakeover: React.FC = () => {
 			/>
 			<Appear delay={TAKE + 26} y={20}>
 				<div style={{fontSize: 46, fontWeight: 600, color: c.gray400}}>
-					118.000 ARGt · Arbitrum One ·{' '}
+					285.000 ARGt · Arbitrum One ·{' '}
 					<span style={{fontFamily: mono, color: '#ffffff'}}>0x7a3f…c91e</span>
 				</div>
 			</Appear>

@@ -18,7 +18,7 @@ Pantalla negra. Respirá, mirá al jurado y apretá **→** cuando arranques a h
 
 **Se ve:** frases que golpean y se tachan: "Buscar proveedores. Llamar uno por uno. Comparar en planillas. Pagar a mano." Termina en **"Ahora lo hace un agente."**
 
-> "Una cafetería necesita 500 vasos para el lunes. ¿Qué hace hoy el dueño? Busca proveedores en Google, llama uno por uno, anota precios en una planilla y paga por transferencia. Todo a mano, todas las semanas.
+> "Pensemos en una cafetería de Palermo que necesita 10 kilos de café en grano para el lunes. ¿Qué hace hoy el dueño? Busca proveedores en Google, llama uno por uno, anota precios en una planilla y paga por transferencia. Todo a mano, todas las semanas.
 > Nosotros pensamos: eso lo puede hacer un agente."
 
 ### 2 · Qué es Tratunex (Bautista, ~12 s)
@@ -29,34 +29,34 @@ Pantalla negra. Respirá, mirá al jurado y apretá **→** cuando arranques a h
 
 ### 3 · Paso 1: necesidad y reglas (Bautista, ~20 s)
 
-**Se ve:** "Nueva compra": 500 vasos, el lunes, $150.000. Reglas: paga solo hasta $120.000; si se pasa, pide aprobación.
+**Se ve:** "Nueva compra": 10 kg de café en grano tostado, el lunes, $320.000. Reglas: paga solo hasta $300.000; si se pasa, pide aprobación.
 
-> "El dueño escribe qué necesita: 500 vasos, para el lunes, hasta 150 mil pesos. Y pone sus reglas: hasta 120 mil, el agente paga solo; si se pasa, le pide aprobación.
+> "El dueño escribe qué necesita: 10 kilos de café en grano, para el lunes, hasta 320 mil pesos. Y pone sus reglas: hasta 300 mil, el agente paga solo; si se pasa, le pide aprobación.
 > Las reglas se aplican en el servidor, antes de firmar cualquier pago."
 
 ### 4 · Paso 2: busca proveedores (Tomás, ~12 s)
 
-**Se ve:** búsqueda "vasos descartables" y tres proveedores, cada uno con su fuente.
+**Se ve:** búsqueda "café en grano tostado" y tres proveedores, cada uno con su fuente.
 
 > "El agente busca proveedores en la web y guarda de dónde sacó cada uno, para que el dueño pueda revisar."
 
 ### 5 · Paso 3: los llama (Bautista, ~25 s)
 
-**Se ve:** llamada con onda de voz, el diálogo y "Cotización guardada: $118.000, entrega el viernes".
+**Se ve:** llamada con onda de voz, el diálogo y "Cotización guardada: $28.500 el kilo · lunes · cobra en ARGt".
 
-> "Y los llama. Con Vapi y Twilio el agente hace una llamada telefónica de verdad: se presenta como asistente virtual, avisa que graba, pide precio y plazo, y no compromete la compra.
+> "Y los llama. Con Vapi y Twilio el agente hace una llamada telefónica de verdad: se presenta como asistente virtual, avisa que graba y hace tres preguntas: si llega para el lunes, el precio por kilo con IVA y si puede cobrar en ARGt. No compromete la compra.
 > Al cortar, la cotización queda cargada sola. En la demo hacemos una llamada real a un compañero que hace de proveedor."
 
 ### 6 · Paso 4: compara y explica (Vale y Nano, ~20 s)
 
-**Se ve:** ranking de tres cotizaciones; "Proveedor A" elegida y el "por qué".
+**Se ve:** ranking de tres cotizaciones (A $285.000, B $260.000, C $310.000); "Proveedor A" elegida y el "por qué".
 
 > "Con las cotizaciones, el agente compara y explica en palabras por qué elige.
-> Fíjense que no elige el más barato: B era más barato, pero llegaba tarde. Elige según tus reglas, no solo por precio."
+> Fíjense que no elige el más barato: B era más barato, pero llegaba el miércoles, y C no cobra en ARGt. Elige según tus reglas, no solo por precio."
 
 ### 7 · Paso 5: paga (Tomás, ~18 s)
 
-**Se ve:** 118.000 ARGt, "Bajo $120.000: paga solo", equivalente en USDT según Belo, red Arbitrum One y el hash.
+**Se ve:** 285.000 ARGt, "Bajo $300.000: paga solo", equivalente en USDT según Belo, red Arbitrum One y el hash.
 
 > "Como está por debajo del límite, paga solo, en ARGt, el peso digital de Twin, en Arbitrum One.
 > Y con el precio público de Belo le mostramos al dueño cuánto es en dólares."
