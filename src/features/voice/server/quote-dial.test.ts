@@ -114,6 +114,7 @@ describe("buildVapiQuoteCallBody", () => {
     expect(body.customer).toEqual({ number: "+5491100000000" });
     expect(body.assistantOverrides.model).toEqual({ provider: "openai", model: "gpt-4.1-mini", toolIds: ["t"], messages: [{ role: "system", content: "PROMPT" }] });
     expect(body.assistantOverrides.endCallMessage).toBe(QUOTE_END_CALL_MESSAGE);
+    expect(body.assistantOverrides.firstMessageMode).toBe("assistant-speaks-first");
     expect(body.metadata.call_id).toBe("k");
   });
 });

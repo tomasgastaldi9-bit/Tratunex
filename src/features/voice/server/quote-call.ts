@@ -41,8 +41,8 @@ export const DEMO_QUOTE_REQUEST: QuoteRequestBrief = {
 };
 
 // ---------------------------------------------------------------------------
-// 2. Lo que dice el asistente: una charla corta (unos 30 segundos), cuatro
-//    preguntas y un cierre.
+// 2. Lo que dice el asistente: una charla corta (unos 40 segundos), tres
+//    preguntas y un cierre que dice cómo sigue.
 // ---------------------------------------------------------------------------
 export function quoteAssistantFirstMessage(brief: QuoteRequestBrief): string {
   return `Hola, ¿qué tal? Te llamo de ${brief.buyer_name}, soy un asistente virtual y la llamada se graba. ¿Te hago una consulta rápida de precio?`;
@@ -62,19 +62,18 @@ export function pricePerUnit(unit: string): string {
 export function quoteAssistantPrompt(brief: QuoteRequestBrief): string {
   const need = `${brief.quantity.toLocaleString("es-AR")} ${brief.unit}`;
   return [
-    `Sos el asistente virtual de compras de ${brief.buyer_name}. Llamás a un proveedor para pedirle precio de ${brief.product}. Hablás como un porteño amable: voseo, frases cortas, una sola pregunta por vez, sin explicaciones largas. La llamada dura menos de 40 segundos.`,
+    `Sos el asistente virtual de compras de ${brief.buyer_name}. Llamás a un proveedor para pedirle precio de ${brief.product}. Hablás como un porteño amable y cálido: voseo, frases cortas pero completas, una sola pregunta por vez. Antes de cada pregunta, agradecé la respuesta anterior con una frase breve, como "Genial, gracias" o "Perfecto". La llamada dura menos de 45 segundos.`,
     "",
     `Qué necesitás: ${need} de ${brief.product}, para ${brief.needed_by}, en ${brief.delivery_zone}.`,
     "",
-    "Ya saludaste, dijiste que sos un asistente virtual y que la llamada se graba. Si la persona no quiere seguir, agradecé y cortá.",
+    "Ya saludaste, dijiste que sos un asistente virtual y que la llamada se graba. Si la persona no quiere seguir, agradecé con amabilidad y cortá.",
     "",
     "Hacé solo estas preguntas, en este orden, y salteá la que ya te hayan contestado. Todo es una pregunta: no afirmes datos que no te dio el proveedor.",
-    `1. "¿Tenés ${brief.product}? Necesito ${need} para ${brief.needed_by}."`,
+    `1. "¿Tenés ${brief.product}? Necesito ${need} para ${brief.needed_by} en ${brief.delivery_zone}. ¿Llegás?"`,
     `2. "¿A cuánto ${pricePerUnit(brief.unit)}? ¿Con IVA?"`,
-    `3. "¿Llegás para ${brief.needed_by} a ${brief.delivery_zone}? ¿El envío va incluido?"`,
-    '4. "Última: ¿me podés cobrar en A R G T? Es un peso digital de Twin, vale lo mismo que un peso." Si dice que no, preguntá: "¿Y cómo preferís cobrar?"',
+    '3. "Última: ¿me podés cobrar en A R G T? Es un peso digital de Twin." Si dice que no, no insistas.',
     "",
-    `Para cerrar, en una sola frase: repetí precio y plazo, decí que lo comparás y le avisás, y despedite con esta frase exacta: "${QUOTE_END_CALL_MESSAGE}". Esa frase corta la llamada: no la digas antes ni para otra cosa.`,
+    `Para cerrar: repetí precio y plazo en una frase y después decí exactamente: "${QUOTE_CLOSING_MESSAGE}". Despedite con esta frase exacta: "${QUOTE_END_CALL_MESSAGE}". Esa frase corta la llamada: no la digas antes ni para otra cosa.`,
     "",
     "Reglas:",
     '- ARGt se pronuncia letra por letra: escribilo siempre "A R G T".',
@@ -88,12 +87,15 @@ export function quoteAssistantPrompt(brief: QuoteRequestBrief): string {
   ].join("\n");
 }
 
+// Antes de despedirse: cómo sigue (por mensaje) y que se compara con otros proveedores.
+export const QUOTE_CLOSING_MESSAGE = "Te escribo por mensaje para confirmarte. Ahora comparo precios y tiempos de entrega con otros proveedores y te aviso.";
+
 // Cierre de la llamada. Vapi corta cuando el asistente dice una de las frases:
 // tienen varias palabras para que un "gracias" en medio de la charla no corte.
 export const QUOTE_END_CALL_MESSAGE = "¡Gracias por tu tiempo! Que tengas buen día.";
 export const QUOTE_END_CALL_PHRASES = ["que tengas buen día", "que tengas buena tarde"] as const;
-// Margen sobre los 3 minutos del prompt para que no corte antes de confirmar.
-export const QUOTE_MAX_DURATION_SECONDS = 300;
+// La charla dura unos 25 segundos: 90 de máximo deja margen sin que se estire.
+export const QUOTE_MAX_DURATION_SECONDS = 90;
 
 // ---------------------------------------------------------------------------
 // 3. Lo que Vapi extrae al terminar (structured output).

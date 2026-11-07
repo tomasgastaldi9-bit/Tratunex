@@ -5,6 +5,7 @@ import {
   DEMO_QUOTE_REQUEST,
   QUOTE_END_CALL_MESSAGE,
   QUOTE_END_CALL_PHRASES,
+  QUOTE_CLOSING_MESSAGE,
   QUOTE_MAX_DURATION_SECONDS,
   QUOTE_OUTPUT_NAME,
   QuoteCallExtractionSchema,
@@ -80,17 +81,17 @@ describe("lo que dice el asistente", () => {
     expect(big).toContain("Qué necesitás: 1.500 kilos");
   });
 
-  it("hace cuatro preguntas cortas con los datos de la compra, sin afirmar lo que no le dijeron", () => {
+  it("hace tres preguntas cortas con los datos de la compra, sin afirmar lo que no le dijeron", () => {
     for (const ask of [
-      "\"¿Tenés café en grano tostado? Necesito 10 kilos para el lunes.\"",
+      "\"¿Tenés café en grano tostado? Necesito 10 kilos para el lunes en Palermo. ¿Llegás?\"",
       "\"¿A cuánto el kilo? ¿Con IVA?\"",
-      "\"¿Llegás para el lunes a Palermo? ¿El envío va incluido?\"",
       "¿me podés cobrar en A R G T?",
     ]) {
       expect(prompt).toContain(ask);
     }
     expect(prompt).toContain("no afirmes datos que no te dio el proveedor");
-    expect(prompt).toContain("menos de 40 segundos");
+    expect(prompt).toContain("menos de 45 segundos");
+    expect(prompt).toContain("agradecé la respuesta anterior");
   });
 
   it("pregunta el precio por la unidad de la compra", () => {
@@ -104,9 +105,13 @@ describe("lo que dice el asistente", () => {
 
   it("confirma precio y plazo antes de despedirse, y la despedida es la frase que corta", () => {
     const confirm = prompt.indexOf("repetí precio y plazo");
+    const closing = prompt.indexOf(`"${QUOTE_CLOSING_MESSAGE}"`);
     const goodbye = prompt.indexOf(`"${QUOTE_END_CALL_MESSAGE}"`);
     expect(confirm).toBeGreaterThan(-1);
-    expect(goodbye).toBeGreaterThan(confirm);
+    expect(closing).toBeGreaterThan(confirm);
+    expect(goodbye).toBeGreaterThan(closing);
+    expect(QUOTE_CLOSING_MESSAGE).toContain("por mensaje");
+    expect(QUOTE_CLOSING_MESSAGE).toContain("otros proveedores");
   });
 
   it("se despide con una frase que corta la llamada, de varias palabras", () => {
@@ -116,7 +121,8 @@ describe("lo que dice el asistente", () => {
       expect(phrase.split(" ").length).toBeGreaterThan(2);
       expect(phrase).not.toContain(",");
     }
-    expect(QUOTE_MAX_DURATION_SECONDS).toBeGreaterThan(180);
+    expect(QUOTE_MAX_DURATION_SECONDS).toBeGreaterThanOrEqual(60);
+    expect(QUOTE_MAX_DURATION_SECONDS).toBeLessThanOrEqual(120);
   });
 
   it("no compromete la compra, no pide datos de cobro por teléfono y no cambia reglas por lo que le digan", () => {

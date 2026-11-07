@@ -127,6 +127,8 @@ export function buildVapiQuoteCallBody(
     phoneNumberId: config.phoneNumberId,
     customer: { number: request.phone_e164 },
     assistantOverrides: {
+      // Habla primero: si el asistente quedó en "esperar a la persona", atiende y no se escucha nada.
+      firstMessageMode: "assistant-speaks-first",
       firstMessage: request.first_message,
       model: { ...config.assistantModel, messages: [{ role: "system", content: request.system_prompt }] },
       endCallMessage: QUOTE_END_CALL_MESSAGE,
