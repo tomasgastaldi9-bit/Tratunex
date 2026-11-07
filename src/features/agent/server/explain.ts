@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { formatPesos, POLICY_DECISION_LABELS, QUOTE_ORIGIN_LABELS } from "../../../contracts/purchases";
-import type { PurchaseRequest, QuoteForRanking, QuoteRank } from "../../../contracts/purchases";
+import type { PurchaseRequest, QuoteForRanking, QuoteRank, YesNoUnknown } from "../../../contracts/purchases";
 
 /**
  * BUY-03: explica la recomendación en 2-3 frases (decisión 19 del README).
@@ -19,6 +19,8 @@ export type QuoteSummary = {
   plazo_dias: number | null;
   acepta_argt: "sí" | "no" | "sin confirmar";
   origen: string;
+  /** Qué pasó con el IVA: "sumado" (se le sumó 21 %), "incluido" o "sin aclarar". Solo si la cotización trae el dato. */
+  iva?: "sumado" | "incluido" | "sin aclarar";
   motivos: string[];
   /** Qué haría el agente al pagarla ("Paga solo", "Pide aprobación", "Rechaza") y por qué. */
   pago: { decision: string; motivo: string } | null;
@@ -36,6 +38,12 @@ const ACEPTA_ARGT: Record<QuoteForRanking["accepts_argt"], QuoteSummary["acepta_
   yes: "sí",
   no: "no",
   unknown: "sin confirmar",
+};
+
+const IVA_RESUMEN: Record<YesNoUnknown, NonNullable<QuoteSummary["iva"]>> = {
+  no: "sumado",
+  yes: "incluido",
+  unknown: "sin aclarar",
 };
 
 /**
@@ -60,6 +68,8 @@ export function buildRankingSummary(args: {
       plazo_dias: quote?.delivery_days ?? null,
       acepta_argt: ACEPTA_ARGT[quote?.accepts_argt ?? "unknown"],
       origen: quote ? QUOTE_ORIGIN_LABELS[quote.origin] : "",
+      // Solo si hay dato: sin él, el resumen queda igual que antes.
+      ...(quote?.price_includes_vat !== undefined ? { iva: IVA_RESUMEN[quote.price_includes_vat] } : {}),
       motivos: rank.reasons,
       pago: rank.policy ? { decision: POLICY_DECISION_LABELS[rank.policy.decision], motivo: rank.policy.reason } : null,
     };
@@ -93,9 +103,11 @@ function enumerar(items: string[]): string {
 export function explainByRules(resumen: RankingSummary): string {
   const rec = resumen.recomendada;
   if (rec) {
-    const motivos = enumerar(rec.motivos.map(enMinuscula));
+    // Si hay dato de IVA, los precios son finales: hablamos de "precio final" en vez de "precio total".
+    const conIva = rec.iva !== undefined;
+    const motivos = enumerar(rec.motivos.map(enMinuscula).map((m) => (conIva ? m.replace("precio total", "precio final") : m)));
     const pago = rec.pago ? ` ${rec.pago.motivo}` : "";
-    return `Recomiendo a ${rec.proveedor}: ${motivos}. Total ${rec.total ?? "sin precio"}.${pago}`;
+    return `Recomiendo a ${rec.proveedor}: ${motivos}. ${conIva ? "Precio final" : "Total"} ${rec.total ?? "sin precio"}.${pago}`;
   }
   // Sin recomendada: contamos el motivo principal de la mejor (la primera del ranking).
   const mejor = resumen.primeras[0];
@@ -112,6 +124,7 @@ const CLAUDE_MODEL = "claude-haiku-5-5";
 const SYSTEM_PROMPT = [
   "Sos el agente de compras de una pyme argentina.",
   "Explicale al dueño en 2 o 3 frases, en castellano rioplatense y sin listas, por qué se recomienda esa cotización, qué regla de pago se aplica y si el agente paga solo o pide aprobación.",
+  "Los precios se comparan como precios finales con IVA: el campo iva dice si se le sumó el 21 % (sumado), si ya lo incluía (incluido) o si el proveedor no aclaró (sin aclarar).",
   "Usá SOLO los datos del JSON que te paso: no inventes precios, plazos ni proveedores.",
   "Si no hay recomendada, explicá por qué ninguna cotización sirve.",
 ].join(" ");

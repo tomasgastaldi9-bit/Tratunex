@@ -1,6 +1,8 @@
 // Solo el TIPO de la cotización de Voz (Bautista): "import type" no trae código de su módulo.
 import type { ComparatorQuote } from "../../voice/server/quote-import";
 import type { QuoteForRanking } from "../../../contracts/purchases";
+// Import relativo (no "@/") a propósito: Vitest no resuelve "@/" en los archivos que prueba.
+import { finalUnitPriceAtomic } from "../../../contracts/purchases";
 
 /**
  * BUY-03 (decisión 20 del README): pasa una cotización guardada en
@@ -44,10 +46,17 @@ export function toQuoteForRanking(quote: ComparatorQuote, supplierName: string):
     supplier_name: toSupplierDisplayName(supplierName),
     // Solo comparamos precios en pesos: si cotizó en dólares (o sin precio), queda sin precio en pesos.
     // Con BigInt la cuenta es exacta: nunca pasa por números con coma.
+    // Después del pasaje a ARGt se aplica el IVA: finalUnitPriceAtomic suma el 21 % solo si
+    // el proveedor cotizó SIN IVA ("no"), así todas las cotizaciones se comparan con precio final.
     unit_price_atomic:
       quote.unit_price?.currency === "ARS"
-        ? (BigInt(quote.unit_price.amount_atomic) * CENTAVOS_A_ATOMIC).toString()
+        ? finalUnitPriceAtomic(
+            (BigInt(quote.unit_price.amount_atomic) * CENTAVOS_A_ATOMIC).toString(),
+            quote.price_includes_vat,
+          )
         : null,
+    // Lo que dijo el proveedor sobre el IVA: el ranking lo usa solo para explicar el motivo.
+    price_includes_vat: quote.price_includes_vat,
     // Si dijo que no puede entregar, cuenta como sin stock (0); si no, lo que dijo (o null si no se sabe).
     available_quantity: quote.can_supply === "no" ? 0 : quote.available_quantity,
     delivery_days: quote.lead_time_days,

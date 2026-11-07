@@ -168,6 +168,14 @@ describe("policyExamples", () => {
     ]);
   });
 
+  it("con el filtro activo y ningún proveedor elegido, avisa en vez de mostrar rechazos", () => {
+    const ejemplos = policyExamples({ ...VALORES, only_allowed_suppliers: true, allowed_supplier_ids: [] });
+    expect(ejemplos.ok).toBe(false);
+    expect(!ejemplos.ok && ejemplos.reason).toBe("no_suppliers");
+    // Al tildar uno, los ejemplos vuelven.
+    expect(policyExamples({ ...VALORES, only_allowed_suppliers: true, allowed_supplier_ids: [PROVEEDOR_A] }).ok).toBe(true);
+  });
+
   it("si un ejemplo no puede existir, no lo muestra", () => {
     // Límite igual al máximo: no hay nada "entre los dos".
     const iguales = policyExamples({ ...VALORES, auto_pay_limit: "200000" });

@@ -61,20 +61,14 @@ export default async function AgentPage() {
       </>
     );
   }
-  if (!reglas.ok) {
-    return (
-      <>
-        {encabezado}
-        <Alert tone="danger" title={reglas.error.message} />
-      </>
-    );
-  }
+  // Si fallan solo las reglas, el resto de la pantalla se ve igual: el paso
+  // "Reglas de pago" queda como no hecho y el error aparece en su fila (abajo).
 
   // null = la empresa todavía no guardó nada (estado "vacío").
   const version = perfil.data.current?.version ?? null;
   const tienePerfil = version !== null;
   // null = la empresa todavía no cargó reglas de pago.
-  const tieneReglas = reglas.data.policy !== null;
+  const tieneReglas = reglas.ok && reglas.data.policy !== null;
 
   // El botón de la tarjeta lleva al PRÓXIMO paso que falta, y solo si la
   // persona lo puede hacer (perfil y reglas los cambian solo los admin; lo
@@ -91,7 +85,8 @@ export default async function AgentPage() {
       );
     }
   } else if (!tieneReglas) {
-    if (reglas.data.can_edit) {
+    // reglas.ok: si no pudimos leerlas, no sabemos si puede cargarlas: sin botón.
+    if (reglas.ok && reglas.data.can_edit) {
       accion = (
         <Link href="/agent/rules" className={buttonStyles()}>
           Cargar reglas
@@ -158,6 +153,8 @@ export default async function AgentPage() {
               </Link>
             }
           />
+          {/* Error corto en la fila de las reglas (el resto de la pantalla sigue). */}
+          {!reglas.ok && <Alert tone="danger" title={reglas.error.message} className="mt-2.5" />}
         </li>
       </ul>
     </>

@@ -9,21 +9,24 @@ import { useActionState, useEffect, useId, useRef, useState, type FormEvent } fr
 import { savePolicyAction, type SavePolicyState } from "@/app/agent/rules/actions";
 import { Alert } from "@/components/ui/Alert";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cx } from "@/components/ui/cx";
 import { Input } from "@/components/ui/Input";
 import { formatPesos, PAYMENT_TOKEN, POLICY_DECISION_LABELS, type PolicyDecision } from "@/contracts/purchases";
 import { policyExamples, type PolicyFormValues } from "./policy-form-data";
 
-/** Un proveedor del CRM para elegir: solo lo que hace falta mostrar. */
-export type SupplierOption = { id: string; name: string; organization: string | null };
+/**
+ * Un proveedor del CRM para elegir: solo lo que hace falta mostrar.
+ * withoutWallet: no tiene billetera de cobro, así que el agente no le puede pagar.
+ */
+export type SupplierOption = { id: string; name: string; organization: string | null; withoutWallet: boolean };
 
 /**
  * Formulario de reglas de pago (/agent/rules).
  *
  * - initialValues: con qué arranca (las reglas guardadas, o vacío).
- * - suppliers: los contactos del CRM que se pueden elegir como proveedores permitidos.
+ * - suppliers: los proveedores del CRM que se pueden elegir como proveedores permitidos.
  * - actionId: identificador de este guardado, para no duplicarlo si se reintenta.
  * - canEdit: false si la persona no es admin. Ve todo, pero no puede cambiar nada.
  */
@@ -158,12 +161,12 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
               si después se vuelve a prender. */}
           <div hidden={!soloPermitidos}>
             {suppliers.length === 0 ? (
-              <p className="text-sm leading-snug text-ink-muted">
-                Todavía no hay proveedores en el CRM.{" "}
-                <Link href="/contacts" className="font-bold text-ink underline">
-                  Ir a contactos
+              <div className="flex flex-col items-start gap-2.5">
+                <p className="text-sm leading-snug text-ink-muted">Todavía no hay proveedores cargados.</p>
+                <Link href="/suppliers" className={buttonStyles({ variant: "secondary", size: "sm" })}>
+                  Ver proveedores
                 </Link>
-              </p>
+              </div>
             ) : (
               // fieldset + legend: el lector de pantalla anuncia "Proveedores permitidos, grupo".
               <fieldset className="min-w-0">
@@ -197,6 +200,12 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
                           {proveedor.organization && (
                             <span className="text-xs leading-tight wrap-break-word text-ink-muted">
                               {proveedor.organization}
+                            </span>
+                          )}
+                          {/* Sin billetera de cobro el agente no le puede pagar: se avisa acá, antes de elegirlo. */}
+                          {proveedor.withoutWallet && (
+                            <span>
+                              <Badge tone="warning">Sin billetera de cobro</Badge>
                             </span>
                           )}
                         </span>
@@ -242,6 +251,12 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
               );
             })}
           </ul>
+        ) : ejemplos.reason === "no_suppliers" ? (
+          // Filtro activo y ningún proveedor tildado: todo daría "Rechaza".
+          // Es más claro avisar qué falta que mostrar tres rechazos iguales.
+          <Alert tone="warning" title="Elegí al menos un proveedor permitido">
+            Si no, el agente no le puede pagar a nadie.
+          </Alert>
         ) : (
           <p className="text-sm leading-snug text-ink-muted">{ejemplos.message}</p>
         )}
