@@ -1,63 +1,98 @@
-.app-shell { display: flex; min-height: 100vh; }
-.app-shell a { text-decoration: none; }
-.skip-link { position: absolute; top: -100px; z-index: 50; padding: 12px 20px; background: white; }
-.skip-link:focus { top: 8px; left: 8px; }
-.sidebar { position: sticky; top: 0; width: var(--sidebar-width); flex: 0 0 var(--sidebar-width); height: 100vh; padding: 30px 16px 20px; display: flex; flex-direction: column; background: var(--color-sidebar); color: var(--color-sidebar-text); }
-.brand { display: flex; align-items: center; gap: 10px; margin: 0 12px 36px; color: var(--color-sidebar-text); font-size: 25px; font-weight: 700; letter-spacing: -1px; }
-.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--color-brand-accent); color: var(--color-sidebar); font-size: 28px; padding-bottom: 4px; }
-.company-switcher { margin: 0 4px 30px; }
-.sidebar .field-label { color: var(--color-sidebar-muted); font-size: 11px; font-weight: 500; }
-.sidebar select { width: 100%; padding: 9px 8px; border-color: var(--color-sidebar-border); background: var(--color-sidebar-surface); color: var(--color-sidebar-text); font-size: 12px; }
-.sidebar select option { background: white; color: var(--color-text); }
-.company-description { margin: 9px 2px 0; font-size: 11px; color: var(--color-sidebar-muted); }
-.nav-group-label { margin: 0 12px 10px; color: var(--color-sidebar-muted); font-size: 10px; font-weight: 600; letter-spacing: 1px; }
-.main-nav { display: grid; gap: 6px; }
-.main-nav a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 11px 13px; border-radius: var(--radius-sm); color: var(--color-sidebar-text); font-weight: 500; }
-.main-nav a:hover { background: var(--color-sidebar-surface); }
-.main-nav a[aria-current="page"] { background: var(--color-sidebar-active); color: var(--color-sidebar-active-text); font-weight: 600; }
-.sidebar :focus-visible { outline-color: var(--color-brand-accent); }
-.nav-icon { width: 20px; font-size: 20px; text-align: center; line-height: 1; }
-.pending-modules { margin-top: 32px; }
-.pending-modules > p:not(.nav-group-label) { margin: 14px 12px; font-size: 12px; }
-.pending-modules > p > span { display: block; color: var(--color-sidebar-muted); font-size: 10px; margin-top: 2px; }
-.sidebar-bottom { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 18px 6px 0; border-top: 1px solid var(--color-sidebar-border); }
-.avatar { display: grid; place-items: center; flex: 0 0 32px; height: 32px; background: var(--color-sidebar-surface); border-radius: 50%; }
-.sidebar-bottom strong { display: block; font-size: 11px; font-weight: 500; }
-.sidebar-bottom div > span { display: block; color: var(--color-sidebar-muted); font-size: 10px; }
-.workspace { flex: 1; min-width: 0; }
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: var(--topbar-height); padding: 12px 32px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
-.breadcrumb { display: flex; align-items: center; gap: 13px; color: var(--color-text-muted); font-size: 12px; }
-.breadcrumb strong { color: var(--color-text); font-weight: 500; }
-.topbar .badge { font-size: 11px; }
-.workspace-note { display: flex; justify-content: space-between; gap: 12px; padding: 14px 32px 0; color: var(--color-text-muted); font-size: 11px; }
-.app-main { padding: 28px 32px 40px; min-width: 0; }
-.app-footer { padding: 0 32px 24px; color: var(--color-text-muted); font-size: 11px; }
-.mobile-menu { display: none; }
-.standalone-state { max-width: 700px; margin: 12vh auto; padding: 24px; }
-.standalone-state h1 { font-size: 28px; line-height: 1.3; }
-.standalone-state p { color: var(--color-text-muted); margin-bottom: 24px; }
-@media (max-width: 1024px) {
-  :root { --sidebar-width: 204px; }
-  .sidebar { padding-left: 12px; padding-right: 12px; }
-  .app-main { padding: 24px; }
-  .topbar { padding: 12px 24px; }
-  .workspace-note { padding-left: 24px; padding-right: 24px; }
+/*
+ * Estilos globales de Tratunex.
+ *
+ * Acá viven los "tokens" del diseño: los colores, bordes, sombras y la fuente
+ * que usa TODA la app. Vienen del Figma "No.162 Japanese-Style Notion
+ * Illustration" (pantalla "Frame 14"), en versión blanco, grises y negro.
+ *
+ * ¿Por qué acá? Con Tailwind v4, todo lo que se declara dentro de @theme se
+ * convierte en clases. Por ejemplo, --color-surface habilita bg-surface,
+ * text-surface, border-surface, etc. Si mañana cambia un gris, se cambia en
+ * este archivo y se actualiza en todas las pantallas.
+ */
+@import "tailwindcss";
+
+@theme {
+  /* ---------- Colores ---------- */
+
+  /* Fondo de la página (blanco puro, como el lienzo del Figma). */
+  --color-canvas: #ffffff;
+
+  /* Gris muy claro de las tarjetas, inputs y pastillas (#F6F6F8 en Figma). */
+  --color-surface: #f6f6f8;
+
+  /* Gris un poco más oscuro para cuando pasás el mouse por una tarjeta.
+     No está en el Figma: lo derivamos del gris de las tarjetas. */
+  --color-surface-hover: #ececef;
+
+  /* Gris para bordes y líneas divisorias (derivado, el Figma casi no tiene bordes). */
+  --color-line: #e4e4e7;
+
+  /* Negro: texto principal, botones y menú lateral. */
+  --color-ink: #000000;
+
+  /* Texto secundario (subtítulos, pestañas inactivas).
+     En Figma es negro al 50% (#808080); lo oscurecemos un poco para que se lea
+     bien sobre el gris de las tarjetas (accesibilidad: contraste mínimo 4.5:1). */
+  --color-ink-muted: #666666;
+
+  /* Texto de ayuda dentro de un input vacío (placeholder). */
+  --color-ink-subtle: #8c8c8c;
+
+  /* ---------- Colores de ESTADO ----------
+     Regla: el color solo aparece para decir algo (nunca para decorar).
+     Cada estado tiene dos tonos:
+       - el fuerte (--color-success): para texto, íconos y puntitos.
+       - el suave (--color-success-soft): para el fondo de etiquetas y avisos.
+     Todas las combinaciones fuerte-sobre-suave se leen bien (contraste ≥ 4.5:1). */
+
+  /* Verde = salió bien (compró, sí es cliente potencial, guardado). */
+  --color-success: #1f6b45;
+  --color-success-soft: #e6f4ec;
+
+  /* Ámbar = te toca hacer algo (en seguimiento, revisar, pendiente). */
+  --color-warning: #8a5a00;
+  --color-warning-soft: #fff3d6;
+
+  /* Rojo = salió mal o es delicado (no compró, error, llamada real). */
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+
+  /* Azul = oportunidad o información (cliente potencial, voz en el navegador). */
+  --color-info: #1d4e89;
+  --color-info-soft: #e8f0fa;
+
+  /* ---------- Bordes redondeados ---------- */
+
+  /* Tarjetas y menú lateral (20px en Figma). Clase: rounded-card */
+  --radius-card: 20px;
+
+  /* Botones, inputs, pastillas e imágenes chicas (10px). Clase: rounded-control */
+  --radius-control: 10px;
+
+  /* ---------- Sombras ---------- */
+
+  /* Sombra del menú lateral negro, que "flota" hacia la derecha. Clase: shadow-sidebar */
+  --shadow-sidebar: 10px 0 10px rgb(0 0 0 / 0.2);
+
+  /* Sombra suave de globitos y menús que aparecen encima. Clase: shadow-pop */
+  --shadow-pop: 0 4px 2px rgb(0 0 0 / 0.1);
 }
-@media (max-width: 767px) {
-  .app-shell { display: block; }
-  .sidebar { display: none; position: static; width: 100%; height: auto; padding: 24px 20px; }
-  .sidebar-open { display: flex; }
-  .brand { margin-bottom: 24px; }
-  .company-switcher { margin-bottom: 24px; }
-  .main-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .main-nav a { justify-content: center; font-size: 12px; gap: 6px; padding: 10px 6px; }
-  .main-nav .nav-icon { display: none; }
-  .pending-modules, .sidebar-bottom { display: none; }
-  .mobile-menu { display: inline-flex; padding: 6px 10px; }
-  .topbar { padding: 12px 16px; gap: 10px; }
-  .breadcrumb { gap: 8px; margin-right: auto; }
-  .topbar .badge { font-size: 10px; padding: 3px 6px; }
-  .workspace-note { padding: 12px 16px 0; flex-wrap: wrap; gap: 4px; }
-  .app-main { padding: 24px 16px; }
-  .app-footer { padding: 0 16px 20px; }
+
+/*
+ * La fuente la carga Next en layout.tsx y la deja en la variable
+ * --font-kantumruy. "inline" hace que Tailwind use esa variable tal cual
+ * (si no, no la encontraría, porque se define en el <html> y no acá).
+ * Clase: font-sans (y es la fuente por defecto de toda la página).
+ */
+@theme inline {
+  --font-sans: var(--font-kantumruy), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Base de la página: fondo blanco y texto negro. */
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+  }
 }
