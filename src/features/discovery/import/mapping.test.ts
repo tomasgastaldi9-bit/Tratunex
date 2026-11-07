@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { upsertContact, crmIntegration } from "../../crm/server/public";
+import { upsertContact, crmIntegration } from "../../crm/server/mock-public";
 import { toContactInput, csvRecordToContact } from "./mapping";
 
 const company_id = "10000000-0000-4000-8000-000000000001";
