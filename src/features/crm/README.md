@@ -4,6 +4,12 @@ Este bloque continúa la base de Nano (TRA-53) sobre el bootstrap, contratos
 comunes y autenticación PLAT-03 de Plataforma. El alcance se basa en `docs/BRIEF.md`; la descripción y el
 estado individuales de los issues de Linear no se pudieron consultar.
 
+La dirección visual vigente es la de Vale (`feat/TRA-53-ui-base`, `e1cb6cc`):
+`docs/DESIGN.md` y el catálogo `/ui`. El CRM usa sus componentes, menú, tokens y
+fuente Kantumruy Pro. Se retiraron los estilos, la galería y el boceto anteriores
+de Nano para mantener una sola referencia. Los archivos visuales publicados por
+Vale se incorporan sin cambios; los ajustes específicos viven en el módulo CRM.
+
 ## Ejecutar la app
 
 ```powershell
@@ -25,6 +31,8 @@ Abrir `http://localhost:3100/pipeline`. También están disponibles `/contacts`,
 El selector es exclusivo de la demostración. No representa una sesión, permisos
 ni aislamiento RLS. Estas pantallas aún no consumen la empresa activa del login;
 la integración persistente usará el contexto verificado de Plataforma.
+Una cookie `tratunex_demo` recuerda únicamente el escenario ficticio al navegar
+con el menú compartido; no concede acceso ni representa membresía.
 Las pantallas son de consulta; el botón de llamar permanece deshabilitado hasta
 integrar la ruta de Voz. No se publican endpoints de escritura sin auth.
 
@@ -94,8 +102,11 @@ node src/features/crm/verification/verify-app.mjs
 ```
 
 Evidencia del 2026-11-07: `npm run lint`, `npm run typecheck` y `npm run build`
-terminaron con exit 0; `npm test` aprobó 46 pruebas en cuatro archivos (35 del
-simulador CRM). La preparación aprobó sus 11 comprobaciones. El recorrido real
-de Next.js con Playwright aprobó 77 comprobaciones en Chrome, incluyendo los
-cuatro anchos, navegación, búsquedas, tareas y respuestas 404. El build genera
-`/`, `/contacts`, `/contacts/[id]`, `/pipeline` y `/tasks`.
+terminaron con exit 0; `npm test` aprobó 55 pruebas en siete archivos (38 del
+CRM). La preparación aprobó sus 11 comprobaciones. El recorrido de Next.js con
+la dirección visual de Vale aprobó 81 comprobaciones en Chrome, incluyendo los
+cuatro anchos, fuente, menú, navegación, búsquedas, tareas y respuestas 404.
+El build genera las rutas CRM y el catálogo `/ui`, además del login de Plataforma.
+El smoke contra `next start` aprobó ocho comprobaciones, sin errores de navegador:
+cuatro rutas disponibles, dos casos 404 y regreso al pipeline conservando la demo.
+Las cinco capturas en `verification/previews/` corresponden a esa compilación.

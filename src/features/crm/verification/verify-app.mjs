@@ -73,6 +73,7 @@ try {
     await page.waitForFunction(() => document.querySelector('a[href="/pipeline?demo=orbita"]'));
     await returnLink.click();
     await page.waitForURL(url => url.pathname === "/pipeline" && url.searchParams.get("demo") === "orbita");
+    await page.locator(".crm-pipeline-column").first().waitFor();
     check("volver desde 404 conserva la demo Órbita", await page.locator(".crm-deal-card").count() === ownDeals(orbita).length);
     check("producción rechaza contacto inválido con 404", (await navigate("/contacts/no-es-un-uuid")).status() === 404);
     await capturePreviews();
@@ -84,12 +85,21 @@ try {
   const rootResponse = await page.goto(baseUrl);
   await page.locator(".crm-pipeline-column").first().waitFor();
   check("home abre el pipeline", rootResponse.ok() && new URL(page.url()).pathname === "/pipeline");
-  check("modo mock visible", /mock/i.test(await page.locator("body").innerText()));
+  check("modo mock visible", /mock|datos de prueba|datos ficticios/i.test(await page.locator("body").innerText()));
   check("pipeline contiene las siete etapas", await page.locator(".crm-pipeline-column").count() === 7);
   check("pipeline muestra oportunidades de Prisma", await page.locator(".crm-deal-card").count() === ownDeals(prisma).length);
   check("pipeline desktop sin desbordamiento de página", await fitsViewport());
   await page.evaluate(() => document.fonts.ready);
-  check("fuente Inter local cargada", await page.evaluate(() => Array.from(document.fonts).some(font => font.family.replaceAll('"', "") === "Inter" && font.status === "loaded")));
+  check("fuente Kantumruy Pro del diseño cargada", await page.evaluate(() => {
+    const fontVariable = getComputedStyle(document.documentElement).getPropertyValue("--font-kantumruy");
+    const bodyFont = getComputedStyle(document.body).fontFamily;
+    const normalize = value => value.toLowerCase().replace(/[^a-z]/g, "");
+    return normalize(fontVariable).includes("kantumruy") && normalize(bodyFont).includes("kantumruy")
+      && Array.from(document.fonts).some(font => normalize(font.family).includes("kantumruy") && font.status === "loaded");
+  }));
+  const menu = page.getByRole("navigation", { name: "Menú principal" });
+  check("menú compartido contiene las cinco secciones del producto", await menu.locator("ul a").count() === 5);
+  check("menú compartido conserva el fondo negro de Vale", await menu.evaluate(element => getComputedStyle(element).backgroundColor) === "rgb(0, 0, 0)");
 
   for (const contact of fixtures.contacts.filter(item => item.company_id === orbita)) {
     check(`datos ajenos ausentes incluso del HTML: ${contact.name}`, !(await page.content()).includes(contact.name));
@@ -156,7 +166,7 @@ try {
   await navigate(`/pipeline?company_id=${orbita}`);
   check("company_id de query no redefine contexto de demo", await page.locator(".crm-deal-card").count() === ownDeals(prisma).length && !(await mainText()).includes("Inés Demo"));
 
-  await page.getByRole("navigation", { name: "Navegación principal" }).getByRole("link", { name: "Contactos", exact: true }).click();
+  await page.getByRole("link", { name: /^(Ver )?contactos$/i }).first().click();
   await page.waitForURL(url => url.pathname === "/contacts");
   await page.getByRole("heading", { name: "Contactos", exact: true }).waitFor();
   check("navegación abre contactos", new URL(page.url()).pathname === "/contacts");
@@ -170,6 +180,10 @@ try {
   check("lista de contactos abre el detalle correcto", await page.locator("h1").innerText() === multiple.name);
   await navigate("/contacts", "orbita");
   check("lista de contactos cambia de empresa", await page.locator(".crm-contacts-table tbody tr").count() === fixtures.contacts.filter(item => item.company_id === orbita).length);
+  await menu.getByRole("link", { name: "Tareas", exact: true }).click();
+  await page.waitForURL(url => url.pathname === "/tasks");
+  await page.getByLabel("Filtrar tareas").selectOption("all");
+  check("menú conserva la empresa de demostración al navegar", await page.locator(".crm-task-table tbody tr").count() === ownTasks(orbita).length && !(await mainText()).includes("Bruno Demo"));
 
   await navigate("/tasks");
   await page.getByLabel("Filtrar tareas").selectOption("all");
@@ -198,11 +212,15 @@ try {
     await navigate("/contacts");
     check(`contactos caben en ${width}px`, await fitsViewport());
     if (width === 320) {
-      await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
-      check("menú móvil anuncia que está abierto", await page.getByRole("button", { name: "Cerrar menú", exact: true }).getAttribute("aria-expanded") === "true");
-      await page.getByRole("navigation", { name: "Navegación principal" }).getByRole("link", { name: "Seguimientos", exact: true }).click();
+      check("menú móvil muestra sus cinco destinos", await menu.locator("ul a:visible").count() === 5);
+      check("menú móvil está fijo al pie de la pantalla", await menu.evaluate(element => {
+        const bounds = element.getBoundingClientRect();
+        return getComputedStyle(element).position === "fixed" && bounds.bottom <= innerHeight && bounds.top >= innerHeight - 150;
+      }));
+      await menu.getByRole("link", { name: "Tareas", exact: true }).click();
       await page.waitForURL(url => url.pathname === "/tasks");
-      check("navegación móvil cierra el menú", await page.getByRole("button", { name: "Abrir menú", exact: true }).getAttribute("aria-expanded") === "false");
+      await page.getByRole("heading", { name: "Tareas", exact: true }).waitFor();
+      check("barra móvil permite navegar a tareas", await page.getByRole("heading", { name: "Tareas", exact: true }).count() === 1);
     }
   }
   check("sin errores de JavaScript en el navegador", runtimeErrors.length === 0);

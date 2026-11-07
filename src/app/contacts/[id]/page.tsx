@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getContact } from "@/features/crm/server/public";
 import { GetContactInputSchema } from "@/contracts/crm";
-import { readCrmDemo } from "@/features/crm/server/demo";
+import { readCrmPageDemo } from "@/features/crm/server/demo";
 import { DemoShell } from "@/features/crm/components/demo-shell";
 import { ContactView } from "@/features/crm/components/crm-views";
 
@@ -12,7 +12,7 @@ export default async function ContactPage({ params, searchParams }: {
   searchParams: Promise<{ demo?: string | string[] }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const data = readCrmDemo(query.demo);
+  const data = await readCrmPageDemo(query.demo);
   const input = GetContactInputSchema.safeParse({ contact_id: id });
   if (!input.success) notFound();
   // Actor de demostración fijo. No reemplaza sesión, RLS ni permisos reales.

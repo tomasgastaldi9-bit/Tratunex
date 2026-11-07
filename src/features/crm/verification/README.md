@@ -59,29 +59,31 @@ de datos. Las reglas del servicio mock tienen sus propias pruebas con Vitest.
 
 ## Evidencia del 7 de noviembre de 2026
 
-Las ejecuciones siguientes corresponden a la base anterior a incorporar
-PLAT-03 (`7ef557c`). La nueva base y el regreso desde 404 requieren una nueva
-ejecución; los resultados previos no se atribuyen a esa incorporación.
+La versión verificada adopta `docs/DESIGN.md` y la base visual de Vale
+(`origin/feat/TRA-53-ui-base`): Kantumruy Pro, menú negro de cinco secciones y
+barra fija inferior en celular. El recorrido también comprueba que el menú
+compartido conserve el escenario de demostración al navegar entre módulos.
 
 Con Next.js en desarrollo en `http://localhost:3100`, el comando siguiente terminó
-con exit 0: **77 comprobaciones aprobadas**, `runtimeErrors: []`.
+con exit 0: **81 comprobaciones aprobadas**, `runtimeErrors: []`. Se utilizó
+`@playwright/test` local, sin definir `PLAYWRIGHT_MODULE_PATH`.
 
 ```powershell
-$env:PLAYWRIGHT_MODULE_PATH = Join-Path $env:TEMP 'tratunex-crm-preparacion-tra53/node_modules/playwright'
 node src/features/crm/verification/verify-app.mjs
 ```
 
 Después del build, con `next start` en el mismo puerto, el comando siguiente
-terminó con exit 0: **7 comprobaciones aprobadas**, `runtimeErrors: []`. Las
-cuatro rutas principales respondieron 200 y los contactos inválidos o ajenos
-respondieron 404. Las cinco capturas entregadas corresponden a esta ejecución
-de producción, sin la interfaz de desarrollo de Next.js.
+terminó con exit 0: **8 comprobaciones aprobadas**, `runtimeErrors: []`. Las
+cuatro rutas principales respondieron 200, los contactos inválidos o ajenos
+respondieron 404 y volver desde el 404 conservó la demo Órbita.
 
 ```powershell
-$env:PLAYWRIGHT_MODULE_PATH = Join-Path $env:TEMP 'tratunex-crm-preparacion-tra53/node_modules/playwright'
 $env:CRM_CAPTURE_ONLY = '1'
 node src/features/crm/verification/verify-app.mjs
 ```
+
+Las cinco capturas entregadas en `previews/` corresponden a esta ejecución
+de producción del diseño de Vale, sin la interfaz de desarrollo de Next.js.
 
 `node --check src/features/crm/verification/verify-app.mjs` y
 `npx eslint src/features/crm/verification/verify-app.mjs` también terminaron
