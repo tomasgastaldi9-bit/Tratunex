@@ -3,6 +3,7 @@
 ## Fuente de verdad
 
 - Antes de trabajar, revisa `git status --short --branch` y conserva cualquier cambio existente.
+- Al iniciar una tarea nueva, ejecuta `git fetch origin` y crea su rama desde `origin/main` actualizado; `fetch` actualiza referencias remotas sin mezclar cambios en tu rama actual.
 - Lee `docs/brief/00_GENERAL.md` y el documento del dominio antes de modificar código. El brief general define el producto, el stack, los contratos, las dependencias y los dueños de archivos.
 - Sigue `docs/DEVELOPMENT_WORKFLOW.md` para Linear, ramas, commits, PRs, revisión y verificación. Usa `CONTRIBUTING.md` para el flujo humano.
 - Si una instrucción de esta carpeta contradice un contrato del brief o una instrucción directa del usuario, detente y explica el conflicto antes de cambiar el alcance.
