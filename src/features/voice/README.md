@@ -50,6 +50,30 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 - **Qué extrae Vapi:** el structured output `tratunex_supplier_quote` (`quoteExtractionJsonSchema`). `extractQuoteFromReport` lo lee del `end-of-call-report`: sin cotización devuelve `extraction: null`; un dato opcional mal formado se descarta y un dato obligatorio faltante es `VALIDATION_ERROR`.
 - `quoteAssistantPrompt(brief)` y `quoteAssistantFirstMessage(brief)` reciben los datos de la compra; QUO-03 los manda a Vapi al iniciar la llamada desde la app.
 
+## Cotizaciones de proveedores (QUO-02)
+
+- **Contrato:** `SupplierQuoteDTOSchema` en `src/contracts/voice.ts`, una fila de `supplier_quotes`. Lo leen el comparador (ORD-02, Nano) y el ranking (BUY-03, Vale).
+- **Tabla:** `supplier_quotes` (migración `20261107180000`). `source` es `call` (llamada real, con `call_id`), `web` (precio publicado, con `source_url`) o `example` (dato de prueba rotulado). Una llamada da como máximo una cotización; proveedor y llamada son de la misma empresa; un dato que no se dijo es `null`, nunca 0. Los miembros solo leen; escribe el servidor con la clave de servicio.
+- **Datos de ejemplo:** `supplierQuoteFixtures` en `fixtures.ts`, tres cotizaciones para "500 vasos para el lunes": la de la llamada (recomendable), la más barata pero tarde y sin ARGt, y una con IVA incluido que solo cubre 300.
+- `purchase_request_id` apunta a la compra de Vale (`purchase_requests`, BUY-01) de la misma empresa; la migración agrega `unique (company_id, id)` a esa tabla para poder exigirlo.
+
+### Traer la cotización desde la llamada
+
+- **Pantalla:** `/calls/quotes/import?purchase_request_id=<compra>`. Se elige el proveedor (lista del CRM) y se pega el ID de la llamada de Vapi (Logs → Calls). Abajo lista las cotizaciones de esa compra y enlaza al comparador.
+- **`importQuoteFromCall(actionCtx, { provider_call_id, supplier_contact_id, purchase_request_id })`** en `public.ts`: lee la llamada con la API de Vapi (`GET /call/:id`, `VAPI_PRIVATE_KEY`), toma la cotización `tratunex_supplier_quote` y guarda la llamada y la cotización con la clave secreta. No depende del webhook: funciona igual si la llamada se hizo desde el dashboard de Vapi.
+  - Llamada sin terminar o cotización todavía sin generar → `CONFLICT` reintentable. Sin una persona del otro lado → `VALIDATION_ERROR`.
+  - Reintentar con la misma llamada no duplica (una fila por ID de Vapi y una cotización por llamada). Una llamada ya asociada a otra empresa, otro proveedor u otra compra se rechaza.
+- **`listSupplierQuotes(ctx, { purchase_request_id })`**: cotizaciones de una compra en la forma que propuso Nano para el comparador (`SupplierQuoteSchema` en ORD-02): precio en centavos enteros con moneda y decimales, y `source` con la llamada (y su transporte), la URL o el rótulo "Datos de prueba".
+- Variables: `VAPI_PRIVATE_KEY`, `SUPABASE_SECRET_KEY` y `NEXT_PUBLIC_SUPABASE_URL` en el servidor.
+
+## Precio de Belo (QUO-04)
+
+- **`getBeloPrice(pair = "USDT/ARS")`** en `public.ts` → `Result<BeloPrice>` con `bid`, `ask`, `mid` (pesos por 1 USDT) y `fetched_at`. Lee la API pública `GET https://api.belo.app/public/price` (sin clave) y guarda el precio 1 minuto por instancia. Pares: `USDT/ARS` y `USDC/ARS`.
+- Belo no informa la hora del precio: `fetched_at` es la hora de la consulta. Tampoco publica `mid`: es el promedio de compra y venta.
+- **`beloEquivalent(monto, "ARS" | "USD", precio)`** (`server/belo-price.ts`) pasa pesos a USDT y USD a pesos con el precio medio. Es solo de referencia: no es el precio de una operación ni convierte pagos.
+- Si Belo no responde o cambia el formato, el error se informa (`PROVIDER_UNAVAILABLE` reintentable o `PROVIDER_ERROR`) y la pantalla muestra los montos solo en su moneda: nunca un precio inventado.
+- Lo usa `/calls/quotes/import`: precio por unidad y total de la compra en pesos y USDT, con la compra, la venta y la hora del precio. El comparador (ORD-02) y la pantalla de pago (PAY-03) pueden usar la misma función.
+
 ## Contrato compartido con el CRM
 
 `CallResultV1Schema` y `NextActionSchema` vienen de `src/contracts/crm.ts` (Nano); `voice.ts` los reexporta y agrega `NormalizedCallResultV1Schema`.

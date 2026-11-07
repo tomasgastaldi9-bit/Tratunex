@@ -1,4 +1,4 @@
-import type { CallDetailDTO, CallDTO, CallResultV1 } from "@/contracts/voice";
+import type { CallDetailDTO, CallDTO, CallResultV1, SupplierQuoteDTO } from "@/contracts/voice";
 
 // FIXTURES de Voz (TRA-43): datos ficticios para desarrollar y probar sin
 // telefonía. No son resultados de llamadas reales. Los IDs son UUID fijos y no
@@ -210,4 +210,85 @@ export const callDetailFixtures: CallDetailDTO[] = [
       transcript: "Agente: Hola, soy el asistente virtual de la empresa. ¿Hablo con el dueño?\nCliente: Sí, ¿qué necesitás?\nAgente: Te cuento en un minuto qué hacemos...\nCliente: Me interesa, mandame los precios por mail.",
     },
   ),
+];
+
+// Cotizaciones de ejemplo (QUO-02) para el comparador (ORD-02) y el ranking
+// (BUY-03). La de llamada imita lo que extrae el cotizador; las otras dos son
+// `example`. Son datos ficticios: se muestran siempre como "Datos de prueba".
+// Caso de la demo: 500 vasos para el lunes (en 2 días).
+export const supplierQuoteFixtureIds = {
+  purchaseRequest: "77777777-7777-4777-8777-777777777777",
+  secondSupplier: "33333333-3333-4333-8333-333333333335",
+  thirdSupplier: "33333333-3333-4333-8333-333333333336",
+} as const;
+
+const baseQuote = {
+  company_id: voiceFixtureIds.company,
+  purchase_request_id: supplierQuoteFixtureIds.purchaseRequest,
+  source_url: null,
+  created_at: "2026-11-07T17:30:00.000Z",
+  updated_at: "2026-11-07T17:30:00.000Z",
+};
+
+export const supplierQuoteFixtures: SupplierQuoteDTO[] = [
+  {
+    ...baseQuote,
+    id: "88888888-8888-4888-8888-888888888881",
+    supplier_contact_id: voiceFixtureIds.contact,
+    call_id: voiceFixtureIds.call,
+    source: "call",
+    can_supply: "yes",
+    unit_price: 85,
+    currency: "ARS",
+    price_includes_vat: "no",
+    available_quantity: 2000,
+    minimum_order_quantity: 200,
+    lead_time_days: 2,
+    lead_time_text: "en 2 días",
+    delivery_included: "yes",
+    accepts_argt: "yes",
+    payment_terms: null,
+    notes: null,
+    summary: "Atendió el vendedor. Tiene 2.000 vasos a $85 más IVA, entrega en 2 días con envío incluido y acepta cobrar en ARGt.",
+  },
+  {
+    ...baseQuote,
+    id: "88888888-8888-4888-8888-888888888882",
+    supplier_contact_id: supplierQuoteFixtureIds.secondSupplier,
+    call_id: null,
+    source: "example",
+    can_supply: "yes",
+    unit_price: 78,
+    currency: "ARS",
+    price_includes_vat: "no",
+    available_quantity: 600,
+    minimum_order_quantity: 500,
+    lead_time_days: 5,
+    lead_time_text: "en 5 días",
+    delivery_included: "no",
+    accepts_argt: "no",
+    payment_terms: "Transferencia por adelantado",
+    notes: "El envío corre por cuenta del comprador.",
+    summary: "El más barato, pero entrega en 5 días (después del lunes), no incluye envío y no acepta ARGt.",
+  },
+  {
+    ...baseQuote,
+    id: "88888888-8888-4888-8888-888888888883",
+    supplier_contact_id: supplierQuoteFixtureIds.thirdSupplier,
+    call_id: null,
+    source: "example",
+    can_supply: "partial",
+    unit_price: 95,
+    currency: "ARS",
+    price_includes_vat: "yes",
+    available_quantity: 300,
+    minimum_order_quantity: null,
+    lead_time_days: 1,
+    lead_time_text: "mañana",
+    delivery_included: "yes",
+    accepts_argt: "yes",
+    payment_terms: null,
+    notes: "Solo tiene 300 de los 500 vasos.",
+    summary: "Precio con IVA incluido y entrega mañana, pero solo cubre 300 de las 500 unidades.",
+  },
 ];

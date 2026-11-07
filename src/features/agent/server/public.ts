@@ -6,6 +6,7 @@ import type {
   CreatePurchaseRequest,
   GetPurchasePolicy,
   GetPurchaseRequest,
+  RankQuotes,
   SavePurchasePolicy,
 } from "@/contracts/purchases";
 import { createRequestSupabaseClient } from "@/lib/supabase/request";
@@ -65,3 +66,10 @@ export const savePurchasePolicy: SavePurchasePolicy = (ctx, input) =>
 /** Decide si un pago se hace solo, necesita aprobación o se rechaza. La llama payInvoice (Tomás). */
 export const checkPurchasePolicy: CheckPurchasePolicy = (ctx, input) =>
   purchaseReadService.checkPurchasePolicy(ctx, input);
+
+/**
+ * Ordena las cotizaciones de una compra, recomienda una y lo explica (BUY-03).
+ * Solo lee (la compra y las reglas), por eso usa el cliente de solo lectura.
+ * La explicación con IA usa ANTHROPIC_API_KEY del servidor; sin clave, usa reglas.
+ */
+export const rankQuotes: RankQuotes = (ctx, input) => purchaseReadService.rankQuotes(ctx, input);

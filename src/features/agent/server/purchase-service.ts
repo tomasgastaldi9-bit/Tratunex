@@ -8,6 +8,8 @@ import {
   purchasePolicySchema,
   purchaseRequestInputSchema,
   purchaseRequestSchema,
+  rankQuotesInputSchema,
+  rankQuotesOutputSchema,
 } from "../../../contracts/purchases";
 import type {
   CheckPurchasePolicy,
@@ -15,12 +17,15 @@ import type {
   GetPurchasePolicy,
   GetPurchaseRequest,
   PurchasePolicy,
+  RankQuotes,
   SavePurchasePolicy,
 } from "../../../contracts/purchases";
+import { buildRankingSummary, explainRanking } from "./explain";
+import { rankQuotesByRules, todayInArgentina } from "./ranking";
 import { fail, logError, translateSaveError } from "./save-errors";
 
 /**
- * Lógica de las compras (BUY-01) y de las reglas de pago (BUY-02).
+ * Lógica de las compras (BUY-01), de las reglas de pago (BUY-02) y del ranking de cotizaciones (BUY-03).
  * NO tiene "server-only" a propósito: así los tests la pueden importar.
  * Recibe una función que entrega el cliente de Supabase; en los tests le
  * pasamos uno falso.
@@ -62,7 +67,18 @@ function toDateText(value: unknown): string | null {
 
 type ReadPolicy = { ok: true; policy: PurchasePolicy | null } | { ok: false; result: ReturnType<typeof fail> };
 
-export function createPurchaseService(getClient: () => Promise<SupabaseClient>) {
+/**
+ * Lo que necesita rankQuotes para pedirle la explicación a Claude. Se puede
+ * reemplazar en las pruebas para que nunca llamen a la API real.
+ */
+export type PurchaseServiceDeps = {
+  /** Devuelve la clave de Claude. Si no se pasa, se lee ANTHROPIC_API_KEY del servidor. */
+  getApiKey?: () => string | undefined;
+  /** El fetch para llamar a Claude. Si no se pasa, el fetch normal. */
+  fetchImpl?: typeof fetch;
+};
+
+export function createPurchaseService(getClient: () => Promise<SupabaseClient>, deps: PurchaseServiceDeps = {}) {
   /** Lee las reglas de la empresa (o null si no hay). Lo usan getPurchasePolicy y checkPurchasePolicy. */
   async function readPolicy(client: SupabaseClient, companyId: string): Promise<ReadPolicy> {
     // company_id viene del servidor (ctx), nunca del navegador.
@@ -271,5 +287,57 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>) 
     };
   };
 
-  return { createPurchaseRequest, getPurchaseRequest, getPurchasePolicy, savePurchasePolicy, checkPurchasePolicy };
+  const rankQuotes: RankQuotes = async (ctx, input) => {
+    const parsedCtx = ctxSchema.safeParse(ctx);
+    if (!parsedCtx.success) {
+      return fail("VALIDATION_ERROR", parsedCtx.error.issues[0]?.message ?? "Contexto inválido", false);
+    }
+    const parsedInput = safeParseSinExcepcion(rankQuotesInputSchema, input);
+    if (!parsedInput.success) {
+      return fail("VALIDATION_ERROR", parsedInput.message, false);
+    }
+
+    // La compra se lee con el mismo lector de getPurchaseRequest: filtra por la
+    // empresa del ctx (una compra de otra empresa es NOT_FOUND) y revisa los montos.
+    const read = await getPurchaseRequest(parsedCtx.data, { purchase_request_id: parsedInput.data.purchase_request_id });
+    if (!read.ok) return read;
+    const request = read.data.purchase_request;
+
+    let policy: ReadPolicy;
+    try {
+      const client = await getClient();
+      policy = await readPolicy(client, parsedCtx.data.company_id);
+    } catch (error) {
+      logError("excepción al leer las reglas para el ranking", error);
+      return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+    }
+    // Sin reglas legibles no decimos qué haría el agente al pagar: devolvemos error.
+    if (!policy.ok) return fail("PROVIDER_UNAVAILABLE", LECTURA_NO_DISPONIBLE, true);
+
+    // El orden lo decide la regla (ranking.ts), con la fecha de hoy en Argentina.
+    const { ranking, recommended_quote_id } = rankQuotesByRules({
+      request,
+      quotes: parsedInput.data.quotes,
+      policy: policy.policy,
+      today: todayInArgentina(),
+    });
+
+    // La IA solo explica; si falla, explainRanking usa el texto de reglas (nunca tira error).
+    const resumen = buildRankingSummary({ request, quotes: parsedInput.data.quotes, ranking, recommended_quote_id });
+    const explanation = await explainRanking(resumen, {
+      apiKey: deps.getApiKey ? deps.getApiKey() : process.env.ANTHROPIC_API_KEY,
+      fetchImpl: deps.fetchImpl ?? fetch,
+    });
+
+    const output = rankQuotesOutputSchema.safeParse({
+      ranking,
+      recommended_quote_id,
+      explanation: explanation.text,
+      explanation_source: explanation.source,
+    });
+    if (!output.success) return fail("PROVIDER_ERROR", "No pudimos armar la comparación de cotizaciones.", false);
+    return { ok: true, data: output.data };
+  };
+
+  return { createPurchaseRequest, getPurchaseRequest, getPurchasePolicy, savePurchasePolicy, checkPurchasePolicy, rankQuotes };
 }

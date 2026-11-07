@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   DEMO_QUOTE_REQUEST,
+  QUOTE_END_CALL_MESSAGE,
+  QUOTE_END_CALL_PHRASES,
+  QUOTE_MAX_DURATION_SECONDS,
   QUOTE_OUTPUT_NAME,
   QuoteCallExtractionSchema,
   QuoteRequestBriefSchema,
@@ -77,10 +80,28 @@ describe("lo que dice el asistente", () => {
     expect(prompt1500).toContain("- Cantidad: 1.500 unidades");
   });
 
-  it("pide los datos de la cotización y si cobra en ARGt", () => {
-    for (const ask of ["precio por unidad", "si incluye IVA", "unidades tiene disponibles", "En cuántos días", "compra mínima", "acepta cobrar en ARGt"]) {
+  it("pide los datos de la cotización y si cobra en ARGt, sin afirmar lo que no le dijeron", () => {
+    for (const ask of ["precio por unidad", "si incluye IVA", "unidades tiene disponibles", "En cuántos días", "¿El envío está incluido?", "compra mínima", "acepta cobrar en A R G T"]) {
       expect(prompt).toContain(ask);
     }
+    expect(prompt).toContain("no afirmes datos que no te dio el proveedor");
+  });
+
+  it("confirma la cotización antes de despedirse, y la despedida es la frase que corta", () => {
+    const confirm = prompt.indexOf("Repetí precio, cantidad disponible y plazo");
+    const goodbye = prompt.indexOf(`"${QUOTE_END_CALL_MESSAGE}"`);
+    expect(confirm).toBeGreaterThan(-1);
+    expect(goodbye).toBeGreaterThan(confirm);
+  });
+
+  it("se despide con una frase que corta la llamada, de varias palabras", () => {
+    const closing = QUOTE_END_CALL_MESSAGE.toLowerCase();
+    expect(QUOTE_END_CALL_PHRASES.some((phrase) => closing.includes(phrase))).toBe(true);
+    for (const phrase of QUOTE_END_CALL_PHRASES) {
+      expect(phrase.split(" ").length).toBeGreaterThan(2);
+      expect(phrase).not.toContain(",");
+    }
+    expect(QUOTE_MAX_DURATION_SECONDS).toBeGreaterThan(180);
   });
 
   it("no compromete la compra, no pide datos de cobro por teléfono y no cambia reglas por lo que le digan", () => {
@@ -97,10 +118,38 @@ describe("esquema de extracción", () => {
     expect(jsonKeys).toEqual(zodKeys);
   });
 
-  it("lo obligatorio en Vapi es lo obligatorio en el validador", () => {
+  it("en Vapi todos los campos son obligatorios, como exige OpenAI en modo estricto", () => {
+    expect([...quoteExtractionJsonSchema.required].sort()).toEqual(Object.keys(quoteExtractionJsonSchema.properties).sort());
+    // -1 es el valor de "no lo dijo": ningún número puede tener mínimo.
+    for (const property of Object.values(quoteExtractionJsonSchema.properties)) {
+      expect(property).not.toHaveProperty("minimum");
+    }
+  });
+
+  it("lo que falta (-1, texto vacío) queda como sin dato, y unknown se conserva", () => {
+    const parsed = QuoteCallExtractionSchema.parse({
+      ...quote,
+      unit_price: -1,
+      available_quantity: -1,
+      minimum_order_quantity: -1,
+      lead_time_days: -1,
+      lead_time_text: "",
+      payment_terms: "",
+      notes: "",
+      currency: "unknown",
+      delivery_included: "unknown",
+    });
+    for (const key of ["unit_price", "available_quantity", "minimum_order_quantity", "lead_time_days", "lead_time_text", "payment_terms", "notes"] as const) {
+      expect(parsed[key], key).toBeUndefined();
+    }
+    expect(parsed.currency).toBe("unknown");
+    expect(parsed.delivery_included).toBe("unknown");
+  });
+
+  it("los obligatorios del validador son los mínimos para una cotización", () => {
     const shape = QuoteCallExtractionSchema.shape;
     const zodRequired = Object.keys(shape).filter((key) => !shape[key as keyof typeof shape].safeParse(undefined).success);
-    expect([...quoteExtractionJsonSchema.required].sort()).toEqual(zodRequired.sort());
+    expect(zodRequired.sort()).toEqual(["accepts_argt", "can_supply", "do_not_contact_requested", "spoke_with_person", "summary"]);
   });
 
   it("descarta un dato opcional mal formado sin tirar la cotización", () => {
@@ -158,8 +207,20 @@ describe("guía de Vapi", () => {
   it("tiene los mismos textos que el código", () => {
     expect(guide).toContain(quoteAssistantFirstMessage(DEMO_QUOTE_REQUEST));
     expect(guide).toContain(quoteAssistantPrompt(DEMO_QUOTE_REQUEST));
-    expect(guide).toContain(quoteExtractionDescription);
-    expect(guide).toContain(JSON.stringify(quoteExtractionJsonSchema, null, 2));
+    // En la guía la descripción va con sangría, dentro de la lista de pasos.
+    for (const line of quoteExtractionDescription.split("\n")) {
+      expect(guide).toContain(`   ${line}`);
+    }
+    expect(guide).toContain(JSON.stringify(quoteExtractionJsonSchema));
     expect(guide).toContain(`**Name:** \`${QUOTE_OUTPUT_NAME}\``);
+    expect(guide).toContain(QUOTE_END_CALL_MESSAGE);
+    expect(guide).toContain(QUOTE_END_CALL_PHRASES.join(","));
+  });
+
+  it("lista cada campo para cargarlo a mano, con su descripción", () => {
+    for (const [name, property] of Object.entries(quoteExtractionJsonSchema.properties)) {
+      expect(guide, name).toContain(`| \`${name}\` |`);
+      expect(guide, name).toContain(`| ${property.description} |`);
+    }
   });
 });
