@@ -2,7 +2,7 @@ import "server-only";
 import { createPurchaseOrdersCrm } from "./purchase-orders-service";
 import { getAuthorizedCrmClient } from "./client";
 
-// PAY-02 aún no publica payInvoice ni la reclamación acordada de una orden.
+// PAY-02 publica un stub no disponible; falta la reclamación acordada de una orden.
 // No hay firmador, red de pagos ni fallback mock conectado a este módulo.
 const orders = createPurchaseOrdersCrm(async (ctx, operation, input) => {
   const authorized = await getAuthorizedCrmClient(ctx, { readOnlyCookies: true });

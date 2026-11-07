@@ -12,6 +12,7 @@ import { createCrmOperationCaller, crmFailure, type CrmExecutor } from "./persis
 
 /** Se conecta exclusivamente después de revisar la reclamación atómica con PAY-02. */
 export type ReviewedOrderPaymentPort = {
+  availability: "unavailable" | "ready";
   payInvoice: (ctx: ActionCtx, input: { order_id: string }) => Promise<Result<{ payment: OrderPayment }>>;
 };
 
@@ -23,7 +24,7 @@ export function createPurchaseOrdersCrm(execute: CrmExecutor, paymentPort?: Revi
   const approvePurchaseOrder = (ctx: ActionCtx, input: ApprovePurchaseOrderInput) => human(ctx,
     () => call(ctx, "approvePurchaseOrder", input, ApprovePurchaseOrderInputSchema, PurchaseOrderDataSchema));
   return {
-    paymentAvailable: !!paymentPort,
+    paymentAvailable: paymentPort?.availability === "ready",
     createPurchaseOrder: (ctx: ActionCtx, input: CreatePurchaseOrderInput) => human(ctx,
       () => call(ctx, "createPurchaseOrder", input, CreatePurchaseOrderInputSchema, CreatePurchaseOrderDataSchema)),
     refreshPurchaseOrder: (ctx: ActionCtx, input: RefreshPurchaseOrderInput) => human(ctx,
@@ -34,7 +35,7 @@ export function createPurchaseOrdersCrm(execute: CrmExecutor, paymentPort?: Revi
     async approveAndPayPurchaseOrder(ctx: ActionCtx, input: ApprovePurchaseOrderInput): Promise<Result<{ order: PurchaseOrder; payment: OrderPayment }>> {
       if (ctx.actor_type !== "user") return crmFailure("FORBIDDEN", "El pago requiere una persona autenticada.");
       // No se guarda una aprobación como efecto lateral de una integración ausente.
-      if (!paymentPort) return crmFailure("PROVIDER_UNAVAILABLE", "El servicio de pagos todavía no está disponible. La orden conserva su estado.");
+      if (paymentPort?.availability !== "ready") return crmFailure("PROVIDER_UNAVAILABLE", "El servicio de pagos todavía no está disponible. La orden conserva su estado.");
       const approved = await approvePurchaseOrder(ctx, input);
       if (!approved.ok) return approved;
       const order = approved.data.order;

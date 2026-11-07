@@ -8,6 +8,7 @@ Schema: `src/contracts/purchase-orders.ts`. Entrada de servidor:
 getPurchaseOrder(ctx, { order_id }): Promise<Result<{ order: PurchaseOrder }>>
 createPurchaseOrder(actionCtx, { supplier_quote_id }): Promise<Result<{ order: PurchaseOrder; created: boolean }>>
 approvePurchaseOrder(actionCtx, { order_id, expected_version }): Promise<Result<{ order: PurchaseOrder }>>
+refreshPurchaseOrder(actionCtx, { order_id, expected_version }): Promise<Result<{ order: PurchaseOrder }>>
 listPurchaseOrders(ctx, { limit? }): Promise<Result<{ items: PurchaseOrder[] }>>
 ```
 
@@ -48,12 +49,23 @@ solo `confirmed`, tras recibo verificado por Pagos, permite mostrar pagada.
 `reverted/failed` se muestran explícitamente. El link debe corresponder al hash
 en `https://arbiscan.io/tx/<hash>`. La idempotencia de pago es por `order_id`.
 
-Al revisar PAY-02 PR #30 (`c5e0e477`) todavía no existe `payInvoice` público:
-sus reservas privadas no verifican orden/aprobación y no se conectan como atajo.
+PAY-02 PR #30 (`78cd6a1`) publica `payInvoice` como stub que siempre devuelve
+`PROVIDER_UNAVAILABLE`. La mera presencia de esa función no habilita pagos:
+el puerto de CRM requiere `availability: "ready"` explícito, además de la revisión
+del claim. Con `"unavailable"` no se llama al stub ni se guarda una aprobación.
+Sus reservas privadas no se conectan como atajo.
 No se habilitan pagos hasta acordar el claim y conectar el validador de Tomás.
 No se exponen claves ni transacciones firmadas. La aceptación live queda pendiente.
 
-Compatibilidad pendiente con QUO-02 (`feat/TRA-71-cotizaciones`, `15f9b3a2`): su
-`supplier_quotes` propone `unit_price numeric(14,2)`, moneda ARS/USD/unknown y
+QUO-02 está integrado en `main` por PR #35 (`d83096a`): su
+`supplier_quotes` usa `unit_price numeric(14,2)`, moneda ARS/USD/unknown y
 `source` texto con `call_id` separado. No se duplica esa tabla ni se asume el DTO
 propuesto de ORD-02 como estructura persistida.
+
+La lista y ficha viven en `/orders` y `/orders/[id]`. El comparador puede usar
+`CreatePurchaseOrderButton` de `crm/components/purchase-order-create-button.tsx`
+con la cotización seleccionada. Su conexión al comparador de ORD-02 sigue pendiente;
+el botón no pide IDs internos a la persona. `refreshPurchaseOrder` solo actualiza
+snapshots de órdenes pendientes; nunca reemplaza una orden aprobada que pudiera
+tener un intento de pago en curso. La consulta de estado duradera corresponde a
+PAY-02 y todavía debe conectarse.
