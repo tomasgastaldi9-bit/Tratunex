@@ -12,6 +12,8 @@ Describe el resultado y el motivo en pocas líneas.
 - Archivos principales:
 - ¿Se coordinó con sus dueños?:
 
+Mapa de responsables y límites de edición: [sección 3 del brief general](https://github.com/tomasgastaldi9-bit/Tratunex/blob/main/docs/brief/00_GENERAL.md)
+
 ## Verificación
 
 - [ ] Comandos ejecutados y resultado exacto:
