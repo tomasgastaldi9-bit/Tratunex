@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Tratunex · Pipeline</title>
+    <link rel="stylesheet" href="../../../components/ui/tokens.css" />
+    <link rel="stylesheet" href="../../../components/ui/components.css" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="../mocks/fixtures.js" defer></script>
+    <script src="./prototype.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Ir al contenido</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación de Tratunex">
+        <a class="brand" href="#/pipeline"><span class="brand-mark" aria-hidden="true">t</span> tratunex</a>
+        <div class="company-switcher">
+          <label class="field-label" for="company-select">Tu espacio de trabajo</label>
+          <select id="company-select" aria-describedby="company-description"></select>
+          <p id="company-description" class="company-description"></p>
+        </div>
+        <div class="nav-group-label">CRM</div>
+        <nav class="main-nav" aria-label="Gestión de contactos">
+          <a href="#/pipeline" data-nav="pipeline"><span class="nav-icon icon-pipeline" aria-hidden="true">▥</span> Pipeline</a>
+          <a href="#/contacts" data-nav="contacts"><span class="nav-icon" aria-hidden="true">◎</span> Contactos</a>
+          <a href="#/tasks" data-nav="tasks"><span class="nav-icon" aria-hidden="true">☑</span> Tareas <span id="task-nav-count" class="nav-count"></span></a>
+        </nav>
+        <div class="sidebar-guide">
+          <a class="guide-link" href="../../../components/ui/index.html"><span aria-hidden="true">◈</span> Sistema visual <span aria-hidden="true">↗</span></a>
+          <p>Componentes y patrones para el equipo.</p>
+        </div>
+        <div class="sidebar-bottom">
+          <span class="avatar" aria-hidden="true">N</span>
+          <div><strong>Nano</strong><span>Equipo Tratunex</span></div>
+        </div>
+      </aside>
+      <div class="workspace">
+        <header class="topbar">
+          <div class="breadcrumb">Espacio de trabajo <span aria-hidden="true">/</span> <span id="breadcrumb-current">Pipeline</span></div>
+          <div class="demo-banner"><span class="demo-dot" aria-hidden="true"></span> Demo · datos ficticios</div>
+        </header>
+        <div class="review-toolbar" aria-label="Revisión de estados del diseño">
+          <span class="timezone-note">Horarios de Argentina <span>UTC−3</span></span>
+          <label for="view-state">Estado de pantalla</label>
+          <select id="view-state">
+            <option value="ready">Con datos</option>
+            <option value="loading">Cargando</option>
+            <option value="empty">Sin datos</option>
+            <option value="error">Error</option>
+          </select>
+        </div>
+        <main id="main" tabindex="-1"></main>
+        <footer class="workspace-footer">
+          <span>Tratunex · Diseño v1</span>
+          <a href="../../../components/ui/index.html">Guía para desarrollar →</a>
+        </footer>
+      </div>
+    </div>
+    <noscript>Activá JavaScript para recorrer los bocetos del CRM.</noscript>
+  </body>
+</html>
