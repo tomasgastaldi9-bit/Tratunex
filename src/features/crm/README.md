@@ -24,6 +24,8 @@ Cada intención de mutación conserva su `action_id` en los reintentos.
 - `getContact`, `upsertContact`, `updateContact` y `listContacts`: persistencia
   Supabase mediante `contacts_execute`. Una RPC ausente devuelve
   `PROVIDER_UNAVAILABLE`; no se reemplaza por fixtures.
+- `upsertSupplier`, `updateSupplier`, `getSupplier`, `listSuppliers` y
+  `setSupplierWallet`: persistencia mediante `suppliers_execute` en ORD-01.
 - `recordCallResult` y las cuatro funciones de seguimientos: **mock en memoria**
   hasta sus tickets de implementación. Admiten solo las dos empresas ficticias
   publicadas y no representan resultados reales de Voz.
@@ -55,6 +57,32 @@ guardan en una misma transacción.
 La propuesta está en `database/contacts.sql`. **Tomás debe versionarla y
 aplicarla al Supabase compartido**. Esta entrega no aplica migraciones remotas,
 no crea deals/tareas ni procesa llamadas reales.
+
+## Proveedores · ORD-01 / TRA-74
+
+El brief v3 reutiliza contactos para proveedores. `/suppliers` y
+`/suppliers/[id]` ofrecen lista, búsqueda y filtros en servidor, ficha y edición
+de datos comerciales. Cada proveedor mantiene el UUID del contacto; la tabla
+`supplier_profiles` agrega el rol y destino de cobro sin modificar los contratos
+de CRM-03 ni las migraciones aplicadas.
+
+La billetera se carga en una acción humana separada, con red y dirección juntas.
+La API de importación no admite billeteras y conserva la existente al reimportar.
+`expected_wallet_version` rechaza ediciones desactualizadas; una respuesta
+ambigua conserva la misma acción para recuperar su resultado. Los actores
+`voice/system` no pueden editar ni vaciar el destino, tampoco por RPC directa.
+
+Se valida la sintaxis de dirección EVM y se rechaza la dirección cero. No se
+afirma checksum verificado, propiedad, saldo ni autorización para pagar. Este
+módulo no firma transacciones. Ver las firmas y límites de integración en
+[`CONTRACTS-V3.md`](CONTRACTS-V3.md) y la propuesta incremental
+[`database/suppliers.sql`](database/suppliers.sql), que Tomás coordina para la
+base compartida.
+
+API: `GET/POST /api/crm/suppliers`, `GET/PATCH /api/crm/suppliers/[id]` y
+`POST /api/crm/suppliers/[id]/wallet`. Las dos primeras mutaciones usan el
+payload de contacto existente. Wallet recibe `{collection_wallet,
+expected_wallet_version}`; todas conservan el envelope `{action_id,input}`.
 
 ## API del navegador
 
