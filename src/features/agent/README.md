@@ -8,7 +8,7 @@ El dashboard donde cada empresa "entrena" a su agente de voz: qué vende, a qui�
 
 1. **Una versión = toda la configuración.** Guardar cualquier sección (perfil, instrucciones, criterios, conocimiento) crea la versión siguiente de la empresa: 1, 2, 3… Cada llamada guarda ese único número (`agent_version` en `CallResultV1`) y las métricas de AGT-08 agrupan por él.
 2. **Las versiones nunca se pisan.** Cada guardado agrega una fila en `agent_profiles`; la versión vigente es la de número más alto. Al guardar una sección, la fila nueva copia las demás secciones de la versión anterior.
-3. **Sin cambios, sin versión nueva.** Si el perfil que llega es igual al vigente, se responde `{ version: <la vigente>, created: false }`.
+3. **Sin cambios, sin versión nueva.** Si la sección que llega es igual a la vigente, se responde `{ version: <la vigente>, created: false }`.
 4. **Nadie pisa el trabajo de otro.** El formulario manda `base_version` (la versión que estaba viendo). Si mientras tanto alguien guardó otra, el servidor responde `CONFLICT` en vez de pisarla.
 5. **Solo los admin guardan.** Admin y vendedor pueden ver; solo `role = 'admin'` en `company_members` puede guardar. La base es la que decide (no alcanza con ocultar el botón).
 6. **Una página por sección.** `/agent` es el resumen; cada sección tiene su página y su carpeta, así cada ticket toca archivos distintos.
@@ -92,7 +92,7 @@ Errores: la función lanza excepciones cuyo mensaje empieza con el código, igua
 
 ## Servidor (`src/features/agent/server/`)
 
-- `public.ts` (`import "server-only"`) es lo único que importan otros módulos y las páginas. Exporta `getAgentProfile` y `saveCompanyProfile` con las firmas de `src/contracts/agent.ts`.
+- `public.ts` (`import "server-only"`) es lo único que importan otros módulos y las páginas. Exporta `getAgentProfile`, `saveCompanyProfile` y `saveAgentKnowledge` con las firmas de `src/contracts/agent.ts`.
 - La lógica vive en archivos sin `server-only`, que reciben el cliente de Supabase desde afuera, para poder probarlos con Vitest y un cliente falso.
 - Vitest no resuelve el alias `@/`. En archivos que importa un test, los imports con valor van con ruta relativa (`../../../contracts/agent`); `import type` con `@/` sí funciona.
 - Toda respuesta es `Result<T>` (`src/contracts/common.ts`). Un error de la base nunca se convierte en éxito.
