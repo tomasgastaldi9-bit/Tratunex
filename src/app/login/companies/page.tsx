@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAuthUnavailable, selectedCompanyCookie } from "@/lib/auth/company";
@@ -37,6 +38,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
           <button type="submit">{company.name}{selected === company.id ? " (seleccionada)" : ""}</button>
         </form>
       ))}
+      {companies?.some((company) => company.id === selected) ? <p><Link href="/prospects">Ir a prospección</Link></p> : null}
       <form action={signOut}><button type="submit">Cerrar sesión</button></form>
     </main>
   );

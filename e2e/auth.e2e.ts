@@ -59,6 +59,14 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await expect(page.getByRole("alert")).toContainText("No tenés acceso");
   await page.getByRole("button", { name: "Empresa E2E A" }).click();
   await expect(page.getByRole("button", { name: "Empresa E2E A (seleccionada)" })).toBeVisible();
+  await page.getByRole("link", { name: "Ir a prospección" }).click();
+  await page.getByLabel("Rubro").fill("panaderías");
+  await page.getByLabel("Zona").fill("Córdoba");
+  await page.getByRole("button", { name: "Buscar prospectos" }).click();
+  await expect(page.getByText("Datos de ejemplo (mock)")).toBeVisible();
+  await expect(page.getByText("Sin teléfono disponible")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ver fuente" })).toHaveAttribute("href", "https://example.com/");
+  await page.goto("/login/companies");
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel("Correo").fill(emailB);
