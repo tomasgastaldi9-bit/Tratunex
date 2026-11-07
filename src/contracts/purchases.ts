@@ -291,6 +291,7 @@ export type QuoteForRanking = z.infer<typeof quoteForRankingSchema>;
 
 export const RANK_QUOTES_MAX = 20;
 
+/** Compra + cotizaciones (obligatorias). Lo usa el comparador de Nano: no cambiar. */
 export const rankQuotesInputSchema = z.object({
   purchase_request_id: z.uuid(),
   quotes: z
@@ -299,6 +300,17 @@ export const rankQuotesInputSchema = z.object({
     .max(RANK_QUOTES_MAX, `Mandá como máximo ${RANK_QUOTES_MAX} cotizaciones`),
 });
 export type RankQuotesInput = z.infer<typeof rankQuotesInputSchema>;
+
+/**
+ * Lo que acepta rankQuotes: igual que rankQuotesInputSchema pero con las
+ * cotizaciones OPCIONALES. Si no vienen, rankQuotes las lee de la tabla
+ * supplier_quotes (con listSupplierQuotes de Voz). Es un esquema aparte para
+ * no romper a quien ya usa rankQuotesInputSchema con quotes obligatorio.
+ */
+export const rankQuotesAutoInputSchema = rankQuotesInputSchema.extend({
+  quotes: rankQuotesInputSchema.shape.quotes.optional(),
+});
+export type RankQuotesAutoInput = z.infer<typeof rankQuotesAutoInputSchema>;
 
 /** Una cotización ya ordenada, con el porqué. */
 export const quoteRankSchema = z.object({
@@ -340,4 +352,4 @@ export type RankQuotesOutput = z.infer<typeof rankQuotesOutputSchema>;
  * PROVIDER_UNAVAILABLE (la base no respondió). Si la IA falla, NO es un error:
  * se usa la explicación de respaldo y explanation_source = "rules".
  */
-export type RankQuotes = (ctx: Ctx, input: RankQuotesInput) => Promise<Result<RankQuotesOutput>>;
+export type RankQuotes = (ctx: Ctx, input: RankQuotesAutoInput) => Promise<Result<RankQuotesOutput>>;

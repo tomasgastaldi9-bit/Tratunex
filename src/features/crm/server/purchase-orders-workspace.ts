@@ -2,6 +2,7 @@ import "server-only";
 import { getCompanyContext } from "@/features/platform/server/public";
 import { loadCompany } from "./contacts-workspace";
 import { getPurchaseOrder, listPurchaseOrders, orderPaymentAvailable } from "./purchase-orders-public";
+import { getOrderPayment } from "@/features/payments/server/public";
 
 export async function loadPurchaseOrdersPage(order_id?: string) {
   const context = await getCompanyContext(undefined, { readOnlyCookies: true });
@@ -11,9 +12,11 @@ export async function loadPurchaseOrdersPage(order_id?: string) {
   if (order_id) {
     const result = await getPurchaseOrder(context.data, { order_id });
     if (!result.ok) return result;
-    return { ok: true, data: { company: company.data, order: result.data.order, orders: null, paymentAvailable: orderPaymentAvailable } } as const;
+    const payment = await getOrderPayment(context.data, { order_id });
+    return { ok: true, data: { company: company.data, order: result.data.order, orders: null, paymentAvailable: orderPaymentAvailable,
+      payment: payment.ok ? payment.data.payment : null, paymentLookupFailed: !payment.ok } } as const;
   }
   const result = await listPurchaseOrders(context.data, { limit: 50 });
   if (!result.ok) return result;
-  return { ok: true, data: { company: company.data, order: null, orders: result.data.items, paymentAvailable: orderPaymentAvailable } } as const;
+  return { ok: true, data: { company: company.data, order: null, orders: result.data.items, paymentAvailable: orderPaymentAvailable, payment: null, paymentLookupFailed: false } } as const;
 }

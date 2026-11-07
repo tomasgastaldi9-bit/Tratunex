@@ -6,5 +6,6 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const result = await loadPurchaseOrdersPage((await params).id);
   if (!result.ok) return <PurchaseOrderAccessState code={result.error.code} message={result.error.message} />;
   if (!result.data.order) return <PurchaseOrderAccessState code="NOT_FOUND" />;
-  return <PurchaseOrderView company={result.data.company} order={result.data.order} paymentAvailable={result.data.paymentAvailable} />;
+  return <PurchaseOrderView company={result.data.company} order={result.data.order} payment={result.data.payment}
+    paymentLookupFailed={result.data.paymentLookupFailed} paymentAvailable={result.data.paymentAvailable} />;
 }

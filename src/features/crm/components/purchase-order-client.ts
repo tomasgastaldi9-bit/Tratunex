@@ -43,14 +43,26 @@ export function orderPaymentPresentation(payment: OrderPayment | null | undefine
   if (valid.status === "failed" || valid.status === "reverted") return { label: "Falló", tone: "danger" as const,
     description: "El intento no se confirmó. Consultá su estado antes de decidir otra acción." };
   if (valid.status === "unknown") return { label: "Verificación pendiente", tone: "warning" as const,
-    description: "El resultado del intento todavía no está confirmado. Consultá su estado." };
+    description: "El último estado guardado es incierto. Un hash preparado no demuestra que la transacción haya sido enviada." };
+  if (valid.status === "prepared") return { label: "Transacción preparada", tone: "warning" as const,
+    description: "El hash corresponde a una transacción preparada; todavía no demuestra que haya sido enviada." };
   return { label: "Pago en proceso", tone: "info" as const,
     description: "Hay un intento registrado y su confirmación está pendiente." };
 }
 
 const payResponse = resultSchema(z.object({ order: PurchaseOrderSchema, payment: OrderPaymentSchema.nullable() }));
 const orderResponse = resultSchema(z.object({ order: PurchaseOrderSchema }));
+const paymentResponse = resultSchema(z.object({ payment: OrderPaymentSchema.nullable(), chain_checked: z.boolean() }));
 export type OrderPayResult = { order: PurchaseOrder; payment: OrderPayment | null };
+
+export async function reconcileOrderPayment(order: PurchaseOrder): Promise<Result<{ payment: OrderPayment | null; chain_checked: boolean }>> {
+  const action_id = `reconcile:${order.id}`;
+  const response = await fetch(`/api/crm/orders/${order.id}/payment-status`, { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": action_id }, body: JSON.stringify({ action_id, input: {} }) });
+  const parsed = paymentResponse.safeParse(await response.json() as unknown);
+  if (!parsed.success || (parsed.data.ok && !response.ok)) throw new Error("No se pudo consultar el estado del pago.");
+  return parsed.data;
+}
 
 function sameOrder(returned: PurchaseOrder, expected: PurchaseOrder) {
   return returned.id === expected.id && returned.company_id === expected.company_id && returned.purchase_request_id === expected.purchase_request_id
@@ -84,6 +96,17 @@ export async function postOrderPayment(order: PurchaseOrder, action_id: string, 
   return parsed.data;
 }
 
+export async function postResumeOrderPayment(order: PurchaseOrder, action_id: string): Promise<Result<OrderPayResult>> {
+  const response = await fetch(`/api/crm/orders/${order.id}/resume-payment`, { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": action_id }, body: JSON.stringify({ action_id, input: {} }) });
+  const parsed = payResponse.safeParse(await response.json() as unknown);
+  if (!parsed.success) throw new Error("El servicio no confirmó un estado de pago válido.");
+  if (parsed.data.ok && (!response.ok || !sameOrder(parsed.data.data.order, order) || parsed.data.data.order.status !== "approved"
+    || parsed.data.data.order.amount_atomic !== order.amount_atomic || parsed.data.data.order.wallet?.address.toLowerCase() !== order.wallet?.address.toLowerCase()
+    || (parsed.data.data.payment !== null && !validOrderPayment(parsed.data.data.payment, parsed.data.data.order)))) throw new Error("El servicio no confirmó el pago correspondiente a esta orden.");
+  return parsed.data;
+}
+
 export async function refreshOrderSnapshot(order: PurchaseOrder, action_id: string, expected_version: number): Promise<Result<{ order: PurchaseOrder }>> {
   const response = await post(`/api/crm/orders/${order.id}/refresh`, action_id, expected_version);
   const parsed = orderResponse.safeParse(response.payload);
@@ -102,6 +125,14 @@ export const paymentIntentKey = (order: PurchaseOrder) => `tratunex-order-paymen
 export function parseOrderPaymentIntent(value: string | null): OrderPaymentIntent | null {
   if (!value) return null;
   try { const parsed = intentSchema.safeParse(JSON.parse(value)); return parsed.success ? parsed.data : null; } catch { return null; }
+}
+
+/** Continue only the same browser action after checking that no reservation is visible. */
+export function canResumeOrderPayment(order: PurchaseOrder, stored: string | null, payment: OrderPayment | null | undefined, paymentAvailable: boolean): boolean {
+  const intent = parseOrderPaymentIntent(stored);
+  if (!paymentAvailable || payment || order.quote_source === "example") return false;
+  if (order.status === "awaiting_approval") return !!intent && intent.expected_version === order.version && paymentBlockedReason(order, true, null) === null;
+  return order.status === "approved" && (!intent || order.version === intent.expected_version + 1 || order.version === intent.expected_version);
 }
 
 export function readOrderPaymentIntent(key: string): string | null {

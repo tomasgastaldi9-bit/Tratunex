@@ -44,8 +44,8 @@ function Datum({ label, children }: { label: string; children: React.ReactNode }
   return <div className="min-w-0"><dt className="text-xs text-ink-muted">{label}</dt><dd className="mt-1.5 break-words text-sm font-bold">{children}</dd></div>;
 }
 
-export function PurchaseOrderView({ company, order, payment, paymentAvailable }: {
-  company: Company; order: PurchaseOrder; payment?: OrderPayment | null; paymentAvailable: boolean;
+export function PurchaseOrderView({ company, order, payment, paymentAvailable, paymentLookupFailed = false }: {
+  company: Company; order: PurchaseOrder; payment?: OrderPayment | null; paymentAvailable: boolean; paymentLookupFailed?: boolean;
 }) {
   const verifiedPayment = validOrderPayment(payment, order);
   const paymentState = payment ? orderPaymentPresentation(payment, order) : null;
@@ -80,12 +80,13 @@ export function PurchaseOrderView({ company, order, payment, paymentAvailable }:
       {order.approved_at && <p className="text-xs text-ink-muted">Aprobada por una persona · {date.format(new Date(order.approved_at))}, horario de Argentina.</p>}
     </Card>
     <Card className="space-y-4"><h2 className="text-base font-bold">Estado del pago</h2>
-      {paymentState ? <><Badge tone={paymentState.tone}>{paymentState.label}</Badge><p className="text-sm text-ink-muted">{paymentState.description}</p></>
+      {paymentLookupFailed ? <Alert tone="warning" title="Estado no disponible">No se pudo consultar el estado del pago. Volvé a consultar antes de realizar otra acción.</Alert>
+        : paymentState ? <><Badge tone={paymentState.tone}>{paymentState.label}</Badge><p className="text-sm text-ink-muted">{paymentState.description}</p></>
         : <><Badge>Pago pendiente</Badge><p className="text-sm text-ink-muted">{paymentAvailable ? "Todavía no hay una confirmación de pago para esta orden." : "La consulta de pagos estará disponible cuando se conecte el servicio de pagos."}</p></>}
       {verifiedPayment?.tx_hash && verifiedPayment.explorer_url && <a href={verifiedPayment.explorer_url} target="_blank" rel="noreferrer"
         className="block break-all font-mono text-xs font-bold underline underline-offset-4">{verifiedPayment.tx_hash}</a>}
     </Card>
-    <PurchaseOrderActions key={order.id} order={order} payment={payment} paymentAvailable={paymentAvailable} />
+    <PurchaseOrderActions key={order.id} order={order} payment={payment} paymentAvailable={paymentAvailable && !paymentLookupFailed} />
   </SuppliersFrame>;
 }
 
