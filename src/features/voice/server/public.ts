@@ -19,8 +19,11 @@ import { createRequestSupabaseClient } from "@/lib/supabase/request";
 import { createMockCallReader, createSupabaseCallReader, type CallReader } from "./call-reads";
 import * as calls from "./calls";
 import { importQuoteFromCall as importQuote, type ComparatorQuote, type ImportQuoteFromCallData } from "./quote-import";
-import { createSupabaseQuoteStore, listComparatorQuotes } from "./quote-store";
-import { fetchVapiCall } from "./vapi-api";
+import { createSupabaseDialStore, createSupabaseQuoteStore, listComparatorQuotes } from "./quote-store";
+import { createVapiCall, fetchVapiAssistantModel, fetchVapiCall } from "./vapi-api";
+import { buildVapiQuoteCallBody, formatNeededBy, requestQuoteCall as dialQuote, type RequestQuoteCallData } from "./quote-dial";
+import { getPurchaseRequest } from "@/features/agent/server/public";
+import { getSupplier } from "@/features/crm/server/public";
 import { fetchBeloPrice } from "./belo-price";
 
 // Funciones públicas de Voz para otros módulos de servidor (BRIEF §10).
@@ -130,4 +133,80 @@ export async function getBeloPrice(pair: BeloPair = "USDT/ARS"): Promise<Result<
   const result = await fetchBeloPrice(pair);
   if (result.ok) beloCache.set(pair, { at: Date.now(), price: result.data });
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Pedir cotización por llamada desde la app (QUO-03).
+// ---------------------------------------------------------------------------
+const dialUnavailable = {
+  ok: false,
+  error: {
+    code: "PROVIDER_UNAVAILABLE",
+    message: "Faltan VAPI_PRIVATE_KEY, VAPI_ASSISTANT_ID, VAPI_PHONE_NUMBER_ID o SUPABASE_SECRET_KEY en el servidor",
+    retryable: false,
+  },
+} as const;
+
+// El modelo del asistente casi no cambia: se guarda 5 minutos para que "Llamar
+// ahora" no espere una consulta extra a Vapi antes de cada llamada.
+const ASSISTANT_CACHE_MS = 5 * 60_000;
+const assistantCache = new Map<string, { at: number; model: Record<string, unknown> }>();
+
+async function cachedAssistantModel(assistantId: string, apiKey: string): Promise<Result<Record<string, unknown>>> {
+  const cached = assistantCache.get(assistantId);
+  if (cached && Date.now() - cached.at < ASSISTANT_CACHE_MS) return { ok: true, data: cached.model };
+  const model = await fetchVapiAssistantModel(assistantId, { apiKey });
+  if (model.ok) assistantCache.set(assistantId, { at: Date.now(), model: model.data });
+  return model;
+}
+
+// Llama al proveedor con el asistente cotizador y los datos de la compra. Un
+// mismo action_id (un clic) nunca genera dos llamadas.
+export async function requestQuoteCall(actionCtx: ActionCtx, input: unknown): Promise<Result<RequestQuoteCallData>> {
+  let env: ReturnType<typeof getServerEnv>;
+  try {
+    env = getServerEnv();
+  } catch {
+    return dialUnavailable;
+  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const { VAPI_PRIVATE_KEY: apiKey, VAPI_ASSISTANT_ID: assistantId, VAPI_PHONE_NUMBER_ID: phoneNumberId, SUPABASE_SECRET_KEY: secretKey } = env;
+  if (!supabaseUrl || !apiKey || !assistantId || !phoneNumberId || !secretKey) return dialUnavailable;
+
+  const admin = createClient(supabaseUrl, secretKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  return dialQuote(actionCtx, input, {
+    store: createSupabaseDialStore(admin),
+    async loadTarget(ctx, { supplier_contact_id, purchase_request_id }) {
+      const [supplier, purchase, company] = await Promise.all([
+        getSupplier(ctx, { contact_id: supplier_contact_id }),
+        getPurchaseRequest(ctx, { purchase_request_id }),
+        (await createRequestSupabaseClient()).from("companies").select("name").eq("id", ctx.company_id).maybeSingle(),
+      ]);
+      if (!supplier.ok) return supplier;
+      if (!purchase.ok) return purchase;
+      if (supplier.data.supplier.do_not_contact) {
+        return { ok: false, error: { code: "FORBIDDEN", message: "El proveedor pidió que no lo llamen", retryable: false } };
+      }
+      const request = purchase.data.purchase_request;
+      return {
+        ok: true,
+        data: {
+          supplier_phone_e164: supplier.data.supplier.phone_e164,
+          brief: {
+            buyer_name: company.data?.name ?? "nuestra empresa",
+            product: request.product,
+            quantity: request.quantity,
+            unit: request.unit || "unidades",
+            needed_by: formatNeededBy(request.needed_by),
+            delivery_zone: request.zone || "la dirección que te vamos a confirmar",
+          },
+        },
+      };
+    },
+    async dial(request) {
+      const model = await cachedAssistantModel(assistantId, apiKey);
+      if (!model.ok) return model;
+      return createVapiCall(buildVapiQuoteCallBody(request, { assistantId, phoneNumberId, assistantModel: model.data }), { apiKey });
+    },
+  });
 }

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1",
+  "company_id": "REEMPLAZAR_UUID_EMPRESA_SUR_INSUMOS",
+  "actor_id": "REEMPLAZAR_UUID_PERSONA_ADMIN",
+  "seed_id": "REEMPLAZAR_UUID_PREPARACION_ESTABLE",
+  "purchase_request_id": "REEMPLAZAR_UUID_NUEVO_COMPRA",
+  "example_supplier_ids": ["REEMPLAZAR_UUID_NUEVO_EJEMPLO_1", "REEMPLAZAR_UUID_NUEVO_EJEMPLO_2"],
+  "example_quote_ids": ["REEMPLAZAR_UUID_NUEVO_COTIZACION_1", "REEMPLAZAR_UUID_NUEVO_COTIZACION_2"],
+  "example_phone_e164": ["+12025550130", "+12025550131"],
+  "needed_by": "REEMPLAZAR_LUNES_FUTURO_AAAA-MM-DD",
+  "existing_live_supplier_contact_id": null,
+  "allow_local_placeholder": false,
+  "local_placeholder_supplier_id": null,
+  "local_placeholder_phone_e164": null
+}

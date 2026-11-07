@@ -1,28 +1,28 @@
 import { cx } from "./cx";
 
-/**
- * Tarjeta con un número grande y una descripción al lado
- * (en el Figma: "11 Courses completed" y "04 Courses in progress").
- *
- * En Tratunex sirve para cosas como "12 llamadas hoy" o "04 clientes potenciales".
- *
- * - value: el número (o texto corto) que se ve grande.
- * - label: lo que significa ese número. Podés usar un salto de línea
- *   ("Llamadas\nhoy") para cortarlo en dos renglones como en el Figma.
- */
 type StatCardProps = {
+  /** El número o dato grande. */
   value: string | number;
+  /** Qué es el número. Corto. */
   label: string;
+  /** Aclaración opcional debajo del número (por ejemplo, "de 3 cotizaciones"). */
+  hint?: string;
   className?: string;
 };
 
-export function StatCard({ value, label, className }: StatCardProps) {
+/**
+ * Tarjeta de un número importante: etiqueta chica arriba, número grande abajo.
+ * Sin colores: si el número necesita llamar la atención, acompañalo con un
+ * Badge de estado.
+ */
+export function StatCard({ value, label, hint, className }: StatCardProps) {
   return (
-    <div className={cx("flex items-center gap-2.5 rounded-card bg-surface p-5", className)}>
-      {/* tabular-nums: todos los dígitos ocupan el mismo ancho, así no "bailan" al cambiar. */}
-      <p className="text-[32px] leading-none font-bold tabular-nums">{value}</p>
+    <div className={cx("flex flex-col gap-2 rounded-card border border-line bg-surface px-4 py-4", className)}>
       {/* whitespace-pre-line: respeta los \n del texto para cortarlo en renglones. */}
-      <p className="text-sm leading-none whitespace-pre-line">{label}</p>
+      <p className="text-[13px] leading-tight whitespace-pre-line text-ink-muted">{label}</p>
+      {/* tabular-nums: todos los dígitos ocupan el mismo ancho, así no "bailan" al cambiar. */}
+      <p className="text-[28px] leading-none font-semibold tracking-tight tabular-nums">{value}</p>
+      {hint && <p className="text-xs leading-snug text-ink-muted">{hint}</p>}
     </div>
   );
 }
