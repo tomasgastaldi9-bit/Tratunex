@@ -13,8 +13,8 @@ export function verifyPaymentFees(raw: Hex, limits: Limits): boolean {
     const tx = parseTransaction(raw);
     return tx.type === "eip1559" && tx.gas !== undefined && tx.gas > BigInt(0) && tx.gas <= limits.gas
       && tx.maxFeePerGas !== undefined && tx.maxFeePerGas > BigInt(0) && tx.maxFeePerGas <= limits.maxFeePerGas
-      && tx.maxPriorityFeePerGas !== undefined && tx.maxPriorityFeePerGas >= BigInt(0) && tx.maxPriorityFeePerGas <= limits.maxPriorityFeePerGas
-      && tx.maxPriorityFeePerGas <= tx.maxFeePerGas && limits.maxTotalFee > BigInt(0) && tx.gas * tx.maxFeePerGas <= limits.maxTotalFee
+      && (tx.maxPriorityFeePerGas ?? BigInt(0)) >= BigInt(0) && (tx.maxPriorityFeePerGas ?? BigInt(0)) <= limits.maxPriorityFeePerGas
+      && (tx.maxPriorityFeePerGas ?? BigInt(0)) <= tx.maxFeePerGas && limits.maxTotalFee > BigInt(0) && tx.gas * tx.maxFeePerGas <= limits.maxTotalFee
       && (tx.accessList?.length ?? 0) === 0;
   } catch { return false; }
 }
@@ -27,7 +27,7 @@ export async function signPayment(identity: Identity, limits: Limits, signer: Si
     const inspected = await inspectSignedTransfer(raw, identity);
     if (!inspected.ok) return { ok: false };
     const tx = parseTransaction(raw);
-    if (tx.type !== "eip1559" || tx.gas !== limits.gas || tx.maxFeePerGas !== limits.maxFeePerGas || tx.maxPriorityFeePerGas !== limits.maxPriorityFeePerGas || (tx.accessList?.length ?? 0) !== 0) return { ok: false };
+    if (tx.type !== "eip1559" || tx.gas !== limits.gas || tx.maxFeePerGas !== limits.maxFeePerGas || (tx.maxPriorityFeePerGas ?? BigInt(0)) !== limits.maxPriorityFeePerGas || (tx.accessList?.length ?? 0) !== 0) return { ok: false };
     return { ok: true, raw };
   } catch { return { ok: false }; }
 }
