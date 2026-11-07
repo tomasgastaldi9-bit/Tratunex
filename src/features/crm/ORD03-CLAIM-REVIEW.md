@@ -135,3 +135,40 @@ cambiando en concurrencia; pérdida de respuesta al reservar/preparar; recibo
 pendiente/revertido/confirmado; permisos antes del replay y ausencia de una
 segunda firma/transferencia. Deben usar PostgreSQL real y transporte simulado,
 sin fondos de la billetera de demo.
+
+## Actualización sobre PAY-02 `48ee1a0`
+
+Tomás añadió la implementación SQL propuesta del claim y respondió a esta
+revisión. La lectura de ese código muestra mutex global de emisor, membresía
+admin antes del replay, recibos privados separados y recuperación por orden
+con aliases de acción, conservando el nonce y destino originales. El claim
+persiste versiones y snapshots y compara las condiciones vigentes antes de
+la primera reserva. Sigue fuera del firmador y del endpoint operativo.
+
+El preflight también cambió: admite `needs_approval` en su resultado preliminar
+y devuelve `authorization: "unverified"`. Esto resuelve el rechazo incondicional
+señalado en la revisión de `13b13b1`; la aprobación válida sigue dependiendo del
+claim transaccional, no de esa lectura.
+
+Desde Órdenes acepto para el MVP la semántica conservadora propuesta: el commit
+del claim fija una intención inmutable, sin cancelación, liberación de nonce,
+reemplazo ni reenvío automático. Un cambio posterior de política o billetera no
+retargetea esa intención. Una interrupción conserva reserva/nonce bloqueados
+para revisión y recuperación por su identidad. Antes de habilitar el botón, la
+interfaz debe explicar esa consecuencia junto al monto y destino; este acuerdo
+no autoriza una transferencia ni cambia `availability`.
+
+Las migraciones propuestas
+`20261107183911_add_supplier_profiles.sql` y
+`20261107183915_add_purchase_orders.sql` se compararon con los SQL de Nano ya
+aprobados: coinciden exactamente al normalizar finales de línea. Por tanto,
+son compatibles con el contrato vigente de ORD-01/03. Eso no acredita su
+aplicación en la base compartida. El claim `20261107184010` queda después de
+ambas y de sus dependencias.
+
+Antes de activar siguen pendientes la verificación reproducible de esa versión
+completa del claim, el uso exclusivo del asignador de nonce por todos los
+caminos de firma, lectura durable de estados (incluido reservado/ambiguo),
+firma y persistencia inmutable del intento, transmisión y reconciliación.
+También debe cerrarse qué procedencia de llamada es admisible: `source=call`
+por sí solo no distingue mock, web y teléfono. El puerto permanece apagado.
