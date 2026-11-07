@@ -17,6 +17,14 @@ import { CreatePurchaseOrderButton } from "./purchase-order-create-button";
 type Company = { id: string; name: string; industry?: string | null };
 const number = (value: number) => value.toLocaleString("es-AR");
 const answers = { yes: "Sí", no: "No", unknown: "Sin confirmar" };
+// Color de cada respuesta: verde = bien, ámbar = falta confirmar, rojo = no sirve.
+const argtTone = { yes: "success", no: "danger", unknown: "warning" } as const;
+const stockTone = { yes: "success", partial: "warning", no: "danger", unknown: "neutral" } as const;
+function leadTime(quote: SupplierQuote) {
+  if (quote.lead_time_days === null) return "Sin confirmar";
+  if (quote.lead_time_days === 0) return "En el día";
+  return `${quote.lead_time_days} ${quote.lead_time_days === 1 ? "día" : "días"}`;
+}
 
 function totalFor(quote: SupplierQuote, quantity: number) {
   if (!quote.unit_price) return "Total pendiente";
@@ -27,30 +35,30 @@ function totalFor(quote: SupplierQuote, quantity: number) {
 function QuoteSource({ quote, mode }: { quote: SupplierQuote; mode: QuoteComparison["mode"] }) {
   const source = quote.source;
   if (source.kind === "example" || mode === "example") return <div className="space-y-2">
-    <Badge tone="warning" icon={FlaskConical}>Datos de prueba</Badge>
+    <Badge icon={FlaskConical}>Ejemplo<span className="sr-only"> (datos de prueba)</span></Badge>
     <p className="break-words text-xs text-ink-muted">{source.kind === "example" ? source.label : "Origen ilustrativo"}</p>
   </div>;
   if (source.kind === "web") return <div className="space-y-2"><Badge icon={Globe}>Web</Badge>
-    <a href={source.url} target="_blank" rel="noreferrer" className="block break-all text-xs font-bold underline underline-offset-4">Consultar fuente web</a></div>;
+    <a href={source.url} target="_blank" rel="noreferrer" className="block break-all text-xs font-semibold underline underline-offset-4">Consultar fuente web</a></div>;
   const modeBadge = source.transport === "phone" ? "live" : source.transport;
   const label = source.transport === "phone" ? "Ver llamada telefónica" : source.transport === "web" ? "Ver registro de voz web" : "Ver llamada de prueba";
   return <div className="space-y-2 [&_span]:max-w-full [&_span]:whitespace-normal"><ModeBadge mode={modeBadge} />
-    <Link href={`/calls/${source.call_id}`} className="block text-xs font-bold underline underline-offset-4">{label}</Link></div>;
+    <Link href={`/calls/${source.call_id}`} className="block text-xs font-semibold underline underline-offset-4">{label}</Link></div>;
 }
 
 function QuotePrice({ quote, quantity, unit }: { quote: SupplierQuote; quantity: number; unit: string }) {
   const vat = { yes: "IVA incluido", no: "IVA aparte", unknown: "IVA sin confirmar" };
   return <div className="space-y-2">
-    <p className="break-all font-bold tabular-nums">{quote.unit_price ? formatQuoteMoney(quote.unit_price) : "Precio pendiente"}</p>
+    <p className="break-all font-semibold tabular-nums">{quote.unit_price ? formatQuoteMoney(quote.unit_price) : "Precio pendiente"}</p>
     <p className="text-xs text-ink-muted">Por {unit || "unidad"} · {vat[quote.price_includes_vat]}</p>
     <div className="border-t border-line pt-2"><p className="text-xs text-ink-muted">Total por {number(quantity)} {unit || "unidades"}</p>
-      <p className="mt-1 break-all font-bold tabular-nums">{totalFor(quote, quantity)}</p></div>
+      <p className="mt-1 break-all text-base font-semibold tabular-nums">{totalFor(quote, quantity)}</p></div>
   </div>;
 }
 
 function QuoteStock({ quote }: { quote: SupplierQuote }) {
   const labels = { yes: "Stock confirmado", partial: "Stock parcial", no: "Sin stock", unknown: "Stock sin confirmar" };
-  return <div className="space-y-2"><Badge tone={quote.can_supply === "no" ? "warning" : "neutral"} className="max-w-full"><span className="whitespace-normal">{labels[quote.can_supply]}</span></Badge>
+  return <div className="space-y-2"><Badge tone={stockTone[quote.can_supply]} className="max-w-full"><span className="whitespace-normal">{labels[quote.can_supply]}</span></Badge>
     <p className="text-xs text-ink-muted">Disponible: {quote.available_quantity === null ? "sin confirmar" : number(quote.available_quantity)}</p>
     {quote.minimum_order_quantity !== null && <p className="text-xs text-ink-muted">Mínimo de pedido: {number(quote.minimum_order_quantity)}</p>}
   </div>;
@@ -58,7 +66,7 @@ function QuoteStock({ quote }: { quote: SupplierQuote }) {
 
 function QuoteDelivery({ quote }: { quote: SupplierQuote }) {
   const delivery = { yes: "Entrega incluida", no: "Entrega aparte", unknown: "Costo de entrega sin confirmar" };
-  return <div className="space-y-2"><p className="font-bold">{quote.lead_time_days === null ? "Plazo pendiente" : quote.lead_time_days === 0 ? "Entrega en el día" : `${quote.lead_time_days} ${quote.lead_time_days === 1 ? "día" : "días"}`}</p>
+  return <div className="space-y-2"><p className="font-semibold">{quote.lead_time_days === null ? "Plazo pendiente" : quote.lead_time_days === 0 ? "Entrega en el día" : `${quote.lead_time_days} ${quote.lead_time_days === 1 ? "día" : "días"}`}</p>
     {quote.lead_time_text && <p className="break-words text-xs text-ink-muted">{quote.lead_time_text}</p>}
     <p className="text-xs text-ink-muted">{delivery[quote.delivery_included]}</p>
     {quote.payment_terms && <p className="break-words text-xs text-ink-muted">Pago: {quote.payment_terms}</p>}
@@ -67,10 +75,10 @@ function QuoteDelivery({ quote }: { quote: SupplierQuote }) {
 
 function SupplierName({ row, mode }: { row: QuoteComparisonRow; mode: QuoteComparison["mode"] }) {
   return <div className="min-w-0 space-y-2">
-    {mode === "persisted" ? <Link href={`/suppliers/${row.supplier.id}`} className="block break-words font-bold underline underline-offset-4">{row.supplier.name}</Link>
-      : <p className="break-words font-bold">{row.supplier.name}</p>}
+    {mode === "persisted" ? <Link href={`/suppliers/${row.supplier.id}`} className="block break-words font-semibold underline underline-offset-4">{row.supplier.name}</Link>
+      : <p className="break-words font-semibold">{row.supplier.name}</p>}
     {row.supplier.organization && <p className="break-words text-xs text-ink-muted">{row.supplier.organization}</p>}
-    <details className="text-xs"><summary className="cursor-pointer font-bold">Detalle de la cotización</summary>
+    <details className="text-xs"><summary className="cursor-pointer font-semibold">Detalle de la cotización</summary>
       <p className="mt-2 break-words leading-relaxed text-ink-muted">{row.quote.summary}</p>
       {row.quote.notes && <p className="mt-2 break-words leading-relaxed text-ink-muted">{row.quote.notes}</p>}
     </details>
@@ -81,14 +89,24 @@ function Recommendation({ comparison }: { comparison: QuoteComparison }) {
   const recommendation = comparison.recommendation;
   if (recommendation.status === "pending") return <Alert tone="info" title="Recomendación pendiente">{recommendation.message}</Alert>;
   if (recommendation.status === "error") return <Alert tone="warning" title="No pudimos obtener la recomendación">{recommendation.error.message}</Alert>;
-  const supplier = comparison.rows.find(row => row.quote.id === recommendation.data.recommended_quote_id)?.supplier;
-  return <Card className="space-y-3 border border-ink">
-    <div className="flex flex-wrap items-center gap-3"><Badge tone="strong" icon={Star}>{comparison.mode === "example" ? "Recomendación ilustrativa" : supplier ? "Proveedor recomendado" : "Sin proveedor recomendado"}</Badge>
-      {comparison.mode === "persisted" && <Badge>{recommendation.data.explanation_source === "ai" ? "IA" : "Reglas"}</Badge>}
-      {supplier && <p className="min-w-0 break-words font-bold">{supplier.name}</p>}</div>
-    <p className="break-words text-sm leading-relaxed">{recommendation.data.explanation}</p>
-    <p className="text-xs text-ink-muted">La evaluación compara las cotizaciones; la orden y su aprobación se revisan por separado.</p>
-  </Card>;
+  const row = comparison.rows.find(item => item.quote.id === recommendation.data.recommended_quote_id);
+  const supplier = row?.supplier;
+  const { purchase } = comparison;
+  // Bloque oscuro: es lo primero que hay que ver. Quién conviene, cuánto sale, cuándo llega y si cobra en ARGt.
+  return <section aria-label="Recomendación" className="space-y-4 rounded-card bg-gray-900 p-5 text-white sm:p-6">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-white/10 px-2 py-1 text-xs font-medium"><Star size={14} aria-hidden />{comparison.mode === "example" ? "Recomendación ilustrativa" : supplier ? "Proveedor recomendado" : "Sin proveedor recomendado"}</span>
+      {comparison.mode === "persisted" && <span className="rounded-[5px] border border-white/20 px-2 py-1 text-xs font-medium">{recommendation.data.explanation_source === "ai" ? "IA" : "Reglas"}</span>}
+    </div>
+    {supplier && <p className="break-words text-2xl leading-tight font-semibold tracking-tight">{supplier.name}</p>}
+    {row && <dl className="grid gap-4 border-y border-white/10 py-4 text-sm sm:grid-cols-3">
+      <div className="min-w-0"><dt className="text-gray-400">Total por {number(purchase.quantity)} {purchase.unit || "unidades"}</dt><dd className="mt-1 break-all text-lg font-semibold tabular-nums">{totalFor(row.quote, purchase.quantity)}</dd></div>
+      <div><dt className="text-gray-400">Entrega</dt><dd className="mt-1 text-lg font-semibold">{leadTime(row.quote)}</dd></div>
+      <div><dt className="text-gray-400">Acepta ARGt</dt><dd className="mt-1 text-lg font-semibold">{answers[row.quote.accepts_argt]}</dd></div>
+    </dl>}
+    <p className="max-w-3xl break-words text-sm leading-relaxed text-gray-300">{recommendation.data.explanation}</p>
+    <p className="text-xs text-gray-400">La evaluación compara las cotizaciones; la orden y su aprobación se revisan por separado.</p>
+  </section>;
 }
 
 function RankingEvaluation({ item, fallback }: { item?: QuoteRanking["ranking"][number]; fallback: string }) {
@@ -122,38 +140,38 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
     <PageHeader title="Comparar cotizaciones" description="Revisá precios, stock, plazos y condiciones para esta compra."
       actions={<Link href={mode === "example" ? "/orders/quotes" : "/suppliers"} className={buttonStyles({ variant: "ghost" })}>
         {mode === "example" ? "Comparar una compra" : "Ver proveedores"}<ArrowRight size={16} aria-hidden /></Link>} />
-    {mode === "example" && <Alert tone="warning" title="Datos de prueba · comparación ilustrativa, sin IA ejecutada">
-      Los proveedores, precios y motivos de esta vista son ficticios.</Alert>}
-    <Card className="space-y-4"><h2 className="break-words text-lg font-bold">{purchase.product}</h2>
+    {mode === "example" && <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
+      <FlaskConical size={12} aria-hidden /> Ejemplo: comparación ilustrativa con datos ficticios, sin IA ejecutada.<span className="sr-only"> (datos de prueba)</span></p>}
+    <Card className="space-y-4"><h2 className="break-words text-lg font-semibold">{purchase.product}</h2>
       <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-        <div><dt className="text-xs text-ink-muted">Cantidad solicitada</dt><dd className="mt-1 break-words font-bold">{number(purchase.quantity)} {purchase.unit || "unidades"}</dd></div>
-        <div><dt className="text-xs text-ink-muted">Fecha de entrega solicitada</dt><dd className="mt-1 font-bold">{purchase.needed_by.split("-").reverse().join("/")}</dd></div>
-        <div className="min-w-0"><dt className="text-xs text-ink-muted">Presupuesto declarado</dt><dd className="mt-1 break-all font-bold">{formatQuoteMoney({ amount_atomic: purchase.budget_atomic, currency: "ARGt", decimals: 18 })}</dd></div>
-        <div><dt className="text-xs text-ink-muted">Zona de entrega</dt><dd className="mt-1 break-words font-bold">{purchase.zone || "Sin definir"}</dd></div>
+        <div><dt className="text-xs text-ink-muted">Cantidad solicitada</dt><dd className="mt-1 break-words font-semibold">{number(purchase.quantity)} {purchase.unit || "unidades"}</dd></div>
+        <div><dt className="text-xs text-ink-muted">Fecha de entrega solicitada</dt><dd className="mt-1 font-semibold">{purchase.needed_by.split("-").reverse().join("/")}</dd></div>
+        <div className="min-w-0"><dt className="text-xs text-ink-muted">Presupuesto declarado</dt><dd className="mt-1 break-all font-semibold">{formatQuoteMoney({ amount_atomic: purchase.budget_atomic, currency: "ARGt", decimals: 18 })}</dd></div>
+        <div><dt className="text-xs text-ink-muted">Zona de entrega</dt><dd className="mt-1 break-words font-semibold">{purchase.zone || "Sin definir"}</dd></div>
       </dl>
     </Card>
     <Recommendation comparison={comparison} />
     {comparison.quotes_status === "pending" && <Alert tone="info" title="Cotizaciones pendientes">La comparación se completará cuando estén disponibles las cotizaciones de esta compra.</Alert>}
     {!rows.length ? <EmptyState icon={MessageSquareText} title={comparison.quotes_status === "pending" ? "Esperando cotizaciones" : "Todavía no hay cotizaciones para esta compra"}
       description="Los precios, la disponibilidad y las condiciones aparecerán acá cuando se registren las cotizaciones." /> : <>
-      <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-base font-bold">Cotizaciones disponibles</h2>
+      <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-base font-semibold">Cotizaciones disponibles</h2>
         <p className="text-xs text-ink-muted">{rows.length} {rows.length === 1 ? "cotización" : "cotizaciones"} · Totales para {number(purchase.quantity)} {purchase.unit || "unidades"}</p></div>
       <p className="text-xs text-ink-muted">Cada precio conserva su moneda. El ranking usa la equivalencia nominal de 1 ARS = 1 ARGt; los precios en USD quedan sin conversión. Revisá IVA, entrega y mínimos de pedido.</p>
       <div role="region" aria-label="Tabla comparativa de cotizaciones" tabIndex={0}
         className="hidden min-w-0 overflow-x-auto rounded-card border border-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink xl:block">
-        <table className="w-full min-w-[1120px] table-fixed text-left text-sm">
+        <table className="w-full min-w-[960px] table-fixed text-left text-sm">
           <caption className="sr-only">Comparación de proveedores para {purchase.product}: precio, stock, plazo, aceptación de ARGt, origen y motivo.</caption>
           <colgroup><col className="w-[18%]" /><col className="w-[16%]" /><col className="w-[12%]" /><col className="w-[13%]" /><col className="w-[9%]" /><col className="w-[14%]" /><col className="w-[18%]" /></colgroup>
-          <thead className="bg-surface"><tr>{["Proveedor", "Precio y total", "Stock", "Entrega y condiciones", "Acepta ARGt", "Origen", "Evaluación"].map(label => <th key={label} scope="col" className="p-4 align-top text-xs font-bold">{label}</th>)}</tr></thead>
+          <thead className="bg-gray-50"><tr>{["Proveedor", "Precio y total", "Stock", "Entrega y condiciones", "Acepta ARGt", "Origen", "Evaluación"].map(label => <th key={label} scope="col" className="px-4 py-3 align-top text-xs font-medium text-ink-muted">{label}</th>)}</tr></thead>
           <tbody>{rows.map(row => {
             const selected = row.quote.id === recommendedId;
-            return <tr key={row.quote.id} data-recommended={selected ? "true" : undefined} className={`border-t border-line ${selected ? "bg-info-soft/40" : ""}`}>
+            return <tr key={row.quote.id} data-recommended={selected ? "true" : undefined} className={`border-t border-line ${selected ? "bg-gray-50 shadow-[inset_3px_0_0_var(--color-gray-900)]" : ""}`}>
               <th scope="row" className="p-4 align-top font-normal"><SupplierName row={row} mode={mode} />
-                {selected && <Badge tone="info" icon={Star} className="mt-3">{mode === "example" ? "Ejemplo recomendado" : "Recomendado"}</Badge>}</th>
+                {selected && <Badge tone="strong" icon={Star} className="mt-3">{mode === "example" ? "Ejemplo recomendado" : "Recomendado"}</Badge>}</th>
               <td className="p-4 align-top"><QuotePrice quote={row.quote} quantity={purchase.quantity} unit={purchase.unit} /></td>
               <td className="p-4 align-top"><QuoteStock quote={row.quote} /></td>
               <td className="p-4 align-top"><QuoteDelivery quote={row.quote} /></td>
-              <td className="p-4 align-top"><Badge tone={row.quote.accepts_argt === "unknown" ? "warning" : "neutral"} className="max-w-full"><span className="whitespace-normal">{answers[row.quote.accepts_argt]}</span></Badge></td>
+              <td className="p-4 align-top"><Badge tone={argtTone[row.quote.accepts_argt]} className="max-w-full"><span className="whitespace-normal">{answers[row.quote.accepts_argt]}</span></Badge></td>
               <td className="p-4 align-top"><QuoteSource quote={row.quote} mode={mode} /></td>
               <td className="space-y-4 p-4 align-top"><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} />
                 <CreateOrderAction companyId={company.id} row={row} mode={mode} /></td>
@@ -163,17 +181,17 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
       </div>
       <section aria-label="Cotizaciones en tarjetas" className="grid min-w-0 gap-5 lg:grid-cols-2 xl:hidden">{rows.map(row => {
         const selected = row.quote.id === recommendedId;
-        return <Card key={row.quote.id} data-recommended={selected ? "true" : undefined} className={`min-w-0 space-y-5 border ${selected ? "border-ink" : "border-transparent"}`}>
+        return <Card key={row.quote.id} data-recommended={selected ? "true" : undefined} className={`min-w-0 space-y-5 border ${selected ? "border-gray-900 ring-1 ring-gray-900" : "border-line"}`}>
           <SupplierName row={row} mode={mode} />
           {selected && <Badge tone="strong" icon={Star}>{mode === "example" ? "Ejemplo recomendado" : "Recomendado"}</Badge>}
           <dl className="grid min-w-0 gap-5 sm:grid-cols-2">
-            <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Precio y total</dt><dd><QuotePrice quote={row.quote} quantity={purchase.quantity} unit={purchase.unit} /></dd></div>
-            <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Stock</dt><dd><QuoteStock quote={row.quote} /></dd></div>
-            <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Entrega y condiciones</dt><dd><QuoteDelivery quote={row.quote} /></dd></div>
-            <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Acepta ARGt</dt><dd>{answers[row.quote.accepts_argt]}</dd></div>
-            <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Origen</dt><dd><QuoteSource quote={row.quote} mode={mode} /></dd></div>
+            <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Precio y total</dt><dd><QuotePrice quote={row.quote} quantity={purchase.quantity} unit={purchase.unit} /></dd></div>
+            <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Stock</dt><dd><QuoteStock quote={row.quote} /></dd></div>
+            <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Entrega y condiciones</dt><dd><QuoteDelivery quote={row.quote} /></dd></div>
+            <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Acepta ARGt</dt><dd><Badge tone={argtTone[row.quote.accepts_argt]}>{answers[row.quote.accepts_argt]}</Badge></dd></div>
+            <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Origen</dt><dd><QuoteSource quote={row.quote} mode={mode} /></dd></div>
           </dl>
-          <div className="space-y-3 border-t border-line pt-4"><h3 className="text-xs font-bold">Evaluación</h3><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} /></div>
+          <div className="space-y-3 border-t border-line pt-4"><h3 className="text-xs font-semibold">Evaluación</h3><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} /></div>
           <CreateOrderAction companyId={company.id} row={row} mode={mode} />
         </Card>;
       })}</section>
@@ -200,9 +218,9 @@ export function QuoteComparisonStart({ company, purchases }: { company: Company;
     <PageHeader title="Comparar cotizaciones" description="Elegí una compra guardada para revisar las ofertas de sus proveedores."
       actions={<Link href="/purchases/new" className={buttonStyles({ variant: "secondary" })}>Nueva compra<ArrowRight size={16} aria-hidden /></Link>} />
     {purchases?.items.length ? <section aria-label="Compras para comparar" className="space-y-4">
-      <h2 className="text-base font-bold">Compras de tu empresa</h2>
+      <h2 className="text-base font-semibold">Compras de tu empresa</h2>
       <ul className="space-y-3">{purchases.items.map(purchase => <li key={purchase.id}><Card className="space-y-4">
-        <div className="min-w-0"><h3 className="break-words text-base font-bold">{purchase.product}</h3>
+        <div className="min-w-0"><h3 className="break-words text-base font-semibold">{purchase.product}</h3>
           <p className="mt-2 break-words text-sm text-ink-muted">{purchase.quantity.toLocaleString("es-AR")} {purchase.unit || "unidades"} · Para el {purchase.needed_by.split("-").reverse().join("/")}</p></div>
         <div className="flex flex-wrap gap-3">
           <Link href={`/orders/quotes?purchase_request_id=${purchase.id}`} className={buttonStyles({ variant: "primary" })}

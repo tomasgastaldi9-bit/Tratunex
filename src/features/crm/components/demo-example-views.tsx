@@ -1,6 +1,5 @@
 import { ArrowRight, FlaskConical, Wallet } from "lucide-react";
 import Link from "next/link";
-import { Alert } from "../../../components/ui/Alert";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonStyles } from "../../../components/ui/Button";
@@ -12,13 +11,22 @@ import { SuppliersFrame } from "./supplier-view";
 
 const pesos = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
-/** Aviso común: deja claro que son datos de prueba y por qué aparecen. */
+/** Línea chica común: rotula los datos de muestra y por qué aparecen. */
 function DemoNotice({ what }: { what: string }) {
   return (
-    <Alert tone="warning" title="Datos de prueba">
-      La base todavía no tiene la tabla de {what}, así que mostramos un ejemplo ficticio para la demo. No se puede
-      editar ni pagar. Cuando se cargue la base, esta pantalla muestra los datos reales de la empresa.
-    </Alert>
+    <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
+      <FlaskConical size={12} aria-hidden /> {`Ejemplo: ${what} de muestra mientras se carga la base.`}
+      <span className="sr-only"> (datos de prueba)</span>
+    </p>
+  );
+}
+
+/** Etiqueta chica y gris para cada elemento de muestra. */
+function ExampleBadge() {
+  return (
+    <Badge icon={FlaskConical}>
+      Ejemplo<span className="sr-only"> (datos de prueba)</span>
+    </Badge>
   );
 }
 
@@ -58,9 +66,7 @@ export function SuppliersExampleView() {
                           Billetera pendiente
                         </Badge>
                       )}
-                      <Badge tone="warning" icon={FlaskConical}>
-                        Datos de prueba
-                      </Badge>
+                      <ExampleBadge />
                     </div>
                     <p className="text-xs text-ink-muted">Acepta ARGt: {supplier.accepts_argt}</p>
                     {supplier.wallet && (
@@ -96,9 +102,7 @@ export function OrdersExampleView() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge tone="warning">{order.status}</Badge>
-                  <Badge tone="warning" icon={FlaskConical}>
-                    Datos de prueba
-                  </Badge>
+                  <ExampleBadge />
                 </div>
               </div>
               <dl className="grid grid-cols-1 gap-4 border-y border-line py-3 text-sm sm:grid-cols-3">

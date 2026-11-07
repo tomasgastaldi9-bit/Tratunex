@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -83,9 +83,10 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
       />
 
       {isMock && (
-        <Alert tone="warning" title="Datos de prueba">
-          Esta llamada es un ejemplo: no se llamó a nadie.
-        </Alert>
+        <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
+          <FlaskConical size={12} aria-hidden /> Ejemplo: esta llamada es de muestra, no se llamó a nadie.
+          <span className="sr-only"> (datos de prueba)</span>
+        </p>
       )}
 
       <Section title="Resultado">
