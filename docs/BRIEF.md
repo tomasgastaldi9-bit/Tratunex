@@ -5,7 +5,7 @@ Plataforma para que **cualquier empresa** prospecte clientes en frío con un age
 Este documento es la **fuente de verdad** del proyecto: alcance, reparto, contratos, datos y reglas. Si algo de código, de Linear o de otro documento lo contradice, gana este brief; para cambiarlo, abrí un PR que lo modifique.
 
 - Tareas: proyecto **Tratunex MVP** en Linear, equipo `TRA`.
-- Versión colaborativa con comentarios: [Brief Tratunex v2](https://claude.ai/artifact/2m4dgom69C8jqhcxYVZTMw).
+- Versión colaborativa con comentarios: [Brief Tratunex v2](https://claude.ai/artifact/2m4dgom69C8jqhcxYVZTMw) (pedile acceso a Bautista). Si difiere de este archivo, gana este archivo.
 - Cómo trabajar con ramas, commits y PR: [`DEVELOPMENT_WORKFLOW.md`](DEVELOPMENT_WORKFLOW.md).
 
 ---
@@ -169,21 +169,24 @@ La produce el análisis de fin de llamada (Bautista) con los criterios de la emp
 - `answered_by`: `human` | `voicemail` | `unknown`.
 - `is_potential_client`: `yes` | `no` | `unknown`, con el motivo.
 - `outcome`: `interested` | `not_interested` | `callback_requested` | `wants_to_buy` | `not_assessed`.
+- `do_not_contact_requested`: `true` si pidió explícitamente que no lo llamen más.
 - `score`: 0 a 100 según los criterios de la empresa; `summary` de 3 a 5 líneas.
 - `next_action`: ninguna, `callback` (con fecha) o `human_review`.
 
 ### Reglas para mover el pipeline (las aplica Nano en `recordCallResult`)
 
-| Resultado de la llamada | Etapa resultante | Tarea |
-|---|---|---|
-| Falló, buzón o desconocido | `contacted` (solo si estaba en `new`) | — |
-| Humano + `not_interested` | `lost` | — |
-| Humano + `is_potential_client = no` | `disqualified` | — |
-| Humano + `callback_requested` | `follow_up` | `callback` con la fecha pedida |
-| Humano + `interested` o potencial `yes` | `potential_client` | según `next_action` |
-| Humano + `wants_to_buy` | `potential_client` | `human_review` para que una persona cierre |
-| Pidió no ser contactado | `disqualified` y `do_not_contact = true` | — |
-| Fecha de callback poco clara | sin cambio | `human_review` |
+Se evalúan de arriba hacia abajo y **se aplica la primera fila que coincide**.
+
+| # | Resultado de la llamada | Etapa resultante | Tarea |
+|---|---|---|---|
+| 1 | `do_not_contact_requested = true` | `disqualified` y `do_not_contact = true` en el contacto | — |
+| 2 | Falló, buzón o desconocido | `contacted` (solo si estaba en `new`) | — |
+| 3 | Humano + `not_interested` | `lost` | — |
+| 4 | Humano + `is_potential_client = no` | `disqualified` | — |
+| 5 | Humano + `callback_requested` sin fecha clara | `follow_up` | `human_review` para fijar la fecha |
+| 6 | Humano + `callback_requested` con fecha | `follow_up` | `callback` con la fecha pedida |
+| 7 | Humano + `wants_to_buy` | `potential_client` | `human_review` para que una persona cierre |
+| 8 | Humano + `interested` o `is_potential_client = yes` | `potential_client` | según `next_action` |
 
 Un evento nunca saca un deal de `won`, `lost` o `disqualified`. Una llamada fallida nunca pasa a `lost`.
 
@@ -256,6 +259,7 @@ type CallResultV1 = {
   answered_by: 'human' | 'voicemail' | 'unknown';
   is_potential_client: 'yes' | 'no' | 'unknown';
   outcome: 'interested' | 'not_interested' | 'callback_requested' | 'wants_to_buy' | 'not_assessed';
+  do_not_contact_requested: boolean; // pidió explícitamente que no lo llamen más
   score: number | null;
   summary: string;
   transcript_url: string | null;
