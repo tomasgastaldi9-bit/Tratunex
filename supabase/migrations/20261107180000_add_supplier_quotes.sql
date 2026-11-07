@@ -15,6 +15,8 @@ create table public.supplier_quotes (
   supplier_contact_id uuid not null,
   call_id uuid,
   source text not null check (source in ('call', 'web', 'example')),
+  -- Página donde estaba el precio, solo en cotizaciones web.
+  source_url text check (source_url is null or (source_url ~* '^https?://' and length(source_url) <= 2048)),
   can_supply text not null check (can_supply in ('yes', 'partial', 'no', 'unknown')),
   -- Un dato que el proveedor no dijo es null: nunca 0 ni texto vacío.
   unit_price numeric(14, 2) check (unit_price is null or unit_price > 0),
@@ -39,7 +41,9 @@ create table public.supplier_quotes (
   -- Una llamada da como máximo una cotización: reprocesar el aviso no la duplica.
   unique (call_id),
   -- Solo las cotizaciones de llamadas tienen llamada, y todas la tienen.
-  check ((source = 'call') = (call_id is not null))
+  check ((source = 'call') = (call_id is not null)),
+  -- Solo las cotizaciones web tienen URL, y todas la tienen.
+  check ((source = 'web') = (source_url is not null))
 );
 
 create index supplier_quotes_company_request_idx

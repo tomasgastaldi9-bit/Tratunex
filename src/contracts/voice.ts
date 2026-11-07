@@ -135,6 +135,8 @@ export const SupplierQuoteDTOSchema = z.object({
   // Solo las cotizaciones de llamadas tienen llamada.
   call_id: IdSchema.nullable(),
   source: QuoteSourceSchema,
+  // Página donde estaba el precio: solo en las cotizaciones web, y todas la tienen.
+  source_url: WebUrlSchema.max(2048).nullable(),
   can_supply: QuoteCanSupplySchema,
   // Precio por unidad en `currency`, con hasta 2 decimales.
   unit_price: z.number().positive().nullable(),
@@ -155,6 +157,9 @@ export const SupplierQuoteDTOSchema = z.object({
 }).superRefine((quote, ctx) => {
   if ((quote.source === "call") !== (quote.call_id !== null)) {
     ctx.addIssue({ code: "custom", path: ["call_id"], message: "Solo las cotizaciones de llamadas tienen call_id, y todas lo tienen" });
+  }
+  if ((quote.source === "web") !== (quote.source_url !== null)) {
+    ctx.addIssue({ code: "custom", path: ["source_url"], message: "Solo las cotizaciones web tienen source_url, y todas la tienen" });
   }
 });
 

@@ -22,7 +22,14 @@ describe("supplier quote contract", () => {
   it("only call quotes carry a call, and all of them do", () => {
     expect(SupplierQuoteDTOSchema.safeParse({ ...callQuote, call_id: null }).success).toBe(false);
     expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, call_id: callQuote.call_id }).success).toBe(false);
-    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, source: "web" }).success).toBe(true);
+  });
+
+  it("only web quotes carry the page URL, and all of them do", () => {
+    const url = "https://proveedor.example/vasos";
+    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, source: "web", source_url: url }).success).toBe(true);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, source: "web" }).success).toBe(false);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, source_url: url }).success).toBe(false);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, source: "web", source_url: "javascript:alert(1)" }).success).toBe(false);
   });
 
   it("a missing figure is null, never 0 or empty text", () => {

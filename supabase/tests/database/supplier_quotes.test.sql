@@ -1,5 +1,5 @@
 begin;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'a@example.test'),
@@ -32,11 +32,11 @@ select throws_ok(
   '23503', null, 'a quote cannot point to a call of another company'
 );
 select throws_ok(
-  $$insert into public.supplier_quotes (company_id, supplier_contact_id, source, can_supply, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'c2000000-0000-4000-8000-000000000001', 'web', 'yes', 'no', 'ajena')$$,
+  $$insert into public.supplier_quotes (company_id, supplier_contact_id, source, source_url, can_supply, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'c2000000-0000-4000-8000-000000000001', 'web', 'https://proveedor.example/vasos', 'yes', 'no', 'ajena')$$,
   '23503', null, 'a quote cannot point to a supplier of another company'
 );
 select throws_ok(
-  $$insert into public.supplier_quotes (company_id, purchase_request_id, supplier_contact_id, source, can_supply, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'e2000000-0000-4000-8000-000000000001', 'c1000000-0000-4000-8000-000000000001', 'web', 'yes', 'no', 'compra ajena')$$,
+  $$insert into public.supplier_quotes (company_id, purchase_request_id, supplier_contact_id, source, source_url, can_supply, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'e2000000-0000-4000-8000-000000000001', 'c1000000-0000-4000-8000-000000000001', 'web', 'https://proveedor.example/vasos', 'yes', 'no', 'compra ajena')$$,
   '23503', null, 'a quote cannot point to a purchase of another company'
 );
 select throws_ok(
@@ -44,7 +44,11 @@ select throws_ok(
   '23514', null, 'a call quote needs its call'
 );
 select throws_ok(
-  $$insert into public.supplier_quotes (company_id, supplier_contact_id, source, can_supply, unit_price, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000001', 'web', 'yes', 0, 'no', 'precio cero')$$,
+  $$insert into public.supplier_quotes (company_id, supplier_contact_id, source, can_supply, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000001', 'web', 'yes', 'no', 'sin url')$$,
+  '23514', null, 'a web quote needs its URL'
+);
+select throws_ok(
+  $$insert into public.supplier_quotes (company_id, supplier_contact_id, source, source_url, can_supply, unit_price, accepts_argt, summary) values ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000001', 'web', 'https://proveedor.example/vasos', 'yes', 0, 'no', 'precio cero')$$,
   '23514', null, 'a missing price is null, never 0'
 );
 

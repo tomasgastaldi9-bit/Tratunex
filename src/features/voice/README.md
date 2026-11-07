@@ -53,7 +53,7 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 ## Cotizaciones de proveedores (QUO-02)
 
 - **Contrato:** `SupplierQuoteDTOSchema` en `src/contracts/voice.ts`, una fila de `supplier_quotes`. Lo leen el comparador (ORD-02, Nano) y el ranking (BUY-03, Vale).
-- **Tabla:** `supplier_quotes` (migración `20261107180000`). `source` es `call` (llamada real), `web` (precio publicado) o `example` (dato de prueba rotulado). Una llamada da como máximo una cotización; proveedor y llamada son de la misma empresa; un dato que no se dijo es `null`, nunca 0. Los miembros solo leen; escribe el servidor con la clave de servicio.
+- **Tabla:** `supplier_quotes` (migración `20261107180000`). `source` es `call` (llamada real, con `call_id`), `web` (precio publicado, con `source_url`) o `example` (dato de prueba rotulado). Una llamada da como máximo una cotización; proveedor y llamada son de la misma empresa; un dato que no se dijo es `null`, nunca 0. Los miembros solo leen; escribe el servidor con la clave de servicio.
 - **Datos de ejemplo:** `supplierQuoteFixtures` en `fixtures.ts`, tres cotizaciones para "500 vasos para el lunes": la de la llamada (recomendable), la más barata pero tarde y sin ARGt, y una con IVA incluido que solo cubre 300.
 - `purchase_request_id` apunta a la compra de Vale (`purchase_requests`, BUY-01) de la misma empresa; la migración agrega `unique (company_id, id)` a esa tabla para poder exigirlo.
 

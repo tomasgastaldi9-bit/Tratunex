@@ -225,6 +225,7 @@ export const supplierQuoteFixtureIds = {
 const baseQuote = {
   company_id: voiceFixtureIds.company,
   purchase_request_id: supplierQuoteFixtureIds.purchaseRequest,
+  source_url: null,
   created_at: "2026-11-07T17:30:00.000Z",
   updated_at: "2026-11-07T17:30:00.000Z",
 };
