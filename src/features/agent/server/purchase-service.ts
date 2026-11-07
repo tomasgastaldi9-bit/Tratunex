@@ -30,16 +30,13 @@ const LECTURA_NO_DISPONIBLE = "No pudimos leer los datos de compras. Probá de n
 const GUARDADO_NO_DISPONIBLE = "No pudimos guardar. Revisá tu conexión y probá de nuevo.";
 
 /**
- * Convierte un monto que viene de la base (numeric) a texto entero.
- * Postgres puede mandar el numeric como texto ("1000") o como número. El texto
- * es seguro. Un número solo lo aceptamos si es entero y "seguro" de JavaScript
- * (hasta 2^53): más grande ya pudo haberse redondeado y con plata no adivinamos.
- * Devuelve null si no se puede convertir con certeza.
+ * Valida un monto que viene de la base. Los selects piden los montos con ::text
+ * (PostgREST devuelve numeric como número JSON, y un número de 23 dígitos ya se
+ * redondeó al leerlo). Si igual llega un número, lo rechazamos: con plata no
+ * adivinamos. Devuelve null si no es un texto de dígitos.
  */
 function toAtomicText(value: unknown): string | null {
-  if (typeof value === "string") return /^\d+$/.test(value) ? value : null;
-  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return String(value);
-  return null;
+  return typeof value === "string" && /^\d+$/.test(value) ? value : null;
 }
 
 /**
@@ -71,7 +68,7 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>) 
     // company_id viene del servidor (ctx), nunca del navegador.
     const read = await client
       .from("purchase_policies")
-      .select("max_per_purchase_atomic, auto_pay_limit_atomic, only_allowed_suppliers, allowed_supplier_ids")
+      .select("max_per_purchase_atomic::text, auto_pay_limit_atomic::text, only_allowed_suppliers, allowed_supplier_ids")
       .eq("company_id", companyId)
       .maybeSingle();
     if (read.error) {
@@ -147,7 +144,7 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>) 
       // Filtramos por id Y por la empresa del ctx: una compra de otra empresa es "no existe".
       const read = await client
         .from("purchase_requests")
-        .select("id, product, quantity, unit, needed_by, budget_atomic, zone, status, created_at, created_by")
+        .select("id, product, quantity, unit, needed_by, budget_atomic::text, zone, status, created_at, created_by")
         .eq("id", id.data)
         .eq("company_id", parsedCtx.data.company_id)
         .maybeSingle();

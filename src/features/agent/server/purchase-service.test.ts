@@ -51,6 +51,7 @@ type Res = { data: unknown; error: { message?: string; code?: string } | null };
 // Cliente falso: from(tabla).select().eq()....maybeSingle() devuelve lo que pidamos por tabla.
 function fakeClient(opts: { tables?: Record<string, Res>; rpc?: Res; rpcThrows?: boolean; fromThrows?: boolean }) {
   const eq = vi.fn();
+  const selects: Array<[string, string]> = [];
   const rpc = vi.fn(async () => {
     if (opts.rpcThrows) throw new Error("boom");
     return opts.rpc ?? { data: null, error: null };
@@ -58,7 +59,10 @@ function fakeClient(opts: { tables?: Record<string, Res>; rpc?: Res; rpcThrows?:
   const from = vi.fn((table: string) => {
     if (opts.fromThrows) throw new Error("boom");
     const chain = {
-      select: () => chain,
+      select: (cols: string) => {
+        selects.push([table, cols]);
+        return chain;
+      },
       eq: (col: string, val: unknown) => {
         eq(table, col, val);
         return chain;
@@ -68,7 +72,7 @@ function fakeClient(opts: { tables?: Record<string, Res>; rpc?: Res; rpcThrows?:
     return chain;
   });
   const service = createPurchaseService(async () => ({ rpc, from }) as unknown as SupabaseClient);
-  return { service, rpc, from, eq };
+  return { service, rpc, from, eq, selects };
 }
 
 describe("createPurchaseRequest", () => {
@@ -109,11 +113,12 @@ describe("createPurchaseRequest", () => {
 
 describe("getPurchaseRequest", () => {
   it("lee por id Y por company_id del ctx, y convierte montos (texto o número) y fecha", async () => {
-    // El monto llega como número entero seguro y la fecha con hora: se normalizan.
-    const row = { ...savedRequest, budget_atomic: 1000, needed_by: "2026-11-20T00:00:00" };
-    const { service, eq } = fakeClient({ tables: { purchase_requests: { data: row, error: null } } });
+    // Monto realista (1e23) como texto, tal cual lo manda PostgREST tras el ::text; la fecha con hora se normaliza.
+    const row = { ...savedRequest, needed_by: "2026-11-20T00:00:00" };
+    const { service, eq, selects } = fakeClient({ tables: { purchase_requests: { data: row, error: null } } });
     const r = await service.getPurchaseRequest(ctx, { purchase_request_id: requestId });
-    expect(r).toEqual({ ok: true, data: { purchase_request: { ...savedRequest, budget_atomic: "1000" } } });
+    expect(r).toEqual({ ok: true, data: { purchase_request: savedRequest } });
+    expect(selects).toContainEqual(["purchase_requests", expect.stringContaining("budget_atomic::text")]);
     expect(eq).toHaveBeenCalledWith("purchase_requests", "id", requestId);
     expect(eq).toHaveBeenCalledWith("purchase_requests", "company_id", company);
   });
@@ -121,6 +126,11 @@ describe("getPurchaseRequest", () => {
   it("acepta el monto como texto", async () => {
     const { service } = fakeClient({ tables: { purchase_requests: { data: savedRequest, error: null } } });
     expect(await service.getPurchaseRequest(ctx, { purchase_request_id: requestId })).toMatchObject({ ok: true });
+  });
+
+  it("un monto que llega como número (1e23) se rechaza, no se redondea", async () => {
+    const { service } = fakeClient({ tables: { purchase_requests: { data: { ...savedRequest, budget_atomic: 1e23 }, error: null } } });
+    expect(await service.getPurchaseRequest(ctx, { purchase_request_id: requestId })).toMatchObject({ ok: false, error: { code: "PROVIDER_ERROR" } });
   });
 
   it("sin fila → NOT_FOUND", async () => {
@@ -149,15 +159,16 @@ describe("getPurchasePolicy", () => {
   });
 
   it("convierte numeric (número o texto) a texto; vendedor no edita", async () => {
-    const row = { max_per_purchase_atomic: 5000, auto_pay_limit_atomic: "1000", only_allowed_suppliers: true, allowed_supplier_ids: [supplier] };
-    const { service, eq } = fakeClient({
+    const row = { max_per_purchase_atomic: pesosToAtomic(5000), auto_pay_limit_atomic: pesosToAtomic(1000), only_allowed_suppliers: true, allowed_supplier_ids: [supplier] };
+    const { service, eq, selects } = fakeClient({
       tables: { purchase_policies: { data: row, error: null }, company_members: { data: { role: "vendedor" }, error: null } },
     });
     expect(await service.getPurchasePolicy(ctx)).toEqual({
       ok: true,
-      data: { policy: { max_per_purchase_atomic: "5000", auto_pay_limit_atomic: "1000", only_allowed_suppliers: true, allowed_supplier_ids: [supplier] }, can_edit: false },
+      data: { policy: { max_per_purchase_atomic: pesosToAtomic(5000), auto_pay_limit_atomic: pesosToAtomic(1000), only_allowed_suppliers: true, allowed_supplier_ids: [supplier] }, can_edit: false },
     });
     expect(eq).toHaveBeenCalledWith("purchase_policies", "company_id", company);
+    expect(selects).toContainEqual(["purchase_policies", expect.stringMatching(/max_per_purchase_atomic::text.*auto_pay_limit_atomic::text/)]);
   });
 
   it("sin membresía → can_edit false", async () => {
@@ -201,17 +212,21 @@ describe("savePurchasePolicy", () => {
 });
 
 describe("checkPurchasePolicy", () => {
-  const rows = (over: object = {}) => ({
+  // Reglas como las manda PostgREST tras el ::text: montos en unidades mínimas reales, como texto.
+  const real = (over: object = {}) => ({
     tables: {
       purchase_policies: {
-        data: { max_per_purchase_atomic: pesosToAtomic(500000), auto_pay_limit_atomic: 100000 * 1, only_allowed_suppliers: false, allowed_supplier_ids: [], ...over },
+        data: {
+          max_per_purchase_atomic: pesosToAtomic(500000),
+          auto_pay_limit_atomic: pesosToAtomic(100000),
+          only_allowed_suppliers: false,
+          allowed_supplier_ids: [],
+          ...over,
+        },
         error: null,
       },
     } as Record<string, Res>,
   });
-  // Para tener límites en unidades mínimas reales (muy grandes) los pasamos como texto.
-  const real = (over: object = {}) =>
-    rows({ auto_pay_limit_atomic: pesosToAtomic(100000), ...over });
 
   it("sin reglas → needs_approval", async () => {
     const { service } = fakeClient({});
