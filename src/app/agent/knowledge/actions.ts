@@ -6,6 +6,7 @@
 import { redirect } from "next/navigation";
 import { saveAgentKnowledgeInputSchema } from "@/contracts/agent";
 import {
+  knowledgeFailureTitle,
   knowledgeFieldErrors,
   readKnowledgeForm,
   savedKnowledgeUrl,
@@ -67,9 +68,11 @@ export async function saveKnowledgeAction(
   const action_id = actionIdForSubmission(actionIdDelFormulario, nuevoActionId);
   const validado = saveAgentKnowledgeInputSchema.safeParse(input);
   if (!validado.success) {
+    const fieldErrors = knowledgeFieldErrors(validado.error);
     return {
-      message: "Revisá los campos marcados.",
-      fieldErrors: knowledgeFieldErrors(validado.error),
+      // Si solo falla la lista entera, el título es ese mensaje (ver knowledgeFailureTitle).
+      message: knowledgeFailureTitle(fieldErrors),
+      fieldErrors,
       // Los datos estaban mal: es un error que NO se arregla reintentando igual
       // (retryable false), así que el próximo intento lleva otro action_id.
       action_id: actionIdAfterError({ retryable: false }, action_id, nuevoActionId),
