@@ -201,4 +201,3 @@ export type GetContactData = z.infer<typeof GetContactDataSchema>;
 export type RecordCallResultData = z.infer<typeof RecordCallResultDataSchema>;
 export type FollowupData = z.infer<typeof FollowupDataSchema>;
 export type ClaimDueFollowupsData = z.infer<typeof ClaimDueFollowupsDataSchema>;
-
