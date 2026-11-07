@@ -26,12 +26,12 @@ import { cx } from "./cx";
 export type BadgeTone = "neutral" | "strong" | "info" | "success" | "warning" | "danger";
 
 const TONOS: Record<BadgeTone, string> = {
-  neutral: "bg-surface text-ink border-line",
+  neutral: "bg-wash text-ink border-line",
   strong: "bg-ink text-white border-ink",
-  info: "bg-info-soft text-info border-transparent",
-  success: "bg-success-soft text-success border-transparent",
-  warning: "bg-warning-soft text-warning border-transparent",
-  danger: "bg-danger-soft text-danger border-transparent",
+  info: "bg-info-soft text-info border-info/15",
+  success: "bg-success-soft text-success border-success/15",
+  warning: "bg-warning-soft text-warning border-warning/15",
+  danger: "bg-danger-soft text-danger border-danger/15",
 };
 
 type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
@@ -43,7 +43,7 @@ export function Badge({ tone = "neutral", icon: Icono, className, children, ...r
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 rounded-control border px-2.5 py-1 text-xs leading-none font-bold whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs leading-none font-semibold whitespace-nowrap",
         TONOS[tone],
         className,
       )}

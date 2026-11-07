@@ -31,9 +31,9 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const VARIANTES: Record<ButtonVariant, string> = {
-  primary: "bg-ink text-white hover:bg-ink/80",
-  secondary: "bg-surface text-ink hover:bg-surface-hover",
-  ghost: "bg-transparent text-ink hover:bg-surface",
+  primary: "bg-ink text-white shadow-sm hover:bg-graphite-soft",
+  secondary: "border border-line bg-surface text-ink shadow-card hover:border-ink-subtle hover:bg-surface-hover",
+  ghost: "bg-transparent text-ink hover:bg-ink/[0.05]",
   danger: "bg-danger text-white hover:bg-danger/85",
 };
 
@@ -57,7 +57,7 @@ export function buttonStyles({
 }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
   return cx(
     // Base común: esquinas de 10px, texto en una línea, transición suave.
-    "inline-flex items-center justify-center gap-2 rounded-control leading-none font-bold whitespace-nowrap",
+    "inline-flex items-center justify-center gap-2 rounded-control leading-none font-semibold whitespace-nowrap",
     "transition-colors duration-150",
     // Anillo negro visible cuando se navega con teclado (accesibilidad).
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",

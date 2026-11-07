@@ -2,8 +2,9 @@
  * Estilos globales de Tratunex.
  *
  * Acá viven los "tokens" del diseño: los colores, bordes, sombras y la fuente
- * que usa TODA la app. Vienen del Figma "No.162 Japanese-Style Notion
- * Illustration" (pantalla "Frame 14"), en versión blanco, grises y negro.
+ * que usa TODA la app. Estilo de panel de gestión: menú lateral oscuro,
+ * fondo gris claro y tarjetas blancas con borde fino. Todo en escala de
+ * grises; el color aparece solo para decir algo (estados).
  *
  * ¿Por qué acá? Con Tailwind v4, todo lo que se declara dentro de @theme se
  * convierte en clases. Por ejemplo, --color-surface habilita bg-surface,
@@ -15,29 +16,33 @@
 @theme {
   /* ---------- Colores ---------- */
 
-  /* Fondo de la página (blanco puro, como el lienzo del Figma). */
-  --color-canvas: #ffffff;
+  /* Fondo de la página: gris muy claro, para que las tarjetas blancas se despeguen. */
+  --color-canvas: #f3f4f6;
 
-  /* Gris muy claro de las tarjetas, inputs y pastillas (#F6F6F8 en Figma). */
-  --color-surface: #f6f6f8;
+  /* Tarjetas, campos, filas de listas y pastillas: blanco. */
+  --color-surface: #ffffff;
 
-  /* Gris un poco más oscuro para cuando pasás el mouse por una tarjeta.
-     No está en el Figma: lo derivamos del gris de las tarjetas. */
-  --color-surface-hover: #ececef;
+  /* Cuando pasás el mouse por una tarjeta o fila. */
+  --color-surface-hover: #f7f8f9;
 
-  /* Gris para bordes y líneas divisorias (derivado, el Figma casi no tiene bordes). */
-  --color-line: #e4e4e7;
+  /* Gris de relleno suave dentro de una tarjeta blanca (chips, íconos, pistas). */
+  --color-wash: #f1f2f4;
 
-  /* Negro: texto principal, botones y menú lateral. */
-  --color-ink: #000000;
+  /* Bordes y líneas divisorias. */
+  --color-line: #e4e6ea;
 
-  /* Texto secundario (subtítulos, pestañas inactivas).
-     En Figma es negro al 50% (#808080); lo oscurecemos un poco para que se lea
-     bien sobre el gris de las tarjetas (accesibilidad: contraste mínimo 4.5:1). */
-  --color-ink-muted: #666666;
+  /* Negro: texto principal y botones principales. */
+  --color-ink: #0c0d0f;
+
+  /* Texto secundario (subtítulos). Contraste ≥ 4.5:1 sobre blanco y sobre el gris del fondo. */
+  --color-ink-muted: #5c6068;
 
   /* Texto de ayuda dentro de un input vacío (placeholder). */
-  --color-ink-subtle: #8c8c8c;
+  --color-ink-subtle: #8b9099;
+
+  /* Grafitos del menú lateral y del banner principal (degradé oscuro). */
+  --color-graphite: #1c1d21;
+  --color-graphite-soft: #2c2e34;
 
   /* ---------- Colores de ESTADO ----------
      Regla: el color solo aparece para decir algo (nunca para decorar).
@@ -46,50 +51,56 @@
        - el suave (--color-success-soft): para el fondo de etiquetas y avisos.
      Todas las combinaciones fuerte-sobre-suave se leen bien (contraste ≥ 4.5:1). */
 
-  /* Verde = salió bien (compró, sí es cliente potencial, guardado). */
+  /* Verde = salió bien (guardado, confirmado, pagado). */
   --color-success: #1f6b45;
-  --color-success-soft: #e6f4ec;
+  --color-success-soft: #e7f5ed;
 
-  /* Ámbar = te toca hacer algo (en seguimiento, revisar, pendiente). */
+  /* Ámbar = te toca hacer algo (pendiente, revisar). */
   --color-warning: #8a5a00;
-  --color-warning-soft: #fff3d6;
+  --color-warning-soft: #fff4d9;
 
-  /* Rojo = salió mal o es delicado (no compró, error, llamada real). */
+  /* Rojo = salió mal o es delicado (error, llamada real). */
   --color-danger: #b42318;
-  --color-danger-soft: #fdecea;
+  --color-danger-soft: #fdeceb;
 
-  /* Azul = oportunidad o información (cliente potencial, voz en el navegador). */
+  /* Azul = información (en curso, dato para tener en cuenta). */
   --color-info: #1d4e89;
-  --color-info-soft: #e8f0fa;
+  --color-info-soft: #e9f1fb;
 
   /* ---------- Bordes redondeados ---------- */
 
-  /* Tarjetas y menú lateral (20px en Figma). Clase: rounded-card */
-  --radius-card: 20px;
+  /* Tarjetas. Clase: rounded-card */
+  --radius-card: 18px;
 
-  /* Botones, inputs, pastillas e imágenes chicas (10px). Clase: rounded-control */
-  --radius-control: 10px;
+  /* Banner principal de una pantalla. Clase: rounded-hero */
+  --radius-hero: 28px;
+
+  /* Botones, inputs e imágenes chicas. Clase: rounded-control */
+  --radius-control: 12px;
 
   /* ---------- Sombras ---------- */
 
-  /* Sombra del menú lateral negro, que "flota" hacia la derecha. Clase: shadow-sidebar */
-  --shadow-sidebar: 10px 0 10px rgb(0 0 0 / 0.2);
+  /* Sombra casi invisible de las tarjetas blancas. Clase: shadow-card */
+  --shadow-card: 0 1px 2px rgb(16 18 24 / 0.04), 0 1px 3px rgb(16 18 24 / 0.05);
+
+  /* Sombra del menú en el celular (barra flotante abajo). Clase: shadow-sidebar */
+  --shadow-sidebar: 0 10px 30px rgb(0 0 0 / 0.25);
 
   /* Sombra suave de globitos y menús que aparecen encima. Clase: shadow-pop */
-  --shadow-pop: 0 4px 2px rgb(0 0 0 / 0.1);
+  --shadow-pop: 0 8px 24px rgb(16 18 24 / 0.12);
 }
 
 /*
  * La fuente la carga Next en layout.tsx y la deja en la variable
- * --font-kantumruy. "inline" hace que Tailwind use esa variable tal cual
+ * --font-outfit. "inline" hace que Tailwind use esa variable tal cual
  * (si no, no la encontraría, porque se define en el <html> y no acá).
  * Clase: font-sans (y es la fuente por defecto de toda la página).
  */
 @theme inline {
-  --font-sans: var(--font-kantumruy), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Base de la página: fondo blanco y texto negro. */
+/* Base de la página: fondo gris claro y texto casi negro. */
 @layer base {
   body {
     background-color: var(--color-canvas);

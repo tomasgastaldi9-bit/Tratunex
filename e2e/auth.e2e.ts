@@ -62,7 +62,9 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await expect(page.getByRole("alert").filter({ hasText: "No tenés acceso" })).toBeVisible();
   await page.getByRole("button", { name: "Empresa E2E A" }).click();
   await expect(page.getByRole("button", { name: "Empresa E2E A (seleccionada)" })).toBeVisible();
-  await page.getByRole("link", { name: "Ir a prospección" }).click();
+  await page.getByRole("link", { name: "Ir al inicio" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/prospects");
   await page.getByLabel("Rubro").fill("panaderías");
   await page.getByLabel("Zona").fill("Córdoba");
   await page.getByRole("button", { name: "Buscar prospectos" }).click();

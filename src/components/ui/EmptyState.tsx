@@ -40,13 +40,13 @@ export function EmptyState({ icon: Icono = Inbox, title, description, action, cl
     <div
       className={cx(
         // Borde punteado: se lee como "acá va a haber algo", un lugar libre para llenar.
-        "flex flex-col items-center gap-5 rounded-card border border-dashed border-line px-5 py-10 text-center",
+        "flex flex-col items-center gap-5 rounded-card border border-dashed border-ink-subtle/40 bg-surface px-5 py-12 text-center",
         className,
       )}
     >
       {/* Círculo gris de 48px con el ícono en el medio. Es decorativo (aria-hidden):
           lo importante ya lo dice el título. */}
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface text-ink-muted">
+      <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-wash text-ink-muted ring-1 ring-line">
         <Icono size={24} aria-hidden />
       </span>
 
