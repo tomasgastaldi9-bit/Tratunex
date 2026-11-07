@@ -1,7 +1,7 @@
 import { isAddress, type Address } from "viem";
 
-/** Official Twin ARGt contract on Base mainnet (chain 8453). */
-export const TWIN_ARGT_BASE = "0xf016413834E6D1A14F3D628B11D6Ef725a6bdbDD" as const;
+/** Official Twin ARGt contract on Arbitrum One (chain 42161). */
+export const TWIN_ARGT_ARBITRUM = "0x59863989d080B22476DB95656d0C3CC18be92214" as const;
 export const ARGT_ABI = [
   { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
@@ -17,11 +17,11 @@ type ReadClient = {
 /** Read-only check; no key, signing or token movement is involved. */
 export async function inspectWallet(client: ReadClient, wallet: Address, token: Address) {
   if (!isAddress(wallet) || !isAddress(token)) throw new Error("Dirección inválida.");
-  if (token.toLowerCase() !== TWIN_ARGT_BASE.toLowerCase()) throw new Error("El contrato no coincide con Twin ARGt en Base.");
+  if (token.toLowerCase() !== TWIN_ARGT_ARBITRUM.toLowerCase()) throw new Error("El contrato no coincide con Twin ARGt en Arbitrum.");
   const chainId = await client.getChainId();
-  if (chainId !== 8453) throw new Error("La red configurada no es Base principal.");
+  if (chainId !== 42161) throw new Error("La red configurada no es Arbitrum One.");
   const code = await client.getBytecode({ address: token });
-  if (!code || code === "0x") throw new Error("El contrato ARGt no tiene código en Base.");
+  if (!code || code === "0x") throw new Error("El contrato ARGt no tiene código en Arbitrum.");
   const [symbol, decimals, ethWei, argtAtomic] = await Promise.all([
     client.readContract({ address: token, abi: ARGT_ABI, functionName: "symbol" }),
     client.readContract({ address: token, abi: ARGT_ABI, functionName: "decimals" }),
