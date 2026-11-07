@@ -7,8 +7,8 @@ declare
   v_context jsonb; v_policy public.purchase_policies;
 begin
   select id into strict v_company from public.companies where name='Tratunex (empresa de prueba)';
-  select u.id into strict v_actor from auth.users u join public.company_members m on m.user_id=u.id
-    where m.company_id=v_company and m.role='admin' and u.email='tomasgastaldi9@gmail.com';
+  -- Refuse ambiguity: this test company must have exactly one administrator.
+  select m.user_id into strict v_actor from public.company_members m where m.company_id=v_company and m.role='admin';
   if exists(select 1 from app_private.demo_payment_authorizations) then raise exception 'Demo scope already exists; inspect before proceeding'; end if;
   if exists(select 1 from public.contacts where company_id=v_company and phone_e164='+12025550109') then raise exception 'Demo contact number already exists'; end if;
   insert into public.contacts(company_id,name,organization,phone_e164,source,do_not_contact)
