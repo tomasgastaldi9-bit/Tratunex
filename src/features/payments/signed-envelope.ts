@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 function checkInputs(key: Uint8Array, context: string) {
-  if (key.length !== 32 || !context || context.length > 200) throw new Error("Configuración de cifrado inválida.");
+  if (key.length !== 32 || !context || context.length > 512) throw new Error("Configuración de cifrado inválida.");
 }
 function decode(value: unknown, expectedLength?: number): Buffer {
   if (typeof value !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length > 180000) throw new Error("Sobre de pago inválido.");

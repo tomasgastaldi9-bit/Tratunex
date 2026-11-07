@@ -28,7 +28,8 @@ try {
   const [a, b] = await Promise.all([sql(db, same), sql(db, same)]);
   const extract = output => JSON.parse(output.match(/\{[^\n]+\}/)?.[0] ?? "null");
   if (!extract(a)?.id || extract(a).id !== extract(b)?.id) throw new Error("La misma orden no devolvió la misma reserva.");
-  const store = hash => `begin; set local role service_role; select public.store_prepared_payment('${companyA}','${order}','a','0x${hash.repeat(64)}','{"version":1,"iv":"dummy","tag":"dummy","ciphertext":"encrypted"}'); select pg_sleep(1); commit;`;
+  const reservationId = extract(a).id;
+  const store = hash => `begin; set local role service_role; select public.store_prepared_payment('${companyA}','${order}','a','${reservationId}','0x${hash.repeat(64)}','{"version":1,"iv":"dummy","tag":"dummy","ciphertext":"encrypted"}'); select pg_sleep(1); commit;`;
   const prepared = await Promise.allSettled([sql(db, store("a")), sql(db, store("b"))]);
   if (prepared.filter(x => x.status === "fulfilled").length !== 1 || prepared.filter(x => x.status === "rejected" && String(x.reason).includes("prepared transaction differs")).length !== 1) throw new Error("La reserva permitió reemplazar la transacción preparada.");
   const first = `begin; set local role service_role; ${reserve(companyA, randomUUID(), "b", 8)} select pg_sleep(1); commit;`;
