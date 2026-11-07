@@ -31,6 +31,7 @@ ARGt y ETH son activos reales: no publicar claves privadas ni frases de recupera
 ## Documentación del proyecto
 
 - [Brief del MVP: alcance, contratos, ownership y tareas](docs/BRIEF.md)
+- [Pitch: guion de 3 minutos, video de respaldo y entregas](docs/PITCH.md)
 - [Guía para contribuir](CONTRIBUTING.md)
 - [Flujo de desarrollo y coordinación](docs/DEVELOPMENT_WORKFLOW.md)
 
