@@ -52,7 +52,17 @@ export function orderPaymentPresentation(payment: OrderPayment | null | undefine
 
 const payResponse = resultSchema(z.object({ order: PurchaseOrderSchema, payment: OrderPaymentSchema.nullable() }));
 const orderResponse = resultSchema(z.object({ order: PurchaseOrderSchema }));
+const paymentResponse = resultSchema(z.object({ payment: OrderPaymentSchema.nullable(), chain_checked: z.boolean() }));
 export type OrderPayResult = { order: PurchaseOrder; payment: OrderPayment | null };
+
+export async function reconcileOrderPayment(order: PurchaseOrder): Promise<Result<{ payment: OrderPayment | null; chain_checked: boolean }>> {
+  const action_id = `reconcile:${order.id}`;
+  const response = await fetch(`/api/crm/orders/${order.id}/payment-status`, { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": action_id }, body: JSON.stringify({ action_id, input: {} }) });
+  const parsed = paymentResponse.safeParse(await response.json() as unknown);
+  if (!parsed.success || (parsed.data.ok && !response.ok)) throw new Error("No se pudo consultar el estado del pago.");
+  return parsed.data;
+}
 
 function sameOrder(returned: PurchaseOrder, expected: PurchaseOrder) {
   return returned.id === expected.id && returned.company_id === expected.company_id && returned.purchase_request_id === expected.purchase_request_id

@@ -23,10 +23,13 @@ describe("conciliación del pago guardado", () => {
     const receipt = { transactionHash: prepared.data.hash, from: account.address, to: token, status: "success" as const, logs: [log], blockNumber: BigInt(100), blockHash };
     const reader = { getChainId: async () => 42161, getReceipt: async () => receipt, getFinalizedBlockNumber: async () => BigInt(100), getBlockHash: async () => blockHash };
     const persist = vi.fn(async (state: string) => state);
-    expect(await reconcileStoredPayment(identity, { key, store, reader, persist })).toEqual({ state: "confirmed", hash: prepared.data.hash });
+    expect(await reconcileStoredPayment(identity, { key, store, reader, persist })).toEqual({ state: "confirmed", hash: prepared.data.hash, chain_checked: true });
     expect(persist).toHaveBeenCalledWith("confirmed", prepared.data.hash);
     const wrongKey = randomBytes(32);
     expect((await reconcileStoredPayment(identity, { key: wrongKey, store, reader, persist })).state).toBe("unknown");
     expect(persist).toHaveBeenCalledTimes(1);
+    const offlineReader = { ...reader, getChainId: async () => { throw new Error("offline"); } };
+    const terminalPersist = async () => "confirmed";
+    expect(await reconcileStoredPayment(identity, { key, store, reader: offlineReader, persist: terminalPersist })).toEqual({ state: "confirmed", hash: prepared.data.hash, chain_checked: false });
   });
 });

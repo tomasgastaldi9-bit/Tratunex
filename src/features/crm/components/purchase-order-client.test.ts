@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PurchaseOrderSchema, type OrderPayment } from "../../../contracts/purchase-orders";
 import { formatOrderArgt, formatOrderQuoted, orderPaymentPresentation, parseOrderPaymentIntent, paymentBlockedReason,
-  paymentIntentKey, postOrderPayment, readOrderPaymentIntent, refreshOrderSnapshot, storeOrderPaymentIntent } from "./purchase-order-client";
+  paymentIntentKey, postOrderPayment, readOrderPaymentIntent, refreshOrderSnapshot, storeOrderPaymentIntent, reconcileOrderPayment } from "./purchase-order-client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -53,6 +53,14 @@ describe("ORD03: importes y estados del pago", () => {
 });
 
 describe("ORD03: peticiones manuales con autoridad de servidor", () => {
+  it("consulta la cadena sin llamar al endpoint de pagar ni enviar importes", async () => {
+    const fetcher = vi.fn(async () => Response.json({ ok: true, data: { payment, chain_checked: true } }));
+    vi.stubGlobal("fetch", fetcher);
+    expect((await reconcileOrderPayment(order)).ok).toBe(true);
+    const [url, options] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(`/api/crm/orders/${order.id}/payment-status`);
+    expect(JSON.parse(String(options.body))).toEqual({ action_id: `reconcile:${order.id}`, input: {} });
+  });
   it("pagar envía solo expected_version y conserva action_id", async () => {
     const fetcher = vi.fn(async () => Response.json({ ok: true, data: { order: approved, payment } }));
     vi.stubGlobal("fetch", fetcher);

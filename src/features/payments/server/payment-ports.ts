@@ -7,7 +7,7 @@ import { getCompanyContext } from "@/features/platform/server/public";
 import { getPurchaseOrder } from "@/features/crm/server/public";
 import { getPublicEnv, getServerEnv } from "@/lib/env";
 import { OrderPaymentSchema } from "@/contracts/purchase-orders";
-import type { ActionCtx } from "@/contracts/common";
+import type { ActionCtx, Ctx } from "@/contracts/common";
 import type { PreparedIdentity } from "../prepared-payment";
 import { parsePaymentConfig } from "../payment-config";
 import { claimPayment } from "../claim-store";
@@ -34,7 +34,7 @@ export function createPaymentPorts() {
     getBlock: arg => "blockTag" in arg ? chain.getBlock({ blockTag: arg.blockTag }) : chain.getBlock({ blockNumber: arg.blockNumber }),
   });
   return {
-    verifySession: async (ctx: ActionCtx) => {
+    verifySession: async (ctx: Ctx) => {
       const current = await getCompanyContext(ctx.company_id, { readOnlyCookies: true });
       return current.ok && current.data.actor_type === "user" && current.data.actor_id === ctx.actor_id && current.data.company_id === ctx.company_id;
     },
@@ -59,7 +59,7 @@ export function createPaymentPorts() {
       });
     },
     reconcile: (identity: PreparedIdentity) => reconcileStoredPayment(identity, { key: config.encryptionKey, store: createPreparedStore(db, identity), reader, persist: createObservationStore(db, { companyId: identity.companyId, orderId: identity.orderId, id: identity.id }).persist }),
-    readPayment: async (ctx: ActionCtx, id: string) => {
+    readPayment: async (ctx: Ctx, id: string) => {
       const { data, error } = await db.rpc("read_order_payment", { p_company: ctx.company_id, p_actor: ctx.actor_id, p_order: id });
       if (error) throw new Error("No se pudo consultar el pago.");
       if (data === null) return null;

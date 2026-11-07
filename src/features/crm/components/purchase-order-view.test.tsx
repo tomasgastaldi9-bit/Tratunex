@@ -82,4 +82,8 @@ describe("ORD03: lectura de órdenes y aprobación humana", () => {
     expect(html).toContain("No se pudo consultar el estado del pago");
     expect(html).toMatch(/<button[^>]*disabled[^>]*>Aprobar y pagar<\/button>/);
   });
+  it("advierte que la intención de pago no se cancela luego de aprobar", () => {
+    const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={order} paymentAvailable />);
+    expect(html).toContain("Una vez iniciado, el intento no se puede cancelar desde la aplicación");
+  });
 });

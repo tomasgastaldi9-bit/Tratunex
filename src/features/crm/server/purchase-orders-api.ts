@@ -4,6 +4,7 @@ import { getCompanyContext } from "../../platform/server/public";
 import { approveAndPayPurchaseOrder, createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, refreshPurchaseOrder } from "./purchase-orders-public";
 import { crmJson, handleCrmMutation } from "./http";
 import { crmFailure } from "./persistent-crm";
+import { reconcileOrderPayment } from "@/features/payments/server/public";
 
 const context = () => getCompanyContext(undefined, { readOnlyCookies: true });
 const versionSchema = z.object({ expected_version: z.number().int().positive() }).strict();
@@ -30,3 +31,5 @@ export const refreshOrderRequest = (request: Request, order_id: string) => handl
     const payload = RefreshPurchaseOrderInputSchema.safeParse({ order_id, ...input });
     return payload.success ? refreshPurchaseOrder(ctx, payload.data) : Promise.resolve(crmFailure("VALIDATION_ERROR", "La orden no es válida."));
   });
+export const reconcileOrderPaymentRequest = (request: Request, order_id: string) => handleCrmMutation(request, z.object({}).strict(), context,
+  (ctx) => reconcileOrderPayment({ company_id: ctx.company_id, actor_id: ctx.actor_id, actor_type: ctx.actor_type }, { order_id }));
