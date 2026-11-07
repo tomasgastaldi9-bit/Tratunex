@@ -61,7 +61,7 @@ export function DayPicker({ defaultDays, error, disabled = false }: DayPickerPro
                 // la pastilla y no en otra parte de la página.
                 // min-h-10 = 40px de alto: fácil de tocar con el dedo.
                 "relative inline-flex min-h-10 cursor-pointer items-center justify-center rounded-control border px-1 select-none sm:min-w-14 sm:px-3",
-                "text-sm leading-none font-bold transition-colors duration-150",
+                "text-sm leading-none font-medium transition-colors duration-150",
                 // Sin marcar: gris claro, como los campos. Con el mouse encima, un gris más oscuro.
                 "bg-surface text-ink hover:bg-surface-hover",
                 // Marcada (la casilla de adentro está tildada): negra con letra blanca.
@@ -73,7 +73,7 @@ export function DayPicker({ defaultDays, error, disabled = false }: DayPickerPro
                 "has-disabled:cursor-not-allowed has-disabled:opacity-50",
                 // Con error, borde rojo como los otros campos; si no, borde invisible
                 // (así la pastilla mide lo mismo con y sin error).
-                error ? "border-danger" : "border-transparent",
+                error ? "border-danger" : "border-line has-checked:border-ink",
               )}
             >
               <input

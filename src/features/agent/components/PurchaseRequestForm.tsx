@@ -75,11 +75,13 @@ export function PurchaseRequestForm({ actionId }: PurchaseRequestFormProps) {
       action={formAction}
       onSubmit={evitarDobleEnvio}
       // max-w-2xl: en la compu los campos no se estiran de punta a punta.
-      className="flex max-w-2xl flex-col gap-5"
+      // Panel blanco con borde: agrupa la compra y separa el botón abajo.
+      className="flex max-w-2xl flex-col rounded-card border border-line bg-surface"
     >
       {/* Campo oculto: viaja con el formulario pero no se ve. */}
       <input type="hidden" name="action_id" value={state.action_id} />
 
+      <div className="flex flex-col gap-5 p-5 sm:p-6">
       <Input
         label="Qué necesitás comprar"
         name="product"
@@ -116,6 +118,7 @@ export function PurchaseRequestForm({ actionId }: PurchaseRequestFormProps) {
         />
       </div>
 
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
       {/* type="date": el navegador muestra su calendario y siempre manda la
           fecha como "2026-11-09", que es lo que espera el contrato. */}
       <Input
@@ -141,6 +144,7 @@ export function PurchaseRequestForm({ actionId }: PurchaseRequestFormProps) {
         defaultValue={values.budget}
         error={errores.budget}
       />
+      </div>
 
       <Input
         label="Zona de entrega"
@@ -152,8 +156,10 @@ export function PurchaseRequestForm({ actionId }: PurchaseRequestFormProps) {
 
       {/* Error general (por ejemplo, la base no respondió): qué pasó, arriba del botón. */}
       {state.message && <Alert tone="danger" title={state.message} />}
+      </div>
 
-      <div>
+      {/* Pie del panel: la acción, separada de los campos por una línea. */}
+      <div className="flex justify-end border-t border-line px-5 py-4 sm:px-6">
         <Button type="submit" variant="primary" loading={pending}>
           {pending ? "Creando…" : "Crear compra"}
         </Button>

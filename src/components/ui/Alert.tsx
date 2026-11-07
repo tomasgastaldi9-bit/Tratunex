@@ -33,10 +33,10 @@ export type AlertTone = "info" | "success" | "warning" | "danger";
 
 // Fondo suave + texto fuerte del mismo color: siempre se lee bien (contraste ≥ 4.5:1).
 const TONOS: Record<AlertTone, string> = {
-  info: "bg-info-soft text-info",
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  danger: "bg-danger-soft text-danger",
+  info: "border-info/10 bg-info-soft text-info",
+  success: "border-success/10 bg-success-soft text-success",
+  warning: "border-warning/10 bg-warning-soft text-warning",
+  danger: "border-danger/10 bg-danger-soft text-danger",
 };
 
 // Un ícono distinto por tono: así el aviso se entiende aunque alguien no
@@ -66,17 +66,17 @@ export function Alert({ tone = "info", title, children, action, className }: Ale
       //  - "status" (el resto): lo lee cuando termina lo que estaba diciendo.
       // Interrumpir por algo que no es urgente molesta, por eso solo "danger" usa "alert".
       role={tone === "danger" ? "alert" : "status"}
-      className={cx("flex items-start gap-2.5 rounded-control p-4", TONOS[tone], className)}
+      className={cx("flex items-start gap-3 rounded-card border px-4 py-3", TONOS[tone], className)}
     >
       {/* shrink-0: el ícono nunca se achica aunque el texto sea largo. */}
-      <Icono size={20} aria-hidden className="shrink-0" />
+      <Icono size={18} aria-hidden className="mt-px shrink-0" />
 
       {/* flex-wrap: si no entra el texto + la acción en una línea (celular),
           la acción baja abajo en vez de aplastar el texto. */}
       <div className="flex min-w-0 grow flex-wrap items-center gap-x-5 gap-y-3">
         {/* basis-56: el texto pide al menos ~224px antes de compartir la fila con la acción. */}
         <div className="flex min-w-0 grow basis-56 flex-col gap-1.5 text-sm">
-          {title && <p className="leading-tight font-bold">{title}</p>}
+          {title && <p className="leading-tight font-semibold">{title}</p>}
           {children && <div className="leading-snug">{children}</div>}
         </div>
 
