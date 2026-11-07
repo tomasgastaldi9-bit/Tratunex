@@ -1,7 +1,7 @@
 # Guion del pitch con la presentación animada
 
 Para practicar. Cada **toque** es apretar **→** (o el clicker): la presentación reproduce la escena y frena.
-Mientras está frenada, hablás tranquilo: la pantalla espera. Total: **unos 2:45**, deja margen para 3:00.
+Mientras está frenada, hablás tranquilo: la pantalla espera. Total: **unos 2:55**, justo para 3:00.
 
 Presentación: `/pitch/index.html` en el deploy (o doble clic en `Presentar.cmd` en la compu de Bautista).
 El primer toque pone pantalla completa. **←** vuelve una escena atrás si apretaste de más.
@@ -75,7 +75,15 @@ Si el pago real ya está andando, mostrá el hash real en la demo. Si no, decí:
 
 > "Lo que viene: que el proveedor cobre en Belo y pase a pesos a su cuenta; que el mismo agente haga el seguimiento, confirme entrega y factura y avise atrasos; verificar a cada proveedor; y compras que se repiten solas."
 
-### 10 · Cierre (Bautista, ~6 s)
+### 10 · Cómo ganamos plata (Bautista, ~10 s)
+
+**Se ve:** "Cómo ganamos plata": Plan Pyme US$ 29/mes, Plan Crecimiento US$ 79/mes, llamadas extra US$ 0,50 y comisión de 0,5 % con tope. Rotulado "Precio propuesto".
+
+> "Ganamos con una suscripción mensual desde 29 dólares, cobramos las llamadas extra y una comisión chica por cada pago, que a futuro compartimos con Belo cuando el proveedor cobre ahí."
+
+Son precios propuestos: todavía no hay clientes pagando. Si preguntan, decilo así.
+
+### 11 · Cierre (Bautista, ~6 s)
 
 **Se ve:** el logo en negro y "Comprás mejor. Pagás con reglas."
 
