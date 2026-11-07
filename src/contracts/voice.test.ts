@@ -1,12 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { callDtoFixture, callResultFixtures } from "../features/voice/fixtures";
+import { callDtoFixture, callResultFixtures, supplierQuoteFixtures } from "../features/voice/fixtures";
 import {
   CallDTOSchema,
   CallResultV1Schema,
   DispatchDueCallsInputSchema,
   NormalizedCallResultV1Schema,
   StartCallInputSchema,
+  SupplierQuoteDTOSchema,
 } from "./voice";
+
+describe("supplier quote contract", () => {
+  const [callQuote, exampleQuote] = supplierQuoteFixtures;
+
+  it("accepts every supplier quote fixture", () => {
+    for (const fixture of supplierQuoteFixtures) {
+      expect(SupplierQuoteDTOSchema.parse(fixture)).toStrictEqual(fixture);
+    }
+    expect(supplierQuoteFixtures.map((quote) => quote.source)).toEqual(["call", "example", "example"]);
+  });
+
+  it("only call quotes carry a call, and all of them do", () => {
+    expect(SupplierQuoteDTOSchema.safeParse({ ...callQuote, call_id: null }).success).toBe(false);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, call_id: callQuote.call_id }).success).toBe(false);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...exampleQuote, source: "web" }).success).toBe(true);
+  });
+
+  it("a missing figure is null, never 0 or empty text", () => {
+    expect(SupplierQuoteDTOSchema.safeParse({ ...callQuote, unit_price: 0 }).success).toBe(false);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...callQuote, notes: "  " }).success).toBe(false);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...callQuote, unit_price: null, notes: null }).success).toBe(true);
+    expect(SupplierQuoteDTOSchema.safeParse({ ...callQuote, lead_time_days: 400 }).success).toBe(false);
+  });
+});
 
 const contactId = "33333333-3333-4333-8333-333333333333";
 
