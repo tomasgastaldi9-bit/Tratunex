@@ -217,3 +217,33 @@ export const ContactPageSchema = z.object({
 export type UpdateContactInput = z.infer<typeof UpdateContactInputSchema>;
 export type ContactListInput = z.infer<typeof ContactListInputSchema>;
 export type ContactPage = z.infer<typeof ContactPageSchema>;
+
+// ORD-01: información comercial de proveedor, con destino cargado por una persona.
+export const SupplierChainSchema = z.enum(["base", "arbitrum"]);
+export const CollectionWalletSchema = z.object({
+  chain: SupplierChainSchema,
+  // Preserve the entered casing; this schema checks syntax, not ERC-55 ownership or balances.
+  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "Usá una dirección EVM completa con 0x")
+    .refine(address => !/^0x0{40}$/i.test(address), "La dirección cero no puede recibir el cobro"),
+}).strict();
+export const SupplierDTOSchema = ContactDTOSchema.extend({
+  is_supplier: z.literal(true),
+  collection_wallet: CollectionWalletSchema.nullable(),
+  wallet_version: z.number().int().nonnegative(),
+  wallet_updated_at: UtcSchema.nullable(),
+});
+export const SupplierDataSchema = z.object({ supplier: SupplierDTOSchema });
+export const UpsertSupplierDataSchema = SupplierDataSchema.extend({ created: z.boolean() });
+export const SupplierListInputSchema = ContactListInputSchema.extend({
+  wallet_status: z.enum(["pending", "configured"]).optional(),
+});
+export const SupplierPageSchema = z.object({ items: z.array(SupplierDTOSchema), next_cursor: IdSchema.nullable() });
+export const SetSupplierWalletInputSchema = z.object({
+  contact_id: IdSchema,
+  collection_wallet: CollectionWalletSchema.nullable(),
+  expected_wallet_version: z.number().int().nonnegative(),
+}).strict();
+export type SupplierDTO = z.infer<typeof SupplierDTOSchema>;
+export type CollectionWallet = z.infer<typeof CollectionWalletSchema>;
+export type SupplierListInput = z.infer<typeof SupplierListInputSchema>;
+export type SetSupplierWalletInput = z.infer<typeof SetSupplierWalletInputSchema>;
