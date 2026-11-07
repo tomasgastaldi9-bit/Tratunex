@@ -293,10 +293,15 @@ export const RANK_QUOTES_MAX = 20;
 
 export const rankQuotesInputSchema = z.object({
   purchase_request_id: z.uuid(),
+  /**
+   * Opcional. Si no viene, rankQuotes lee las cotizaciones de esa compra de
+   * la tabla supplier_quotes (con listSupplierQuotes de Voz).
+   */
   quotes: z
     .array(quoteForRankingSchema)
     .min(1, "Hace falta al menos una cotización")
-    .max(RANK_QUOTES_MAX, `Mandá como máximo ${RANK_QUOTES_MAX} cotizaciones`),
+    .max(RANK_QUOTES_MAX, `Mandá como máximo ${RANK_QUOTES_MAX} cotizaciones`)
+    .optional(),
 });
 export type RankQuotesInput = z.infer<typeof rankQuotesInputSchema>;
 
@@ -341,3 +346,38 @@ export type RankQuotesOutput = z.infer<typeof rankQuotesOutputSchema>;
  * se usa la explicación de respaldo y explanation_source = "rules".
  */
 export type RankQuotes = (ctx: Ctx, input: RankQuotesInput) => Promise<Result<RankQuotesOutput>>;
+
+// ---------------------------------------------------------------------------
+// Puerto para el comparador de Nano (ORD-02)
+// ---------------------------------------------------------------------------
+
+/** Prefijo de la explicación cuando NO la escribió la IA (no se hace pasar reglas por IA). */
+export const RULES_EXPLANATION_PREFIX = "Explicación automática (sin IA): ";
+
+/**
+ * La forma EXACTA que valida el comparador de Nano (src/contracts/supplier-quotes.ts
+ * en su rama, QuoteRankingSchema, en modo estricto: no admite campos de más).
+ * Una fila por cotización con un solo motivo de texto, la recomendada y la explicación.
+ */
+export const comparatorRankingSchema = z
+  .object({
+    ranking: z
+      .array(z.object({ quote_id: z.string().min(1), reason: z.string().trim().min(1).max(2000) }).strict())
+      .min(1)
+      .max(100),
+    recommended_quote_id: z.string().min(1),
+    explanation: z.string().trim().min(1).max(4000),
+  })
+  .strict();
+export type ComparatorRanking = z.infer<typeof comparatorRankingSchema>;
+
+/**
+ * El adaptador para el comparador: lee las cotizaciones de la compra, las
+ * ordena con rankQuotes y devuelve la forma de comparatorRankingSchema.
+ * Si ninguna cotización sirve, no hay recomendada: devuelve NOT_FOUND con el
+ * motivo en el mensaje (el comparador lo muestra como error explícito).
+ */
+export type RankSupplierQuotes = (
+  ctx: Ctx,
+  input: { purchase_request_id: string },
+) => Promise<Result<ComparatorRanking>>;
