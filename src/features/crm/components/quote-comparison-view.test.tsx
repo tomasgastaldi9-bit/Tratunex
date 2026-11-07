@@ -7,6 +7,8 @@ import type { QuoteComparison } from "../quote-comparison";
 // The frame/navigation is verified separately in browser tests. Render this
 // comparison with the real visual controls and no Next router/session dependency.
 vi.mock("./supplier-view", () => ({ SuppliersFrame: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
+vi.mock("./purchase-order-create-button", () => ({ CreatePurchaseOrderButton: ({ companyId, supplierQuoteId }: { companyId: string; supplierQuoteId: string }) =>
+  <button data-order-company={companyId} data-order-quote={supplierQuoteId}>Crear orden de compra</button> }));
 
 import { QuoteComparisonAccessState, QuoteComparisonStart, QuoteComparisonView } from "./quote-comparison-view";
 
@@ -104,6 +106,19 @@ describe("ORD02: comparación presentada con fuentes y estados explícitos", () 
     const value = comparison();
     value.rows[0].quote = quote({ source: { kind: "web", url: "https://cotizacion.example/fuente" } });
     expect(render(value)).toContain('href="https://cotizacion.example/fuente"');
+  });
+
+  it("conecta la creación solo a cotizaciones guardadas y no envía datos de dinero o wallet", () => {
+    const value = comparison();
+    value.rows[0].quote = quote({ source: { kind: "web", url: "https://cotizacion.example/fuente" } });
+    const html = render(value);
+    expect([...html.matchAll(/data-order-quote=/g)]).toHaveLength(2);
+    expect(html).toContain(`data-order-company="${company.id}"`);
+    expect(html).toContain(`data-order-quote="${quoteId}"`);
+    expect(html).not.toContain("data-order-amount");
+    expect(html).not.toContain("data-order-wallet");
+    expect(render({ ...value, mode: "example" })).not.toContain("Crear orden de compra");
+    expect(render(comparison())).not.toContain("Crear orden de compra");
   });
 
   it("total fuera de rango no hace caer toda la comparación", () => {

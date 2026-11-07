@@ -11,6 +11,7 @@ import type { ErrorCode } from "../../../contracts/common";
 import type { QuoteRanking, SupplierQuote } from "../../../contracts/supplier-quotes";
 import { formatQuoteMoney, quoteTotal, type QuoteComparison, type QuoteComparisonRow } from "../quote-comparison";
 import { SuppliersFrame } from "./supplier-view";
+import { CreatePurchaseOrderButton } from "./purchase-order-create-button";
 
 type Company = { id: string; name: string; industry?: string | null };
 const number = (value: number) => value.toLocaleString("es-AR");
@@ -102,6 +103,13 @@ function RankingEvaluation({ item, fallback }: { item?: QuoteRanking["ranking"][
   </div>;
 }
 
+function CreateOrderAction({ companyId, row, mode }: { companyId: string; row: QuoteComparisonRow; mode: QuoteComparison["mode"] }) {
+  if (mode !== "persisted" || row.quote.source.kind === "example") return null;
+  return <div className="[&_button]:w-full [&_button]:whitespace-normal [&_button]:leading-snug [&_svg]:shrink-0">
+    <CreatePurchaseOrderButton companyId={companyId} supplierQuoteId={row.quote.id} />
+  </div>;
+}
+
 export function QuoteComparisonView({ company, comparison }: { company: Company; comparison: QuoteComparison }) {
   const { purchase, recommendation, rows, mode } = comparison;
   const ready = recommendation.status === "ready";
@@ -146,7 +154,8 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
               <td className="p-4 align-top"><QuoteDelivery quote={row.quote} /></td>
               <td className="p-4 align-top"><Badge tone={row.quote.accepts_argt === "unknown" ? "warning" : "neutral"} className="max-w-full"><span className="whitespace-normal">{answers[row.quote.accepts_argt]}</span></Badge></td>
               <td className="p-4 align-top"><QuoteSource quote={row.quote} mode={mode} /></td>
-              <td className="p-4 align-top"><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} /></td>
+              <td className="space-y-4 p-4 align-top"><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} />
+                <CreateOrderAction companyId={company.id} row={row} mode={mode} /></td>
             </tr>;
           })}</tbody>
         </table>
@@ -164,6 +173,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
             <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Origen</dt><dd><QuoteSource quote={row.quote} mode={mode} /></dd></div>
           </dl>
           <div className="space-y-3 border-t border-line pt-4"><h3 className="text-xs font-bold">Evaluación</h3><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} /></div>
+          <CreateOrderAction companyId={company.id} row={row} mode={mode} />
         </Card>;
       })}</section>
     </>}

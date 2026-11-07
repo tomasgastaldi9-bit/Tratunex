@@ -50,7 +50,7 @@ QUO-02 normaliza precios ARS/USD a enteros string con escala 2. La tabla y la
 extracción son responsabilidad de Bautista; este módulo no duplica SQL ni
 escrituras de `supplier_quotes`. La normalización desde el precio numérico de
 QUO-01 vive en su adaptador publicado. Ausencias permanecen `null`/`unknown`.
-Los datos de la llamada no cambian la wallet del proveedor ni el DNC del CRM.
+La wallet y el DNC pertenecen al CRM; el comparador no los modifica.
 
 La vista conserva moneda y escala originales. `quoteTotal` multiplica
 `BigInt(amount_atomic)` por la cantidad entera sin flotantes; rechaza más de 78
@@ -94,8 +94,17 @@ completitud debe acordarse con Bautista antes de ampliar ese caso.
 
 ## Enlace con ORD-03
 
-La creación de órdenes permanece en su PR/rama ORD-03. Este comparador no
-importa módulos aún ausentes en `main`. Tras integrar su contrato y widget,
-la acción humana podrá pasar la cotización elegida con su UUID y un
-`action_id` estable. La creación debe resolver importes y snapshots de nuevo
-en servidor; el resultado de ranking no autoriza una firma ni un pago.
+ORD-03 está integrado en `main` por PR #36. Las filas guardadas cuyo origen no
+sea `example` conectan `CreatePurchaseOrderButton` de
+`components/purchase-order-create-button.tsx`. La acción es humana y explícita;
+montar la pantalla no envía un POST. El widget pasa solo el UUID de la cotización
+y un `action_id` estable, conservado para recuperar la misma orden si el
+resultado es incierto. Empresa, importe y snapshots de wallet se validan de
+nuevo en servidor; el navegador no envía importes ni destinos.
+
+El ejemplo global y las filas `source.kind: example` no muestran esa acción.
+Crear una orden no implica aprobarla ni pagarla. PAY-02 sigue deshabilitado en
+CRM: leer `getPurchaseOrder` no autoriza una firma. Tomás y Nano deben acordar
+el claim atómico y conectar el puerto con `availability: ready` explícito antes
+de habilitar pagos; la presencia del stub público no alcanza. Ver
+`ORD03-INTEGRATION.md` para el contrato y las validaciones vigentes.
