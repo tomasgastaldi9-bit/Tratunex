@@ -1,0 +1,17 @@
+begin;
+select plan(7);
+insert into auth.users(id,email) values ('e1000000-0000-4000-8000-000000000001','test-a@example.test'),('e1000000-0000-4000-8000-000000000002','test-b@example.test');
+insert into public.companies(id,name) values ('e2000000-0000-4000-8000-000000000001','Demo A'),('e2000000-0000-4000-8000-000000000002','Demo B');
+insert into public.company_members(company_id,user_id,role) values ('e2000000-0000-4000-8000-000000000001','e1000000-0000-4000-8000-000000000001','admin'),('e2000000-0000-4000-8000-000000000002','e1000000-0000-4000-8000-000000000002','admin');
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"e1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select is(public.contacts_execute('{"company_id":"e2000000-0000-4000-8000-000000000001","actor_type":"user","actor_id":"e1000000-0000-4000-8000-000000000001","action_id":"test-1"}','upsertContact','{"name":"Demo","organization":null,"phone_e164":"+12025550123","website":"https://demo.example","source":{"kind":"csv","label":"Ejemplo","url":null},"do_not_contact":true}') ->> 'ok','true','first import succeeds');
+select is(public.contacts_execute('{"company_id":"e2000000-0000-4000-8000-000000000001","actor_type":"user","actor_id":"e1000000-0000-4000-8000-000000000001","action_id":"test-2"}','upsertContact','{"name":"Demo","organization":null,"phone_e164":"+12025550123","website":"https://demo.example","source":{"kind":"csv","label":"Ejemplo","url":null},"do_not_contact":false}') #>> '{data,created}','false','duplicate returns existing contact');
+select is((select count(*) from public.contacts),1::bigint,'single contact after reimport');
+select is((select do_not_contact from public.contacts limit 1),true,'do_not_contact is preserved');
+select is(public.contacts_execute('{"company_id":"e2000000-0000-4000-8000-000000000002","actor_type":"user","actor_id":"e1000000-0000-4000-8000-000000000001","action_id":"test-3"}','listContacts','{}') #>> '{error,code}','FORBIDDEN','cross-company access is rejected');
+select throws_ok($$insert into public.contacts(company_id,name,phone_e164,source) values ('e2000000-0000-4000-8000-000000000001','bad','+12025550120','{}')$$,'42501',null,'direct writes are rejected');
+select is(has_function_privilege('authenticated','app_private.claim_action(uuid,text,uuid,text,text,jsonb)','EXECUTE'),false,'receipt helper stays private');
+reset role;
+select * from finish();
+rollback;

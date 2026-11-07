@@ -8,11 +8,15 @@ import type {
 import fixtures from "../mocks/fixtures.json";
 
 vi.mock("server-only", () => ({}));
+vi.mock("./client", () => ({ getAuthorizedCrmClient: async () => ({
+  ok: false, error: { code: "PROVIDER_UNAVAILABLE", message: "Base no configurada en esta prueba", retryable: true },
+}) }));
 
 import {
   claimDueFollowups, completeFollowup, crmIntegration, failFollowup, getContact,
   recordCallResult, scheduleFollowup, upsertContact,
 } from "./public";
+import { getContact as getMockContact } from "./mock-public";
 
 describe("CRM-02: contrato público consumible sin base ni credenciales", () => {
   it("exporta las siete firmas con Ctx, ActionCtx y Result del contrato común", () => {
@@ -28,9 +32,10 @@ describe("CRM-02: contrato público consumible sin base ni credenciales", () => 
     }
   });
 
-  it("declara mock de proceso y explica que no hay base, auth ni llamadas reales", () => {
-    expect(crmIntegration).toMatchObject({ mode: "mock", persistence: "process" });
-    expect(crmIntegration.description).toContain("Sin base, auth ni llamadas reales");
+  it("declara el modo por operación sin fingir resultados reales de Voz", () => {
+    expect(crmIntegration).toMatchObject({ mode: "mixed", operations: {
+      getContact: "persisted", upsertContact: "persisted", recordCallResult: "mock",
+    } });
   });
 
   it("permite leer un contacto ficticio desde la entrada pública", async () => {
@@ -40,7 +45,10 @@ describe("CRM-02: contrato público consumible sin base ni credenciales", () => 
       actor_type: "user",
       actor_id: "30000000-0000-4000-8000-000000000001",
     };
-    const result: Result<GetContactData> = await getContact(ctx, { contact_id: fixture.id });
+    const result: Result<GetContactData> = await getMockContact(ctx, { contact_id: fixture.id });
     expect(result).toEqual({ ok: true, data: { contact: fixture } });
+    expect(await getContact(ctx, { contact_id: fixture.id })).toMatchObject({
+      ok: false, error: { code: "PROVIDER_UNAVAILABLE" },
+    });
   });
 });
