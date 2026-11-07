@@ -236,22 +236,72 @@ function validationError(message: string): Extract<Result<never>, { ok: false }>
   return { ok: false, error: { code: "VALIDATION_ERROR", message, retryable: false } };
 }
 
+type StructuredOutputs = z.infer<typeof StructuredOutputsSchema>;
+
+// Busca la cotización por nombre. null si Vapi todavía no la generó.
+function pickQuote(outputs: StructuredOutputs): Result<QuoteCallExtraction | null> {
+  const named = Object.values(outputs).find((output) => output.name === QUOTE_OUTPUT_NAME);
+  if (!named || named.result === null || named.result === undefined) {
+    return { ok: true, data: null };
+  }
+  const extraction = QuoteCallExtractionSchema.safeParse(named.result);
+  return extraction.success
+    ? { ok: true, data: extraction.data }
+    : validationError(`La cotización extraída por Vapi no cumple ${QUOTE_OUTPUT_NAME}`);
+}
+
 export function extractQuoteFromReport(payload: unknown): Result<QuoteReport> {
   const parsed = QuoteReportSchema.safeParse(payload);
   if (!parsed.success) {
     return validationError("El aviso no es un end-of-call-report válido");
   }
   const message = parsed.data.message;
-  const outputs = { ...message.call.artifact?.structuredOutputs, ...message.artifact?.structuredOutputs };
-  const named = Object.values(outputs).find((output) => output.name === QUOTE_OUTPUT_NAME);
-  const base = { provider_call_id: message.call.id, ended_reason: message.endedReason ?? message.call.endedReason ?? null };
+  const quote = pickQuote({ ...message.call.artifact?.structuredOutputs, ...message.artifact?.structuredOutputs });
+  if (!quote.ok) return quote;
+  return {
+    ok: true,
+    data: {
+      provider_call_id: message.call.id,
+      ended_reason: message.endedReason ?? message.call.endedReason ?? null,
+      extraction: quote.data,
+    },
+  };
+}
 
-  if (!named || named.result === null || named.result === undefined) {
-    return { ok: true, data: { ...base, extraction: null } };
+// ---------------------------------------------------------------------------
+// 5. Llamada leída de la API de Vapi (GET /call/:id) → cotización.
+// ---------------------------------------------------------------------------
+const VapiCallSchema = z.object({
+  id: z.string().min(1),
+  type: z.string().optional(),
+  status: z.string().optional(),
+  endedReason: z.string().optional(),
+  artifact: z.object({ structuredOutputs: StructuredOutputsSchema.optional() }).optional(),
+});
+
+export type VapiQuoteCall = QuoteReport & {
+  // Solo una llamada terminada puede tener cotización.
+  ended: boolean;
+  // webCall = botón Talk del dashboard; el resto son llamadas telefónicas.
+  transport: "phone" | "web";
+};
+
+export function extractQuoteFromVapiCall(payload: unknown): Result<VapiQuoteCall> {
+  const parsed = VapiCallSchema.safeParse(payload);
+  if (!parsed.success) {
+    return validationError("La respuesta de Vapi no es una llamada válida");
   }
-  const extraction = QuoteCallExtractionSchema.safeParse(named.result);
-  if (!extraction.success) {
-    return validationError(`La cotización extraída por Vapi no cumple ${QUOTE_OUTPUT_NAME}`);
-  }
-  return { ok: true, data: { ...base, extraction: extraction.data } };
+  const call = parsed.data;
+  const quote = pickQuote(call.artifact?.structuredOutputs ?? {});
+  if (!quote.ok) return quote;
+  return {
+    ok: true,
+    data: {
+      provider_call_id: call.id,
+      ended_reason: call.endedReason ?? null,
+      extraction: quote.data,
+      ended: call.status === "ended",
+      transport: call.type === "webCall" ? "web" : "phone",
+    },
+  };
 }
