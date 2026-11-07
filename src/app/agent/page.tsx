@@ -53,6 +53,9 @@ export default async function AgentPage() {
   // null = la empresa todavía no guardó nada (estado "vacío").
   const version = perfil.data.current?.version ?? null;
   const tienePerfil = version !== null;
+  // El conocimiento está "hecho" si la versión vigente tiene al menos un ítem.
+  // (null = nunca se cargó; una lista vacía = se sacó todo: en los dos casos, falta.)
+  const tieneConocimiento = (perfil.data.current?.knowledge?.length ?? 0) > 0;
   // Solo los admin pueden cambiar el perfil (lo decide la base, en getAgentProfile).
   const puedeEditar = perfil.data.can_edit;
 
@@ -75,10 +78,10 @@ export default async function AgentPage() {
         title="Configuración del agente"
         steps={[
           { label: "Perfil de empresa", done: tienePerfil },
-          // Estas tres secciones todavía no existen: por ahora nunca están hechas.
+          // Estas dos secciones todavía no existen: por ahora nunca están hechas.
           { label: "Instrucciones del vendedor", done: false },
           { label: "Criterios de cliente potencial", done: false },
-          { label: "Base de conocimiento", done: false },
+          { label: "Base de conocimiento", done: tieneConocimiento },
         ]}
         action={
           // Si no puede editar, no la invitamos a "completar" ni a "editar"
@@ -109,12 +112,25 @@ export default async function AgentPage() {
             }
           />
         </li>
-        {/* Las otras secciones llegan en los próximos tickets (AGT-02, 03 y 04). */}
-        {["Instrucciones del vendedor", "Criterios de cliente potencial", "Base de conocimiento"].map((seccion) => (
+        {/* Estas dos secciones llegan en los próximos tickets (AGT-03 y 04). */}
+        {["Instrucciones del vendedor", "Criterios de cliente potencial"].map((seccion) => (
           <li key={seccion}>
             <ListItem title={seccion} meta={<Badge icon={Clock}>Próximamente</Badge>} />
           </li>
         ))}
+        <li>
+          <ListItem
+            title="Base de conocimiento"
+            actions={
+              <Link href="/agent/knowledge" className={buttonStyles({ size: "sm" })}>
+                Abrir
+                {/* Texto invisible: para el lector de pantalla el link dice
+                    "Abrir base de conocimiento" y no un "Abrir" suelto. */}
+                <span className="sr-only"> base de conocimiento</span>
+              </Link>
+            }
+          />
+        </li>
       </ul>
     </>
   );
