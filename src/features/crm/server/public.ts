@@ -9,6 +9,8 @@ export const crmIntegration = {
   operations: {
     getContact: "persisted", upsertContact: "persisted", updateContact: "persisted", listContacts: "persisted",
     upsertSupplier: "persisted", updateSupplier: "persisted", getSupplier: "persisted", listSuppliers: "persisted", setSupplierWallet: "persisted",
+    createPurchaseOrder: "persisted", getPurchaseOrder: "persisted", listPurchaseOrders: "persisted",
+    refreshPurchaseOrder: "persisted", approvePurchaseOrder: "persisted",
     recordCallResult: "mock", scheduleFollowup: "mock", claimDueFollowups: "mock",
     completeFollowup: "mock", failFollowup: "mock",
   },
@@ -34,3 +36,8 @@ export const getSupplier = suppliers.getSupplier;
 export const listSuppliers = suppliers.listSuppliers;
 export const setSupplierWallet = suppliers.setSupplierWallet;
 export { recordCallResult, scheduleFollowup, claimDueFollowups, completeFollowup, failFollowup } from "./mock-public";
+// ORD-03: contratos de lectura y aprobación; pagos permanecen deshabilitados.
+export {
+  createPurchaseOrder, getPurchaseOrder, listPurchaseOrders,
+  refreshPurchaseOrder, approvePurchaseOrder,
+} from "./purchase-orders-public";
