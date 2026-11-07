@@ -4,7 +4,7 @@ import { signPayment, verifyPaymentFees } from "./sign-payment";
 import { broadcastOnce } from "./broadcast-once";
 import type { ParametersOfSignPayment } from "./sign-payment";
 
-type Deps = { key: Uint8Array; store: PreparedStore; signer: ParametersOfSignPayment[2]; limits: ParametersOfSignPayment[1]; markStarted: () => Promise<"acquired" | "already_started">; send: (raw: Hex) => Promise<Hex> };
+type Deps = { key: Uint8Array; store: PreparedStore; signer: ParametersOfSignPayment[2]; limits: ParametersOfSignPayment[1]; markStarted: (hash: Hex) => Promise<"acquired" | "already_started">; send: (raw: Hex) => Promise<Hex> };
 /** Caller must supply a previously authorized durable claim and an atomic broadcast mark. */
 export async function submitPreparedPayment(identity: PreparedIdentity, deps: Deps): Promise<{ state: "unknown" | "submitted"; hash?: Hex }> {
   try {

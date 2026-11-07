@@ -18,8 +18,8 @@ export async function payInvoiceWithPorts(ctx: ActionCtx, input: { order_id: str
     if (!Number.isSafeInteger(orderVersion) || orderVersion < 1 || !Number.isSafeInteger(pendingNonce) || pendingNonce < 0) return unavailable();
     const claim = await ports.claim(ctx, { order_id: input.order_id, orderVersion, pendingNonce });
     if (!claim.ok || claim.identity.companyId !== ctx.company_id || claim.identity.orderId !== input.order_id) return unavailable();
-    await ports.submit(claim.identity);
-    await ports.reconcile(claim.identity);
+    try { await ports.submit(claim.identity); } catch { /* A failed response cannot authorize another send. */ }
+    try { await ports.reconcile(claim.identity); } catch { /* Read the durable state even if the RPC is unavailable. */ }
     const payment = OrderPaymentSchema.safeParse(await ports.readPayment(ctx, input.order_id));
     if (!payment.success || payment.data.id !== claim.identity.id || payment.data.amount_atomic !== claim.identity.amount.toString()) return unavailable();
     return { ok: true, data: { payment: payment.data } };

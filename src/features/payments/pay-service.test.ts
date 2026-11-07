@@ -30,4 +30,10 @@ describe("orquestación del pago", () => {
       expect(deps.submit).not.toHaveBeenCalled();
     }
   });
+  it("consulta el mismo estado si el envío falla después de reservar", async () => {
+    const deps = ports(); deps.submit.mockRejectedValue(new Error("timeout"));
+    expect(await payInvoiceWithPorts(ctx, { order_id }, deps)).toEqual({ ok: true, data: { payment } });
+    expect(deps.reconcile).toHaveBeenCalledWith(identity);
+    expect(deps.readPayment).toHaveBeenCalledWith(ctx, order_id);
+  });
 });

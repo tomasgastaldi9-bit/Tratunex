@@ -7,7 +7,9 @@ const hash = keccak256(raw);
 describe("transmisión con reserva durable", () => {
   it("solo transmite si obtiene la marca durable y verifica el hash de respuesta", async () => {
     const send = vi.fn().mockResolvedValue(hash);
-    expect(await broadcastOnce({ raw, hash }, { markStarted: async () => "acquired", send })).toEqual({ state: "submitted" });
+    const markStarted = vi.fn().mockResolvedValue("acquired");
+    expect(await broadcastOnce({ raw, hash }, { markStarted, send })).toEqual({ state: "submitted" });
+    expect(markStarted).toHaveBeenCalledExactlyOnceWith(hash);
     expect(send).toHaveBeenCalledExactlyOnceWith(raw);
   });
   it("nunca transmite cuando la reserva ya se reclamó o el resultado es incierto", async () => {
