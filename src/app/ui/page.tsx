@@ -305,7 +305,9 @@ export default function VitrinaUI() {
 />`}
       >
         <div className="rounded-card border border-dashed border-line p-5">
+          {/* as="h2": esta página ya tiene su h1 ("Vitrina de componentes"); esto es solo un ejemplo. */}
           <PageHeader
+            as="h2"
             title="Agente"
             description="Enseñale a tu agente qué vender y cuándo alguien es cliente potencial."
             actions={

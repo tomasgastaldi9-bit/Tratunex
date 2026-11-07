@@ -108,8 +108,13 @@ type PotentialBadgeProps = {
 
 export function PotentialBadge({ value, score, className }: PotentialBadgeProps) {
   const info = POTENTIAL_INFO[value];
-  // Math.round: por si el puntaje viene con decimales (82.4 → 82).
-  const puntaje = score === undefined ? "" : ` · ${Math.round(score)}/100`;
+  // Solo mostramos el puntaje si es un número de verdad (no NaN ni Infinity).
+  // Math.round: por si viene con decimales (82.4 → 82).
+  // Math.min/Math.max: lo dejamos entre 0 y 100, por si llega un valor raro (140 → 100).
+  const puntaje =
+    score !== undefined && Number.isFinite(score)
+      ? ` · ${Math.min(100, Math.max(0, Math.round(score)))}/100`
+      : "";
   return (
     <Badge tone={info.tone} icon={info.icon} className={className}>
       {info.label}

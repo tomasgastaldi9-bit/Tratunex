@@ -21,9 +21,11 @@ import { cx } from "./cx";
  *  - icon: un ícono de lucide-react a la izquierda del texto.
  *      import { Phone } from "lucide-react";
  *      <Button icon={Phone}>Llamar</Button>
- *  - loading: muestra una ruedita, deshabilita el botón (evita el doble clic)
- *    y avisa al lector de pantalla que está trabajando. Cambiá también el
- *    texto: <Button loading>Llamando…</Button>
+ *  - loading: muestra una ruedita, ignora los clics (evita el doble clic) y
+ *    avisa al lector de pantalla que está trabajando, SIN sacarle el foco a
+ *    quien usa el teclado. Cambiá también el texto: <Button loading>Llamando…</Button>
+ *    Igual, en tu función de guardar, chequeá que no esté ya guardando: el
+ *    navegador puede enviar un formulario apretando Enter en un campo.
  */
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
@@ -83,19 +85,27 @@ export function Button({
   className,
   children,
   type = "button",
+  onClick,
   ...resto
 }: ButtonProps) {
   const lado = TAMANIO_ICONO[size];
 
   return (
     <button
+      {...resto}
       // type="button" por defecto: así un botón dentro de un formulario no lo
       // envía sin querer. Para enviar, pasá type="submit".
-      type={type}
-      disabled={disabled || loading}
+      // Mientras carga lo pasamos a "button": así no vuelve a enviar el formulario.
+      type={loading ? "button" : type}
+      disabled={disabled}
+      // Mientras carga NO usamos "disabled": un botón deshabilitado pierde el
+      // foco del teclado (la persona queda "perdida" al principio de la página).
+      // En cambio, le sacamos lo que hace al apretarlo (onClick) y avisamos al
+      // lector de pantalla que está ocupado (aria-busy) y no disponible (aria-disabled).
+      onClick={loading ? undefined : onClick}
       aria-busy={loading || undefined}
-      className={buttonStyles({ variant, size, className })}
-      {...resto}
+      aria-disabled={loading || undefined}
+      className={buttonStyles({ variant, size, className: cx(loading && "cursor-wait", className) })}
     >
       {/* Mientras carga, la ruedita reemplaza al ícono. */}
       {loading ? (

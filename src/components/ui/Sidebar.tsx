@@ -45,14 +45,14 @@ export function Sidebar({ brand = "T", className }: SidebarProps) {
         className,
       )}
     >
-      {/* Marca: letra grande en negrita (la "M" del Figma). En celular no entra, se oculta. */}
-      <Link
-        href="/"
-        className="hidden text-[32px] leading-none font-bold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white md:block"
-      >
-        {brand}
-        <span className="sr-only"> — Inicio de Tratunex</span>
-      </Link>
+      {/* Marca: letra grande en negrita (la "M" del Figma). En celular no entra, se oculta.
+          No es un link: todavía no hay página de inicio, y un link a una
+          página que no existe lleva a un error 404. Cuando exista, se puede
+          volver a convertir en <Link href="/">. */}
+      <p className="hidden text-[32px] leading-none font-bold md:block">
+        <span aria-hidden>{brand}</span>
+        <span className="sr-only">Tratunex</span>
+      </p>
 
       <ul className="flex flex-row md:w-full md:flex-col md:gap-2">
         {NAV_ITEMS.map((item) => (

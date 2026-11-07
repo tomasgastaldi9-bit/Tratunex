@@ -39,6 +39,8 @@ export function Textarea({
   hint,
   error,
   id,
+  // Lo sacamos aparte para pasárselo a Field, que lo SUMA a la ayuda y al error.
+  "aria-describedby": describedBy,
   required,
   maxLength,
   className,
@@ -56,6 +58,7 @@ export function Textarea({
       error={error}
       required={required}
       id={id}
+      describedBy={describedBy}
       className={className}
     >
       {(propsCampo) => (

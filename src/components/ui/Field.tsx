@@ -34,11 +34,26 @@ type FieldProps = {
   required?: boolean;
   /** Si querés fijar el id del control (si no, se genera solo). */
   id?: string;
+  /**
+   * Ids de OTROS textos que explican el campo (por ejemplo, un panel de ayuda
+   * aparte). Se suman a la ayuda y al error, no los reemplazan.
+   */
+  describedBy?: string;
   className?: string;
   children: (props: FieldControlProps) => ReactNode;
 };
 
-export function Field({ label, hideLabel = false, hint, error, required, id, className, children }: FieldProps) {
+export function Field({
+  label,
+  hideLabel = false,
+  hint,
+  error,
+  required,
+  id,
+  describedBy: describedByExtra,
+  className,
+  children,
+}: FieldProps) {
   // useId genera un id único para conectar el <label> con el control
   // (así, al tocar el título, el cursor va al campo).
   const idGenerado = useId();
@@ -46,8 +61,9 @@ export function Field({ label, hideLabel = false, hint, error, required, id, cla
   const idAyuda = hint ? `${idControl}-ayuda` : undefined;
   const idError = error ? `${idControl}-error` : undefined;
 
-  // aria-describedby: el lector de pantalla lee la ayuda y el error al entrar al campo.
-  const describedBy = [idError, idAyuda].filter(Boolean).join(" ") || undefined;
+  // aria-describedby: el lector de pantalla lee el error, la ayuda y cualquier
+  // otro texto que nos hayan pasado, en ese orden.
+  const describedBy = [idError, idAyuda, describedByExtra].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className={cx("flex flex-col gap-2", className)}>

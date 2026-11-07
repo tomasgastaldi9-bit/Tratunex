@@ -38,6 +38,8 @@ export function Input({
   error,
   icon: Icono,
   id,
+  // Lo sacamos aparte para pasárselo a Field, que lo SUMA a la ayuda y al error.
+  "aria-describedby": describedBy,
   required,
   className,
   ...resto
@@ -52,6 +54,7 @@ export function Input({
       error={error}
       required={required}
       id={id}
+      describedBy={describedBy}
       className={className}
     >
       {(propsCampo) => (
