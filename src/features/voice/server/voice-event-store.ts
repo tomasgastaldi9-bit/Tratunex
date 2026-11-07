@@ -1,14 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { VoiceEventStore } from "./webhook";
 
-// Cliente con la clave secreta: solo para el webhook de Vapi, que no tiene sesión
-// de usuario (BRIEF §5). Si Plataforma publica un cliente privilegiado común en
-// src/lib/supabase, este archivo pasa a usarlo.
-export function createVoiceEventStore(supabaseUrl: string, secretKey: string): VoiceEventStore {
-  const db = createClient(supabaseUrl, secretKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
+// Guarda avisos de Vapi con el cliente privilegiado de Voz (ver admin-client.ts).
+export function createVoiceEventStore(db: SupabaseClient): VoiceEventStore {
   return {
     async insert(event) {
       // Empresa y llamada salen de la llamada guardada, nunca del contenido del aviso.

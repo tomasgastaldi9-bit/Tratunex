@@ -11,10 +11,15 @@ import type {
   StartCallData,
   StartCallInput,
 } from "@/contracts/voice";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { recordCallResult } from "@/features/crm/server/public";
 import { getServerEnv } from "@/lib/env";
 import { createRequestSupabaseClient } from "@/lib/supabase/request";
+import { createVoiceAdminClient } from "./admin-client";
 import { createMockCallReader, createSupabaseCallReader, type CallReader } from "./call-reads";
 import * as calls from "./calls";
+import { processPendingReports, type ProcessSummary } from "./process-reports";
+import { createReportStore } from "./report-store";
 
 // Funciones públicas de Voz para otros módulos de servidor (BRIEF §10).
 // VOICE_MODE=mock (por defecto) responde sin llamar a nadie y muestra llamadas
@@ -66,4 +71,40 @@ export async function listCalls(ctx: Ctx, input: ListCallsInput): Promise<Result
 export async function getCall(ctx: Ctx, input: GetCallInput): Promise<Result<GetCallData>> {
   const reader = await callReader();
   return reader ? reader.get(ctx, input) : invalidConfig;
+}
+
+// Cliente privilegiado para procesos sin sesión de usuario (webhook y cron).
+export function voiceAdminClient(): SupabaseClient | null {
+  try {
+    const secretKey = getServerEnv().SUPABASE_SECRET_KEY;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url && secretKey ? createVoiceAdminClient(url, secretKey) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Procesa los reportes de fin de llamada pendientes de todas las empresas:
+// análisis → resultado en calls → recordCallResult del CRM. Uso interno de
+// servidor: lo llama el webhook al recibir un reporte y el cron para reintentar.
+export async function processVoiceEvents(input: { limit: number }): Promise<Result<ProcessSummary>> {
+  if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 5) {
+    return { ok: false, error: { code: "VALIDATION_ERROR", message: "limit debe estar entre 1 y 5", retryable: false } };
+  }
+  const db = voiceAdminClient();
+  if (!db) {
+    return {
+      ok: false,
+      error: { code: "PROVIDER_UNAVAILABLE", message: "Falta SUPABASE_SECRET_KEY o la URL de Supabase", retryable: false },
+    };
+  }
+  try {
+    const summary = await processPendingReports(
+      { store: createReportStore(db), recordCallResult, now: () => new Date() },
+      input.limit,
+    );
+    return { ok: true, data: summary };
+  } catch {
+    return { ok: false, error: { code: "PROVIDER_UNAVAILABLE", message: "No se pudieron procesar los avisos", retryable: true } };
+  }
 }

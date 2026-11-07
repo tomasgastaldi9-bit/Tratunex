@@ -101,8 +101,10 @@ export function createMockCallReader(fixtures: CallDetailDTO[] = callDetailFixtu
 // Base de datos: tabla calls (migración de TRA-46) con la sesión del usuario.
 // RLS ya limita a las empresas del usuario; además se filtra por la empresa activa.
 // ---------------------------------------------------------------------------
-const CALL_COLUMNS =
-  "id, company_id, contact_id, deal_id, source_task_id, provider_call_id, transport, status, objective, agent_version, ended_reason, created_at, updated_at";
+// La lista no trae la transcripción completa; el detalle sí.
+const LIST_COLUMNS =
+  "id, company_id, contact_id, deal_id, source_task_id, provider_call_id, transport, status, objective, agent_version, ended_reason, ended_at, recording_url, result, created_at, updated_at";
+const DETAIL_COLUMNS = `${LIST_COLUMNS}, transcript`;
 
 type CallRow = {
   id: string;
@@ -116,21 +118,27 @@ type CallRow = {
   objective: string | null;
   agent_version: number | null;
   ended_reason: string | null;
+  // Los completa el procesamiento del reporte final (TRA-48).
+  ended_at: string | null;
+  recording_url: string | null;
+  result: unknown;
+  transcript?: string | null;
   created_at: string;
   updated_at: string;
 };
 
 // La base devuelve timestamps con zona "+00:00"; el contrato usa UTC con "Z".
+const toUtc = (value: string) => new Date(value).toISOString();
+
 function toDetail(row: CallRow): CallDetailDTO | null {
   const parsed = CallDetailDTOSchema.safeParse({
     ...row,
-    created_at: new Date(row.created_at).toISOString(),
-    updated_at: new Date(row.updated_at).toISOString(),
-    // Se completan cuando Voz procese el reporte final (VOZ-07).
-    ended_at: null,
-    recording_url: null,
-    transcript: null,
-    result: null,
+    created_at: toUtc(row.created_at),
+    updated_at: toUtc(row.updated_at),
+    ended_at: row.ended_at ? toUtc(row.ended_at) : null,
+    recording_url: row.recording_url ?? null,
+    transcript: row.transcript ?? null,
+    result: row.result ?? null,
   });
   return parsed.success ? parsed.data : null;
 }
@@ -146,7 +154,7 @@ export function createSupabaseCallReader(supabase: SupabaseClient): CallReader {
       if (parsed.data.cursor && !cursor) return failure("VALIDATION_ERROR", "Cursor inválido");
       const limit = parsed.data.limit ?? DEFAULT_LIMIT;
 
-      let query = supabase.from("calls").select(CALL_COLUMNS).eq("company_id", companyId);
+      let query = supabase.from("calls").select(LIST_COLUMNS).eq("company_id", companyId);
       if (parsed.data.contact_id) query = query.eq("contact_id", parsed.data.contact_id);
       if (cursor) {
         query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
@@ -170,7 +178,7 @@ export function createSupabaseCallReader(supabase: SupabaseClient): CallReader {
 
       const { data, error } = await supabase
         .from("calls")
-        .select(CALL_COLUMNS)
+        .select(DETAIL_COLUMNS)
         .eq("company_id", companyId)
         .eq("id", parsed.data.call_id)
         .maybeSingle();
