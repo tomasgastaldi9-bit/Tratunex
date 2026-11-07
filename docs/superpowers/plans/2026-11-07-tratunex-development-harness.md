@@ -57,7 +57,7 @@
 - [x] **Step 6: Extend `.gitignore`** for Node/Next.js outputs, test reports, and local env files while explicitly allowing `.env.example`.
 - [x] **Step 7: Add `.editorconfig` and `.gitattributes`** with UTF-8, final newline, LF normalization, and editor-neutral indentation settings suitable for the TypeScript/JSON/Markdown project.
 - [x] **Step 8: Review the documents against the five Review Focus items**, validate all relative links to the brief, then run `git diff --check`.
-- [ ] **Step 9: Commit the repository guidance** with a focused `docs:` commit.
+- [x] **Step 9: Commit the repository guidance** with focused `docs:` commits (`285f2e3`, `1aa9c0b`).
 
 ### Task 2: Set up the Linear project and initial issue
 
@@ -103,8 +103,8 @@
 - [x] **Step 1: Create a branch from current `origin/main`** using `docs/TRA-5-development-harness`.
 - [x] **Step 2: Apply and inspect only the Task 1 changes**; leave the approved brief and product code untouched.
 - [x] **Step 3: Validate** relative Markdown links, secret-ignore exceptions, owner rules, and `git diff --check`; report exact results rather than claiming application tests.
-- [ ] **Step 4: Commit, push the feature branch, and open a PR** using `.github/pull_request_template.md`, with the Linear issue linked.
-- [ ] **Step 5: Leave the PR ready for a teammate's review**; the author must not self-approve. Do not merge without the required independent review.
+- [x] **Step 4: Commit, push the feature branch, and open PR #1** using `.github/pull_request_template.md`, with Linear issue `TRA-5` linked.
+- [x] **Step 5: Leave PR #1 ready for a teammate's review**; the author must not self-approve. The PR is open and not a draft; merge remains pending independent review.
 
 ### Deferred: application CI
 
@@ -112,7 +112,7 @@ After the Next.js scaffold lands and stable package scripts exist, add GitHub Ac
 
 ## Execution Order
 
-Tasks 2 and 3 are complete: the new workspace, team, project, issue, domain labels, and GitHub settings are verified. Task 1 adds the repository workflow. Task 4 links the completed repository changes to `TRA-5` and opens the PR. The workspace currently has only Tomi as a member; the other three need confirmed Linear accounts before they can be invited.
+Tasks 1–4 are complete for the planned deliverable: Linear has the verified workspace/team/project/labels and issue `TRA-5`; GitHub settings are configured; the repository workflow is implemented on `docs/TRA-5-development-harness`; PR #1 is open and linked to `TRA-5`. Keep the issue In Progress until PR #1 is independently reviewed and merged. The Linear workspace currently has only Tomi as a member; the other three need confirmed Linear accounts before they can be invited.
 
 ## Self-Review
 
