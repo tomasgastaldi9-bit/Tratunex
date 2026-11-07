@@ -41,6 +41,15 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
   - `wants_to_buy` → `human_review` para que una persona cierre. Sin análisis usable → `human_review`.
   - Empresa, contacto y llamada salen de la llamada guardada (`KnownCall`), nunca del aviso.
 
+## Cotizador por teléfono (QUO-01)
+
+`server/quote-call.ts` define el asistente que llama al proveedor en nombre de la pyme. La guía para cargarlo en Vapi, con los textos para pegar y el guion de prueba, está en [`vapi/cotizador.md`](vapi/cotizador.md).
+
+- **Qué pide:** si puede entregar, precio por unidad (moneda e IVA), stock, plazo, envío, compra mínima y si acepta cobrar en ARGt.
+- **Qué no hace:** no confirma la compra, no dice el presupuesto (no lo conoce) y no pide billetera, CBU ni alias por teléfono. La billetera la carga una persona en el CRM (BRIEF §7).
+- **Qué extrae Vapi:** el structured output `tratunex_supplier_quote` (`quoteExtractionJsonSchema`). `extractQuoteFromReport` lo lee del `end-of-call-report`: sin cotización devuelve `extraction: null`; un dato opcional mal formado se descarta y un dato obligatorio faltante es `VALIDATION_ERROR`.
+- `quoteAssistantPrompt(brief)` y `quoteAssistantFirstMessage(brief)` reciben los datos de la compra; QUO-03 los manda a Vapi al iniciar la llamada desde la app.
+
 ## Contrato compartido con el CRM
 
 `CallResultV1Schema` y `NextActionSchema` vienen de `src/contracts/crm.ts` (Nano); `voice.ts` los reexporta y agrega `NormalizedCallResultV1Schema`.
