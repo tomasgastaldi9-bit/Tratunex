@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ context: vi.fn(), reconcile: vi.fn(), pay: vi.fn(), resume: vi.fn() }));
+const mocks = vi.hoisted(() => ({ context: vi.fn(), reconcile: vi.fn(), pay: vi.fn(), resume: vi.fn(), demo: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("../../platform/server/public", () => ({ getCompanyContext: mocks.context }));
 vi.mock("./purchase-orders-public", () => ({ approveAndPayPurchaseOrder: mocks.pay, resumeApprovedPayment: mocks.resume, createPurchaseOrder: vi.fn(), getPurchaseOrder: vi.fn(), listPurchaseOrders: vi.fn(), refreshPurchaseOrder: vi.fn() }));
 vi.mock("@/features/payments/server/public", () => ({ reconcileOrderPayment: mocks.reconcile }));
-import { reconcileOrderPaymentRequest, resumeOrderPaymentRequest } from "./purchase-orders-api";
+vi.mock("@/features/payments/server/demo-public", () => ({ payDemoOrder: mocks.demo }));
+import { reconcileOrderPaymentRequest, resumeOrderPaymentRequest, demoOrderPaymentRequest } from "./purchase-orders-api";
 
 const company_id = "10000000-0000-4000-8000-000000000001", actor_id = "20000000-0000-4000-8000-000000000001", order_id = "30000000-0000-4000-8000-000000000001";
 const request = (origin = "https://tratunex.example") => new Request("https://tratunex.example/api/crm/orders/status", {
@@ -30,5 +31,12 @@ describe("endpoint de consulta de pago", () => {
     expect(mocks.pay).not.toHaveBeenCalled();
     expect((await resumeOrderPaymentRequest(request("https://other.example"), order_id)).status).toBe(403);
     expect(mocks.resume).toHaveBeenCalledTimes(1);
+  });
+  it("inicia demo solo con contexto autenticado y nunca acepta otro origen", async () => {
+    mocks.demo.mockResolvedValueOnce({ ok: true, data: { payment: {} } });
+    expect((await demoOrderPaymentRequest(request(), order_id)).status).toBe(200);
+    expect(mocks.demo).toHaveBeenCalledWith({ company_id, actor_id, actor_type: "user", action_id: "status" }, { order_id });
+    expect((await demoOrderPaymentRequest(request("https://other.example"), order_id)).status).toBe(403);
+    expect(mocks.demo).toHaveBeenCalledTimes(1);
   });
 });

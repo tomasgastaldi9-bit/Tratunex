@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PurchaseOrderSchema, type OrderPayment } from "../../../contracts/purchase-orders";
 import { formatOrderArgt, formatOrderQuoted, orderPaymentPresentation, parseOrderPaymentIntent, paymentBlockedReason,
-  paymentIntentKey, postOrderPayment, readOrderPaymentIntent, refreshOrderSnapshot, storeOrderPaymentIntent, reconcileOrderPayment, canResumeOrderPayment, postResumeOrderPayment } from "./purchase-order-client";
+  paymentIntentKey, postOrderPayment, readOrderPaymentIntent, refreshOrderSnapshot, storeOrderPaymentIntent, reconcileOrderPayment, canResumeOrderPayment, postResumeOrderPayment, postDemoOrderPayment, validDemoOrderPayment } from "./purchase-order-client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -18,6 +18,13 @@ const payment: OrderPayment = { id: "90000000-0000-4000-8000-000000000001", stat
   explorer_url: `https://arbiscan.io/tx/${hash}`, amount_atomic: order.amount_atomic!, token: "ARGt", chain: "arbitrum" };
 
 describe("ORD03: importes y estados del pago", () => {
+  it("solo acepta una observación de demo con importe y billetera autorizados", () => {
+    const demoOrder = { ...order, quote_source: "example" as const, amount_atomic: "1000000000000000000", wallet: { chain: "arbitrum" as const, address: "0x4E5F932Fa2D1BE48A4FC39a80CD2eC85C8AA5bB1" } };
+    const demoPayment = { ...payment, amount_atomic: demoOrder.amount_atomic };
+    expect(validDemoOrderPayment(demoPayment, demoOrder)).toEqual(demoPayment);
+    expect(validDemoOrderPayment(demoPayment, { ...demoOrder, wallet: { ...demoOrder.wallet, address: `0x${"1".repeat(40)}` } })).toBeNull();
+    expect(validDemoOrderPayment(demoPayment, order)).toBeNull();
+  });
   it("presenta textos decimales y escala ARGt exactamente, sin Number", () => {
     expect(formatOrderQuoted("9007199254740993.0100", "USD")).toBe("USD 9.007.199.254.740.993,0100");
     expect(formatOrderArgt("9007199254740993123456789012345678")).toBe("ARGt 9.007.199.254.740.993,123456789012345678");
@@ -53,6 +60,15 @@ describe("ORD03: importes y estados del pago", () => {
 });
 
 describe("ORD03: peticiones manuales con autoridad de servidor", () => {
+  it("demo envía solo la acción y nunca monto o dirección desde el navegador", async () => {
+    const demoOrder = { ...order, quote_source: "example" as const, amount_atomic: "1000000000000000000", wallet: { chain: "arbitrum" as const, address: "0x4E5F932Fa2D1BE48A4FC39a80CD2eC85C8AA5bB1" } };
+    const fetcher = vi.fn(async () => Response.json({ ok: true, data: { payment: { ...payment, amount_atomic: demoOrder.amount_atomic } } }));
+    vi.stubGlobal("fetch", fetcher);
+    expect((await postDemoOrderPayment(demoOrder, "demo-action")).ok).toBe(true);
+    const [url, options] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(`/api/crm/orders/${order.id}/demo-payment`);
+    expect(JSON.parse(String(options.body))).toEqual({ action_id: "demo-action", input: {} });
+  });
   it("consulta la cadena sin llamar al endpoint de pagar ni enviar importes", async () => {
     const fetcher = vi.fn(async () => Response.json({ ok: true, data: { payment, chain_checked: true } }));
     vi.stubGlobal("fetch", fetcher);

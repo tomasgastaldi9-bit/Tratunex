@@ -5,6 +5,7 @@ import { approveAndPayPurchaseOrder, createPurchaseOrder, getPurchaseOrder, list
 import { crmJson, handleCrmMutation } from "./http";
 import { crmFailure } from "./persistent-crm";
 import { reconcileOrderPayment } from "@/features/payments/server/public";
+import { payDemoOrder } from "@/features/payments/server/demo-public";
 
 const context = () => getCompanyContext(undefined, { readOnlyCookies: true });
 const versionSchema = z.object({ expected_version: z.number().int().positive() }).strict();
@@ -35,3 +36,5 @@ export const reconcileOrderPaymentRequest = (request: Request, order_id: string)
   (ctx) => reconcileOrderPayment({ company_id: ctx.company_id, actor_id: ctx.actor_id, actor_type: ctx.actor_type }, { order_id }));
 export const resumeOrderPaymentRequest = (request: Request, order_id: string) => handleCrmMutation(request, z.object({}).strict(), context,
   (ctx) => resumeApprovedPayment(ctx, { order_id }));
+export const demoOrderPaymentRequest = (request: Request, order_id: string) => handleCrmMutation(request, z.object({}).strict(), context,
+  (ctx) => payDemoOrder(ctx, { order_id }));
