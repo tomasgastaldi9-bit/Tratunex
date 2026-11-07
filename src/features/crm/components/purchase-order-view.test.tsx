@@ -87,4 +87,12 @@ describe("ORD03: lectura de órdenes y aprobación humana", () => {
     const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={order} paymentAvailable />);
     expect(html).toContain("Una vez iniciado, el intento no se puede cancelar desde la aplicación");
   });
+  it("muestra una transferencia de demo confirmada sin presentar la orden ficticia como compra real", () => {
+    const demoOrder = { ...order, quote_source: "example" as const, amount_atomic: "1000000000000000000", wallet: { chain: "arbitrum" as const, address: "0x4E5F932Fa2D1BE48A4FC39a80CD2eC85C8AA5bB1" } };
+    const hash = `0x${"12".repeat(32)}`;
+    const demoPayment: OrderPayment = { id: "90000000-0000-4000-8000-000000000001", status: "confirmed", tx_hash: hash, explorer_url: `https://arbiscan.io/tx/${hash}`, amount_atomic: demoOrder.amount_atomic, chain: "arbitrum", token: "ARGt" };
+    const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={demoOrder} payment={demoPayment} paymentAvailable={false} demoPaymentAvailable />);
+    expect(html).toContain("Transferencia de demo confirmada"); expect(html).toContain("Datos de prueba");
+    expect(html).toContain(`href="https://arbiscan.io/tx/${hash}"`);
+  });
 });

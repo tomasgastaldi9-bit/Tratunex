@@ -33,6 +33,9 @@ jobs:
       - run: npx vitest run src/features/payments/prepared-db.integration.test.ts
         env:
           PAYMENT_DB_INTEGRATION: "1"
+      - run: npx vitest run src/features/payments/demo-claim-db.integration.test.ts src/features/payments/demo-seed-db.integration.test.ts
+        env:
+          PAYMENT_DB_INTEGRATION: "1"
       - run: npx playwright install --with-deps chromium
       - name: Configure local test environment
         shell: bash

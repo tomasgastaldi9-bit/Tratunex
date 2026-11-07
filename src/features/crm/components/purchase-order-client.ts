@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resultSchema, type Result } from "../../../contracts/common";
 import { OrderPaymentSchema, PurchaseOrderSchema, type OrderPayment, type PurchaseOrder } from "../../../contracts/purchase-orders";
+import { DEMO_AMOUNT, DEMO_DESTINATION } from "../../payments/demo-constants";
 
 export function formatOrderQuoted(value: string, currency: string): string {
   const [integer, fraction] = value.split(".");
@@ -34,6 +35,13 @@ export function validOrderPayment(payment: OrderPayment | null | undefined, orde
   return parsed.data;
 }
 
+export function validDemoOrderPayment(payment: OrderPayment | null | undefined, order: PurchaseOrder): OrderPayment | null {
+  const parsed = OrderPaymentSchema.safeParse(payment);
+  if (!parsed.success || order.quote_source !== "example" || order.amount_atomic !== DEMO_AMOUNT || parsed.data.amount_atomic !== DEMO_AMOUNT
+    || order.wallet?.chain !== "arbitrum" || order.wallet.address.toLowerCase() !== DEMO_DESTINATION.toLowerCase()) return null;
+  return parsed.data;
+}
+
 export function orderPaymentPresentation(payment: OrderPayment | null | undefined, order: PurchaseOrder) {
   const valid = validOrderPayment(payment, order);
   if (!valid) return { label: "Verificación pendiente", tone: "warning" as const,
@@ -53,7 +61,16 @@ export function orderPaymentPresentation(payment: OrderPayment | null | undefine
 const payResponse = resultSchema(z.object({ order: PurchaseOrderSchema, payment: OrderPaymentSchema.nullable() }));
 const orderResponse = resultSchema(z.object({ order: PurchaseOrderSchema }));
 const paymentResponse = resultSchema(z.object({ payment: OrderPaymentSchema.nullable(), chain_checked: z.boolean() }));
+const demoPaymentResponse = resultSchema(z.object({ payment: OrderPaymentSchema }));
 export type OrderPayResult = { order: PurchaseOrder; payment: OrderPayment | null };
+
+export async function postDemoOrderPayment(order: PurchaseOrder, action_id: string): Promise<Result<{ payment: OrderPayment }>> {
+  const response = await fetch(`/api/crm/orders/${order.id}/demo-payment`, { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": action_id }, body: JSON.stringify({ action_id, input: {} }) });
+  const parsed = demoPaymentResponse.safeParse(await response.json() as unknown);
+  if (!parsed.success || (parsed.data.ok && (!response.ok || !validDemoOrderPayment(parsed.data.data.payment, order)))) throw new Error("No se pudo confirmar el pago de demo.");
+  return parsed.data;
+}
 
 export async function reconcileOrderPayment(order: PurchaseOrder): Promise<Result<{ payment: OrderPayment | null; chain_checked: boolean }>> {
   const action_id = `reconcile:${order.id}`;
