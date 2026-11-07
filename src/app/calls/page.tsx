@@ -1,4 +1,4 @@
-import { Clock, Phone } from "lucide-react";
+import { Clock, FlaskConical, Phone } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Alert } from "@/components/ui/Alert";
@@ -53,9 +53,10 @@ export default async function CallsPage() {
       <PageHeader title="Llamadas" description="Cada llamada del agente, con su estado y su resultado." />
 
       {mode === "mock" && (
-        <Alert tone="warning" title="Datos de prueba">
-          Estas llamadas son ejemplos: la app todavía no llama de verdad (VOICE_MODE=mock).
-        </Alert>
+        <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
+          <FlaskConical size={12} aria-hidden /> Ejemplo: estas llamadas son de muestra, no se llamó a nadie.
+          <span className="sr-only"> (datos de prueba)</span>
+        </p>
       )}
 
       {!result.ok ? (

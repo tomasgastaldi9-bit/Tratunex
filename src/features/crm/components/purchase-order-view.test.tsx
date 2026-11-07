@@ -60,7 +60,8 @@ describe("ORD03: lectura de órdenes y aprobación humana", () => {
 
   it("ejemplo está rotulado y no contiene enlaces a proveedor ficticio", () => {
     const html = renderToStaticMarkup(<PurchaseOrderView company={company} order={{ ...order, quote_source: "example" }} paymentAvailable />);
-    expect(html).toContain("Datos de prueba");
+    expect(html).toContain("Ejemplo: esta orden viene de una cotización de muestra.");
+    expect(html).toContain('<span class="sr-only"> (datos de prueba)</span>');
     expect(html).toMatch(/<button[^>]*disabled[^>]*>Aprobar y pagar<\/button>/);
     expect(html).not.toContain('href="/suppliers/');
   });

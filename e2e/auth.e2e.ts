@@ -68,7 +68,7 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await page.getByLabel("Rubro").fill("panaderías");
   await page.getByLabel("Zona").fill("Córdoba");
   await page.getByRole("button", { name: "Buscar prospectos" }).click();
-  await expect(page.getByText("Datos de ejemplo (mock)")).toBeVisible();
+  await expect(page.getByText("Ejemplo (datos de prueba)")).toBeVisible();
   await expect(page.getByText("Sin teléfono disponible")).toBeVisible();
   await expect(page.getByRole("link", { name: "Ver fuente" })).toHaveAttribute("href", "https://example.com/");
   await page.getByLabel("Archivo CSV").setInputFiles({ name: "demo.csv", mimeType: "text/csv", buffer: Buffer.from("nombre,telefono,web\nDemo,+12025550123,https://demo.example\nSin código,0351 123 4567,") });

@@ -24,7 +24,7 @@ import { Badge, type BadgeTone } from "./Badge";
  *
  *   <StageBadge stage="follow_up" />          → ámbar "En seguimiento"
  *   <PotentialBadge value="yes" score={82} />  → verde "Potencial: sí · 82/100"
- *   <ModeBadge mode="mock" />                 → ámbar "Datos de prueba"
+ *   <ModeBadge mode="mock" />                 → gris "Ejemplo" (el lector de pantalla oye "datos de prueba")
  *   <CallStatusBadge status="failed" />        → rojo "Falló"
  *
  * Los códigos (new, follow_up, yes, mock...) son EXACTAMENTE los del BRIEF §8.
@@ -131,8 +131,9 @@ export function PotentialBadge({ value, score, className }: PotentialBadgeProps)
 export type IntegrationMode = "mock" | "web" | "live";
 
 export const MODE_INFO: Record<IntegrationMode, EstadoVisual> = {
-  // Ámbar: atención, esto NO es real.
-  mock: { label: "Datos de prueba", tone: "warning", icon: FlaskConical },
+  // Gris y discreto: es un ejemplo, NO es real. ModeBadge le suma un texto
+  // invisible "(datos de prueba)" para el lector de pantalla.
+  mock: { label: "Ejemplo", tone: "neutral", icon: FlaskConical },
   // Azul: voz real pero desde el navegador, sin teléfono.
   web: { label: "Voz en el navegador", tone: "info", icon: Globe },
   // Rojo: llamada telefónica de verdad (cuesta plata y llega a una persona real).
@@ -144,6 +145,7 @@ export function ModeBadge({ mode, className }: { mode: IntegrationMode; classNam
   return (
     <Badge tone={info.tone} icon={info.icon} className={className}>
       {info.label}
+      {mode === "mock" && <span className="sr-only"> (datos de prueba)</span>}
     </Badge>
   );
 }

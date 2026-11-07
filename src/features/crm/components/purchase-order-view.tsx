@@ -33,7 +33,7 @@ export function OrdersListView({ company, orders }: { company: Company; orders: 
             <p className="mt-2 break-words text-sm text-ink-muted">{order.supplier_name} · {order.quantity.toLocaleString("es-AR")} {order.unit || "unidades"}</p></div>
             <OrderStatus order={order} /></div>
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="break-all text-sm font-bold">Cotización: {formatOrderQuoted(order.quoted_total, order.quoted_currency)}</p>
-            {order.quote_source === "example" && <Badge tone="warning" icon={FlaskConical}>Datos de prueba</Badge>}
+            {order.quote_source === "example" && <Badge icon={FlaskConical}>Ejemplo<span className="sr-only"> (datos de prueba)</span></Badge>}
             <Link href={`/orders/${order.id}`} className={buttonStyles({ variant: "ghost", size: "sm" })} aria-label={`Ver orden de ${order.product}`}>Ver orden<ArrowRight size={14} aria-hidden /></Link></div>
         </Card></li>)}</ul>
       </section>}
@@ -53,7 +53,8 @@ export function PurchaseOrderView({ company, order, payment, paymentAvailable, p
     <div><Link href="/orders" className={buttonStyles({ variant: "ghost", size: "sm" })}><ArrowLeft size={16} aria-hidden />Volver a órdenes</Link></div>
     <PageHeader title="Orden de compra" description={order.product} actions={<OrderStatus order={order} />}
       className="[&>div]:min-w-0 [&_p]:break-words" />
-    {order.quote_source === "example" && <Alert tone="warning" title="Datos de prueba">Esta orden proviene de una cotización de ejemplo.</Alert>}
+    {order.quote_source === "example" && <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
+      <FlaskConical size={12} aria-hidden /> Ejemplo: esta orden viene de una cotización de muestra.<span className="sr-only"> (datos de prueba)</span></p>}
     <Card className="space-y-5"><h2 className="text-base font-bold">Cotización elegida</h2>
       <dl className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <Datum label="Proveedor">{order.quote_source === "example" ? order.supplier_name
