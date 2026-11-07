@@ -9,6 +9,9 @@ import type {
   RankQuotes,
   SavePurchasePolicy,
 } from "@/contracts/purchases";
+// Otros módulos, siempre por su public.ts: Voz (cotizaciones) y CRM (nombre del proveedor).
+import { getContact } from "@/features/crm/server/public";
+import { listSupplierQuotes } from "@/features/voice/server/public";
 import { createRequestSupabaseClient } from "@/lib/supabase/request";
 import { createProfileService } from "./profile-service";
 import { createPurchaseService } from "./purchase-service";
@@ -31,7 +34,12 @@ const writeService = createProfileService(() => createRequestSupabaseClient());
 const sectionWriteService = createSectionService(() => createRequestSupabaseClient());
 
 // Compras: leer (páginas y checkPurchasePolicy) usa cookies de solo lectura; guardar usa las normales.
-const purchaseReadService = createPurchaseService(() => createRequestSupabaseClient({ readOnlyCookies: true }));
+// El de lectura además recibe las funciones reales de Voz y del CRM: rankQuotes
+// las usa para leer las cotizaciones de la compra cuando no se las pasan.
+const purchaseReadService = createPurchaseService(() => createRequestSupabaseClient({ readOnlyCookies: true }), {
+  listSupplierQuotes,
+  getContact,
+});
 const purchaseWriteService = createPurchaseService(() => createRequestSupabaseClient());
 
 /** Devuelve la versión vigente del agente de la empresa y si la persona puede editarla. */
