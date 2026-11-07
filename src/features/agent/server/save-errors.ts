@@ -8,7 +8,7 @@ import type { Result } from "../../../contracts/common";
  */
 
 /** Arma un error con la forma que pide Result. */
-export function fail(code: "VALIDATION_ERROR" | "FORBIDDEN" | "CONFLICT" | "PROVIDER_ERROR" | "PROVIDER_UNAVAILABLE", message: string, retryable: boolean): Result<never> {
+export function fail(code: "VALIDATION_ERROR" | "NOT_FOUND" | "FORBIDDEN" | "CONFLICT" | "PROVIDER_ERROR" | "PROVIDER_UNAVAILABLE", message: string, retryable: boolean): Result<never> {
   return { ok: false, error: { code, message, retryable } };
 }
 
