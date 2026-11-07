@@ -147,6 +147,19 @@ const dialUnavailable = {
   },
 } as const;
 
+// El modelo del asistente casi no cambia: se guarda 5 minutos para que "Llamar
+// ahora" no espere una consulta extra a Vapi antes de cada llamada.
+const ASSISTANT_CACHE_MS = 5 * 60_000;
+const assistantCache = new Map<string, { at: number; model: Record<string, unknown> }>();
+
+async function cachedAssistantModel(assistantId: string, apiKey: string): Promise<Result<Record<string, unknown>>> {
+  const cached = assistantCache.get(assistantId);
+  if (cached && Date.now() - cached.at < ASSISTANT_CACHE_MS) return { ok: true, data: cached.model };
+  const model = await fetchVapiAssistantModel(assistantId, { apiKey });
+  if (model.ok) assistantCache.set(assistantId, { at: Date.now(), model: model.data });
+  return model;
+}
+
 // Llama al proveedor con el asistente cotizador y los datos de la compra. Un
 // mismo action_id (un clic) nunca genera dos llamadas.
 export async function requestQuoteCall(actionCtx: ActionCtx, input: unknown): Promise<Result<RequestQuoteCallData>> {
@@ -191,7 +204,7 @@ export async function requestQuoteCall(actionCtx: ActionCtx, input: unknown): Pr
       };
     },
     async dial(request) {
-      const model = await fetchVapiAssistantModel(assistantId, { apiKey });
+      const model = await cachedAssistantModel(assistantId, apiKey);
       if (!model.ok) return model;
       return createVapiCall(buildVapiQuoteCallBody(request, { assistantId, phoneNumberId, assistantModel: model.data }), { apiKey });
     },
