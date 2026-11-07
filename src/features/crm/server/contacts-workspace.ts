@@ -8,7 +8,7 @@ import { crmFailure, databaseFailure } from "./persistent-crm";
 import { getContact, listContacts } from "./public";
 
 const CompanySchema = z.object({ id: z.uuid(), name: z.string() });
-async function loadCompany(ctx: Ctx) {
+export async function loadCompany(ctx: Ctx) {
   const client = await getAuthorizedCrmClient(ctx, { readOnlyCookies: true });
   if (!client.ok) return client;
   try {

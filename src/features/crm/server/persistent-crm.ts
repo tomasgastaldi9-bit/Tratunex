@@ -15,7 +15,7 @@ export function crmFailure<T>(code: ErrorCode, message: string, retryable = fals
 }
 
 // Only timestamp columns are normalized. UUIDs, provider IDs and text stay literal.
-const timestampKeys = new Set(["created_at", "updated_at", "occurred_at", "due_at", "lease_expires_at", "started_at", "call_started_at"]);
+const timestampKeys = new Set(["created_at", "updated_at", "occurred_at", "due_at", "lease_expires_at", "started_at", "call_started_at", "wallet_updated_at"]);
 export function normalizeCrmDates(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizeCrmDates);
   if (value && typeof value === "object") {
@@ -59,8 +59,8 @@ function belongsToCompany(value: unknown, companyId: string): boolean {
 }
 
 /** Real transactional adapter. Persistence and authority are enforced again in SQL. */
-export function createPersistentCrm(execute: CrmExecutor) {
-  async function call<I, O>(ctx: Ctx | ActionCtx, operation: string, input: I,
+export function createCrmOperationCaller(execute: CrmExecutor) {
+  return async function call<I, O>(ctx: Ctx | ActionCtx, operation: string, input: I,
     inputSchema: z.ZodType<I>, dataSchema: z.ZodType<O>, mutation = true): Promise<Result<O>> {
     const context = (mutation ? mutationIdentitySchema : identitySchema).safeParse(ctx);
     const payload = inputSchema.safeParse(input);
@@ -77,7 +77,11 @@ export function createPersistentCrm(execute: CrmExecutor) {
     } catch {
       return crmFailure("PROVIDER_UNAVAILABLE", "No se pudo confirmar el resultado. Consultá el estado y conservá la misma acción al reintentar.", true);
     }
-  }
+  };
+}
+
+export function createPersistentCrm(execute: CrmExecutor) {
+  const call = createCrmOperationCaller(execute);
   const operations = crmOperationSchemas;
   return {
     getContact: (ctx: Ctx, input: GetContactInput) => call(ctx, "getContact", input, operations.getContact.input, operations.getContact.data, false),
