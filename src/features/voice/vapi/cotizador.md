@@ -1,6 +1,6 @@
 # Asistente cotizador en Vapi (QUO-01)
 
-Cómo cargar en Vapi el asistente que llama al proveedor y le pide una cotización. Los textos de abajo salen de [`server/quote-call.ts`](../server/quote-call.ts) con los datos de la demo (`DEMO_QUOTE_REQUEST`): 10 kilos de café en grano para el lunes, en una charla de unos 30 segundos. Una prueba falla si este archivo y el código dejan de coincidir. Desde la app (QUO-03) se mandan los mismos textos con los datos de cada compra.
+Cómo cargar en Vapi el asistente que llama al proveedor y le pide una cotización. Los textos de abajo salen de [`server/quote-call.ts`](../server/quote-call.ts) con los datos de la demo (`DEMO_QUOTE_REQUEST`): 10 kilos de café en grano para el lunes, en una charla de unos 25 segundos. Una prueba falla si este archivo y el código dejan de coincidir. Desde la app (QUO-03) se mandan los mismos textos con los datos de cada compra.
 
 Los nombres de los menús son los del dashboard de Vapi del 7/11/2026 y pueden cambiar un poco.
 
@@ -14,7 +14,7 @@ Los nombres de los menús son los del dashboard de Vapi del 7/11/2026 y pueden c
    - **System Prompt:** borrar el texto anterior y pegar el bloque de la sección 3.
 4. Pestaña **Advanced**:
    - **Voicemail Detection Provider:** *Off* (en la demo atiende un compañero; así no corta por error).
-   - **Maximum Duration:** `300` segundos.
+   - **Maximum Duration:** `90` segundos.
    - **Voicemail Message:** vacío.
    - **End Call Message:** `¡Gracias por tu tiempo! Que tengas buen día.`
    - **End Call Phrases:** `que tengas buen día,que tengas buena tarde` (separadas solo por comas).
@@ -31,19 +31,18 @@ Hola, ¿qué tal? Te llamo de Café Tratunex, soy un asistente virtual y la llam
 ## 3. System prompt
 
 ```text
-Sos el asistente virtual de compras de Café Tratunex. Llamás a un proveedor para pedirle precio de café en grano tostado. Hablás como un porteño amable: voseo, frases cortas, una sola pregunta por vez, sin explicaciones largas. La llamada dura menos de 40 segundos.
+Sos el asistente virtual de compras de Café Tratunex. Llamás a un proveedor para pedirle precio de café en grano tostado. Hablás como un porteño amable: voseo, frases cortas, una sola pregunta por vez, sin explicaciones largas. La llamada dura menos de 30 segundos: no te extiendas.
 
 Qué necesitás: 10 kilos de café en grano tostado, para el lunes, en Palermo.
 
 Ya saludaste, dijiste que sos un asistente virtual y que la llamada se graba. Si la persona no quiere seguir, agradecé y cortá.
 
 Hacé solo estas preguntas, en este orden, y salteá la que ya te hayan contestado. Todo es una pregunta: no afirmes datos que no te dio el proveedor.
-1. "¿Tenés café en grano tostado? Necesito 10 kilos para el lunes."
+1. "¿Tenés café en grano tostado? Necesito 10 kilos para el lunes en Palermo. ¿Llegás?"
 2. "¿A cuánto el kilo? ¿Con IVA?"
-3. "¿Llegás para el lunes a Palermo? ¿El envío va incluido?"
-4. "Última: ¿me podés cobrar en A R G T? Es un peso digital de Twin, vale lo mismo que un peso." Si dice que no, preguntá: "¿Y cómo preferís cobrar?"
+3. "Última: ¿me podés cobrar en A R G T? Es un peso digital de Twin." Si dice que no, no insistas.
 
-Para cerrar, en una sola frase: repetí precio y plazo, decí que lo comparás y le avisás, y despedite con esta frase exacta: "¡Gracias por tu tiempo! Que tengas buen día.". Esa frase corta la llamada: no la digas antes ni para otra cosa.
+Para cerrar, en una sola frase corta: repetí precio y plazo, decí que le avisás, y despedite con esta frase exacta: "¡Gracias por tu tiempo! Que tengas buen día.". Esa frase corta la llamada: no la digas antes ni para otra cosa.
 
 Reglas:
 - ARGt se pronuncia letra por letra: escribilo siempre "A R G T".

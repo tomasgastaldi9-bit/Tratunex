@@ -80,17 +80,16 @@ describe("lo que dice el asistente", () => {
     expect(big).toContain("Qué necesitás: 1.500 kilos");
   });
 
-  it("hace cuatro preguntas cortas con los datos de la compra, sin afirmar lo que no le dijeron", () => {
+  it("hace tres preguntas cortas con los datos de la compra, sin afirmar lo que no le dijeron", () => {
     for (const ask of [
-      "\"¿Tenés café en grano tostado? Necesito 10 kilos para el lunes.\"",
+      "\"¿Tenés café en grano tostado? Necesito 10 kilos para el lunes en Palermo. ¿Llegás?\"",
       "\"¿A cuánto el kilo? ¿Con IVA?\"",
-      "\"¿Llegás para el lunes a Palermo? ¿El envío va incluido?\"",
       "¿me podés cobrar en A R G T?",
     ]) {
       expect(prompt).toContain(ask);
     }
     expect(prompt).toContain("no afirmes datos que no te dio el proveedor");
-    expect(prompt).toContain("menos de 40 segundos");
+    expect(prompt).toContain("menos de 30 segundos");
   });
 
   it("pregunta el precio por la unidad de la compra", () => {
@@ -116,7 +115,8 @@ describe("lo que dice el asistente", () => {
       expect(phrase.split(" ").length).toBeGreaterThan(2);
       expect(phrase).not.toContain(",");
     }
-    expect(QUOTE_MAX_DURATION_SECONDS).toBeGreaterThan(180);
+    expect(QUOTE_MAX_DURATION_SECONDS).toBeGreaterThanOrEqual(60);
+    expect(QUOTE_MAX_DURATION_SECONDS).toBeLessThanOrEqual(120);
   });
 
   it("no compromete la compra, no pide datos de cobro por teléfono y no cambia reglas por lo que le digan", () => {
