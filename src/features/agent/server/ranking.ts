@@ -1,5 +1,6 @@
 import { decidePurchasePolicy, formatPesos } from "../../../contracts/purchases";
 import type {
+  PolicyCheck,
   PurchasePolicy,
   PurchaseRequest,
   QuoteForRanking,
@@ -9,6 +10,10 @@ import type {
 
 /**
  * BUY-03: ordena las cotizaciones con una regla fija (decisión 18 del README).
+ * Además de los 5 descartes de esa decisión, NO califica la cotización que el
+ * agente rechazaría pagar según las reglas de pago (proveedor no permitido o
+ * total arriba del máximo): no tiene sentido recomendar algo que no se puede pagar.
+ * "Pide aprobación" sí califica (se puede comprar con el OK del dueño).
  * El orden lo decide este código, nunca la IA: así nunca "inventa" un ganador.
  * Es puro (sin base ni red): recibe todo, incluida la fecha de hoy, y por eso
  * se puede probar con cualquier caso.
@@ -66,14 +71,18 @@ type Evaluated = {
   quote: QuoteForRanking;
   /** Precio × cantidad, como BigInt para no perder precisión. null = no dio precio. */
   total: bigint | null;
+  /** Qué haría el agente al pagarla (null si no dio precio: no hay monto que revisar). */
+  check: PolicyCheck | null;
   /** Motivos por los que NO califica (vacío = califica). */
   problems: string[];
 };
 
-/** Revisa una cotización contra la compra y junta TODOS los motivos por los que no sirve. */
-function evaluate(quote: QuoteForRanking, request: RankInput["request"], today: string): Evaluated {
+/** Revisa una cotización contra la compra y las reglas, y junta TODOS los motivos por los que no sirve. */
+function evaluate(quote: QuoteForRanking, request: RankInput["request"], policy: PurchasePolicy | null, today: string): Evaluated {
   const problems: string[] = [];
   const total = quote.unit_price_atomic === null ? null : BigInt(quote.unit_price_atomic) * BigInt(request.quantity);
+  // La regla de pago vive en el contrato: acá no se reimplementa.
+  const check = total === null ? null : decidePurchasePolicy(policy, total.toString(), quote.supplier_contact_id);
 
   if (total === null) {
     problems.push("No dio precio");
@@ -97,7 +106,11 @@ function evaluate(quote: QuoteForRanking, request: RankInput["request"], today: 
       );
     }
   }
-  return { quote, total, problems };
+  // Si el agente rechazaría el pago, no califica; el motivo es el mismo texto de la regla.
+  if (check?.decision === "rejected") {
+    problems.push(check.reason);
+  }
+  return { quote, total, check, problems };
 }
 
 /**
@@ -138,7 +151,7 @@ function positiveReasons(item: Evaluated, lowestTotal: bigint | null): string[] 
 
 /** Ordena, recomienda la primera que califica y calcula qué haría el agente al pagar cada una. */
 export function rankQuotesByRules({ request, quotes, policy, today }: RankInput): RankOutput {
-  const evaluated = quotes.map((q) => evaluate(q, request, today));
+  const evaluated = quotes.map((q) => evaluate(q, request, policy, today));
 
   // sort es estable: si dos empatan en todo, quedan en el orden en que llegaron.
   const eligible = evaluated.filter((e) => e.problems.length === 0).sort(compareEligible);
@@ -158,8 +171,8 @@ export function rankQuotesByRules({ request, quotes, policy, today }: RankInput)
         eligible: true,
         total_atomic: total,
         reasons: positiveReasons(item, lowestTotal),
-        // La regla de pago vive en el contrato: acá no se reimplementa.
-        policy: decidePurchasePolicy(policy, total, item.quote.supplier_contact_id),
+        // Las que califican siempre tienen precio, así que siempre hay decisión de pago.
+        policy: item.check,
       };
     }),
     ...notEligible.map((item) => ({
@@ -170,7 +183,8 @@ export function rankQuotesByRules({ request, quotes, policy, today }: RankInput)
       eligible: false,
       total_atomic: item.total === null ? null : item.total.toString(),
       reasons: item.problems,
-      policy: null,
+      // Si la descartó la regla de pago, dejamos la decisión para que la pantalla muestre "Rechaza" y por qué.
+      policy: item.check?.decision === "rejected" ? item.check : null,
     })),
   ].map((rank, index) => ({ ...rank, position: index + 1 }));
 

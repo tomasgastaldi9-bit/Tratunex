@@ -101,7 +101,8 @@ export function explainByRules(resumen: RankingSummary): string {
   const mejor = resumen.primeras[0];
   const motivo = mejor?.motivos[0];
   if (!mejor || !motivo) return "Ninguna cotización sirve para esta compra.";
-  return `Ninguna cotización sirve para esta compra: ${enMinuscula(motivo)} (${mejor.proveedor}).`;
+  // Los motivos de la regla de pago terminan en punto: se lo sacamos para no cerrar la frase dos veces.
+  return `Ninguna cotización sirve para esta compra: ${enMinuscula(motivo.replace(/\.$/, ""))} (${mejor.proveedor}).`;
 }
 
 const CLAUDE_URL = "https://api.anthropic.com/v1/messages";

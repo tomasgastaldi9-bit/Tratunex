@@ -133,14 +133,59 @@ describe("rankQuotesByRules", () => {
   it("la regla de pago se calcula para cada una que califica (sin reglas → pide aprobación)", () => {
     const r = rank([quote({ unit_price_atomic: pesosToAtomic(100) }), quote({ unit_price_atomic: pesosToAtomic(150) })], null);
     expect(r.ranking.map((q) => q.policy?.decision)).toEqual(["needs_approval", "needs_approval"]);
-    const conReglas = rankQuotesByRules({
+    expect(r.ranking.map((q) => q.eligible)).toEqual([true, true]);
+  });
+
+  it("pide aprobación sigue calificando y se puede recomendar", () => {
+    const r = rankQuotesByRules({
       request: { ...request, budget_atomic: pesosToAtomic(1000000) },
-      quotes: [quote({ unit_price_atomic: pesosToAtomic(300) }), quote({ unit_price_atomic: pesosToAtomic(1200) })],
+      // $ 150.000 > $ 100.000 que paga solo → pide aprobación.
+      quotes: [quote({ quote_id: "con-ok", unit_price_atomic: pesosToAtomic(300) })],
       policy,
       today,
     });
-    // $ 150.000 > $ 100.000 que paga solo → pide aprobación; $ 600.000 > máximo → rechaza.
-    expect(conReglas.ranking.map((q) => q.policy?.decision)).toEqual(["needs_approval", "rejected"]);
+    expect(r.recommended_quote_id).toBe("con-ok");
+    expect(r.ranking[0]).toMatchObject({ eligible: true, policy: { decision: "needs_approval" } });
+  });
+
+  it("total arriba del máximo por compra (pero dentro del presupuesto) → no califica, con el motivo de la regla", () => {
+    const r = rankQuotesByRules({
+      request: { ...request, budget_atomic: pesosToAtomic(1000000) },
+      quotes: [quote({ quote_id: "sobre-maximo", unit_price_atomic: pesosToAtomic(1200) }), quote({ quote_id: "cara-ok", unit_price_atomic: pesosToAtomic(1300), available_quantity: 1 })],
+      policy,
+      today,
+    });
+    expect(r.recommended_quote_id).toBeNull();
+    const rejected = { decision: "rejected", reason: "$ 600.000 supera el máximo por compra de $ 500.000." };
+    expect(r.ranking[0]).toMatchObject({ quote_id: "sobre-maximo", eligible: false, reasons: [rejected.reason], policy: rejected });
+    // Si además falla otra cosa, se juntan todos los motivos (el de la regla al final).
+    expect(r.ranking[1]).toMatchObject({
+      quote_id: "cara-ok",
+      eligible: false,
+      reasons: ["Tiene 1 de 500", "$ 650.000 supera el máximo por compra de $ 500.000."],
+      policy: { decision: "rejected" },
+    });
+  });
+
+  it("proveedor fuera de la lista de permitidos → no califica y no se recomienda, aunque sea la más barata", () => {
+    const permitido = quote({ quote_id: "permitido", unit_price_atomic: pesosToAtomic(190) });
+    const noPermitido = quote({ quote_id: "no-permitido", unit_price_atomic: pesosToAtomic(150) });
+    const soloLista: PurchasePolicy = { ...policy, only_allowed_suppliers: true, allowed_supplier_ids: [permitido.supplier_contact_id] };
+    const r = rank([noPermitido, permitido], soloLista);
+    expect(r.recommended_quote_id).toBe("permitido");
+    expect(r.ranking[0]).toMatchObject({ quote_id: "permitido", position: 1, eligible: true, policy: { decision: "auto_pay" }, reasons: ["El precio total más bajo", "Entrega en 5 días", "Acepta ARGt"] });
+    expect(r.ranking[1]).toMatchObject({
+      quote_id: "no-permitido",
+      position: 2,
+      eligible: false,
+      reasons: ["El proveedor no está en la lista de proveedores permitidos."],
+      policy: { decision: "rejected", reason: "El proveedor no está en la lista de proveedores permitidos." },
+    });
+  });
+
+  it("si no califica por otra causa (y la regla no la rechaza), policy queda null", () => {
+    const r = rank([quote({ available_quantity: 1 })]);
+    expect(r.ranking[0]).toMatchObject({ eligible: false, policy: null });
   });
 });
 

@@ -63,6 +63,16 @@ describe("explainByRules", () => {
   it("sin recomendada: el motivo principal de la mejor", () => {
     expect(explainByRules(summaryFor([quotes[0]!]))).toBe("Ninguna cotización sirve para esta compra: tiene 300 de 500 (Vasos Baratos).");
   });
+
+  it("sin recomendada porque la regla de pago la rechaza: usa ese motivo, sin doble punto, y el resumen lleva el 'Rechaza'", () => {
+    const soloLista: PurchasePolicy = { ...policy, only_allowed_suppliers: true, allowed_supplier_ids: [quotes[0]!.supplier_contact_id] };
+    const qs = [quotes[1]!];
+    const { ranking, recommended_quote_id } = rankQuotesByRules({ request, quotes: qs, policy: soloLista, today: "2026-11-07" });
+    const s = buildRankingSummary({ request, quotes: qs, ranking, recommended_quote_id });
+    expect(s.recomendada).toBeNull();
+    expect(s.primeras[0]?.pago).toEqual({ decision: "Rechaza", motivo: "El proveedor no está en la lista de proveedores permitidos." });
+    expect(explainByRules(s)).toBe("Ninguna cotización sirve para esta compra: el proveedor no está en la lista de proveedores permitidos (Descartables Sur).");
+  });
 });
 
 describe("explainWithClaude / explainRanking", () => {
