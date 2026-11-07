@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pesosToAtomic } from "../../../contracts/purchases";
-import { createPurchaseService } from "./purchase-service";
+import { createPurchaseService, type PurchaseServiceDeps } from "./purchase-service";
 
 // Espiamos console.error: el servicio anota los errores raros en el log del servidor.
 let consoleError: MockInstance<typeof console.error>;
@@ -49,7 +49,8 @@ const policy = {
 type Res = { data: unknown; error: { message?: string; code?: string } | null };
 
 // Cliente falso: from(tabla).select().eq()....maybeSingle() devuelve lo que pidamos por tabla.
-function fakeClient(opts: { tables?: Record<string, Res>; rpc?: Res; rpcThrows?: boolean; fromThrows?: boolean }) {
+// Para rankQuotes: por defecto sin clave de Claude y con un fetch falso, así ninguna prueba llama a la API real.
+function fakeClient(opts: { tables?: Record<string, Res>; rpc?: Res; rpcThrows?: boolean; fromThrows?: boolean; deps?: PurchaseServiceDeps }) {
   const eq = vi.fn();
   const selects: Array<[string, string]> = [];
   const rpc = vi.fn(async () => {
@@ -71,7 +72,8 @@ function fakeClient(opts: { tables?: Record<string, Res>; rpc?: Res; rpcThrows?:
     };
     return chain;
   });
-  const service = createPurchaseService(async () => ({ rpc, from }) as unknown as SupabaseClient);
+  const deps = opts.deps ?? { getApiKey: () => undefined, fetchImpl: vi.fn() as unknown as typeof fetch };
+  const service = createPurchaseService(async () => ({ rpc, from }) as unknown as SupabaseClient, deps);
   return { service, rpc, from, eq, selects };
 }
 
@@ -264,5 +266,76 @@ describe("checkPurchasePolicy", () => {
       const r = await fakeClient(opts).service.checkPurchasePolicy(ctx, input);
       expect(r).toMatchObject({ ok: false, error: { code: "PROVIDER_UNAVAILABLE", retryable: true } });
     }
+  });
+});
+
+describe("rankQuotes", () => {
+  // Plazo desconocido a propósito: así la prueba no depende de la fecha de hoy.
+  const quote = (over: object = {}) => ({
+    quote_id: "q-sirve",
+    supplier_contact_id: supplier,
+    supplier_name: "Descartables Sur",
+    unit_price_atomic: pesosToAtomic(180),
+    available_quantity: 1000,
+    delivery_days: null,
+    accepts_argt: "yes" as const,
+    origin: "call" as const,
+    ...over,
+  });
+  const input = {
+    purchase_request_id: requestId,
+    quotes: [quote({ quote_id: "q-sin-stock", supplier_contact_id: otherSupplier, unit_price_atomic: pesosToAtomic(150), available_quantity: 10 }), quote()],
+  };
+  const tables = (over: Record<string, Res> = {}) => ({
+    purchase_requests: { data: savedRequest, error: null },
+    purchase_policies: { data: policy, error: null },
+    ...over,
+  });
+
+  it("valida la entrada sin leer la base", async () => {
+    const { service, from } = fakeClient({});
+    expect(await service.rankQuotes(ctx, { ...input, quotes: [] })).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
+    expect(await service.rankQuotes({ ...ctx, company_id: " " }, input)).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("la compra no existe (o es de otra empresa) → NOT_FOUND", async () => {
+    const { service, eq } = fakeClient({});
+    expect(await service.rankQuotes(ctx, input)).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+    expect(eq).toHaveBeenCalledWith("purchase_requests", "company_id", company);
+  });
+
+  it("si no se pueden leer las reglas → PROVIDER_UNAVAILABLE", async () => {
+    const a = fakeClient({ tables: tables({ purchase_policies: { data: null, error: { message: "x" } } }) });
+    expect(await a.service.rankQuotes(ctx, input)).toMatchObject({ ok: false, error: { code: "PROVIDER_UNAVAILABLE", retryable: true } });
+    const b = fakeClient({ tables: tables({ purchase_policies: { data: { ...policy, max_per_purchase_atomic: 1e30 }, error: null } }) });
+    expect(await b.service.rankQuotes(ctx, input)).toMatchObject({ ok: false, error: { code: "PROVIDER_UNAVAILABLE" } });
+  });
+
+  it("éxito sin clave de Claude: ranking + explicación de reglas, sin llamar a fetch", async () => {
+    const fetchImpl = vi.fn();
+    const { service, eq } = fakeClient({ tables: tables(), deps: { getApiKey: () => undefined, fetchImpl: fetchImpl as unknown as typeof fetch } });
+    const r = await service.rankQuotes(ctx, input);
+    expect(r).toMatchObject({
+      ok: true,
+      data: {
+        recommended_quote_id: "q-sirve",
+        explanation_source: "rules",
+        ranking: [
+          { quote_id: "q-sirve", position: 1, eligible: true, total_atomic: pesosToAtomic(90000), policy: { decision: "auto_pay" } },
+          { quote_id: "q-sin-stock", position: 2, eligible: false, reasons: ["Tiene 10 de 500"], policy: null },
+        ],
+      },
+    });
+    if (r.ok) expect(r.data.explanation).toMatch(/^Recomiendo a Descartables Sur: /);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(eq).toHaveBeenCalledWith("purchase_policies", "company_id", company);
+  });
+
+  it("con clave usa la explicación de Claude (fuente ai)", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: "Conviene Descartables Sur." }] })));
+    const { service } = fakeClient({ tables: tables(), deps: { getApiKey: () => "k", fetchImpl: fetchImpl as unknown as typeof fetch } });
+    expect(await service.rankQuotes(ctx, input)).toMatchObject({ ok: true, data: { explanation: "Conviene Descartables Sur.", explanation_source: "ai" } });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
