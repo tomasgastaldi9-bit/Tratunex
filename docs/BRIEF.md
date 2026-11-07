@@ -106,6 +106,25 @@ Contratos ARGt (docs de Twin): Base `0xf016413834E6D1A14F3D628B11D6Ef725a6bdbDD`
 - **Cada pago guarda su hash** y se muestra con link al explorer.
 - **Los ARGt son plata real** (1 ARGt ≈ 1 peso): la billetera del agente tiene solo lo justo para la demo.
 
+### Excepción autorizada para la demo
+
+Tomás autorizó una única demostración con una necesidad y cotización **ficticias,
+rotuladas como datos de ejemplo**, y una transferencia real de **1 ARGt** entre
+las dos billeteras de prueba bajo su control en Arbitrum. No se presenta la
+cotización como una oferta real. El destinatario autorizado es
+`0x4E5F932Fa2D1BE48A4FC39a80CD2eC85C8AA5bB1`; el emisor es la billetera del
+agente documentada en el README.
+
+Esta excepción solo se habilita para la empresa y la orden de prueba autorizadas,
+con aprobación humana, política y presupuesto vigentes, y mediante una ruta
+aislada que conserve la reserva única por orden, el nonce global y la protección
+contra retransmisiones. La pantalla debe advertir que los datos son ficticios,
+que la transferencia es real y que no puede cancelarse desde la aplicación.
+Las cotizaciones de ejemplo siguen bloqueadas en el flujo ordinario. El monto,
+la red y las billeteras se verifican en el servidor y la base, no se aceptan del
+navegador; habilitar la excepción requiere revisión y pruebas específicas.
+La habilitación se retira al terminar la demostración.
+
 ## 8. Datos nuevos
 
 Todas las tablas llevan `company_id` y RLS por membresía.
