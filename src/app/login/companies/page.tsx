@@ -48,7 +48,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
       ) : null}
       {!error && companies?.length === 0 ? <Alert tone="warning">Tu usuario todavía no pertenece a ninguna empresa.</Alert> : null}
       {companies && companies.length > 0 ? (
-        <ul className="divide-y divide-line rounded-card border border-line">
+        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
           {companies.map((company) => {
             const isSelected = selected === company.id;
             return (

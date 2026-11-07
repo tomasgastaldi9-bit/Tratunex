@@ -47,6 +47,8 @@ export default async function HomePage() {
 
       {!contexto.ok && <AccessAlert code={contexto.error.code} />}
 
+      {contexto.ok && <ProximoPaso perfil={perfil} reglas={reglas} />}
+
       {contexto.ok && (
         <Seccion titulo="Antes de comprar" descripcion="El agente necesita saber quién compra y hasta cuánto puede pagar.">
           <Fila
@@ -105,7 +107,7 @@ function Seccion({ titulo, descripcion, children }: { titulo: string; descripcio
         <h2 className="text-[15px] font-semibold">{titulo}</h2>
         <p className="text-sm text-ink-muted">{descripcion}</p>
       </div>
-      <ul className="divide-y divide-line rounded-card border border-line">{children}</ul>
+      <ul className="divide-y divide-line rounded-card border border-line bg-surface">{children}</ul>
     </section>
   );
 }
@@ -123,7 +125,11 @@ function Fila({
 }) {
   return (
     <li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3.5 sm:items-center">
-      {numero !== undefined && <span className="w-4 text-sm text-ink-subtle tabular-nums">{numero}</span>}
+      {numero !== undefined && (
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white tabular-nums">
+          {numero}
+        </span>
+      )}
       <div className="flex min-w-0 grow basis-60 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
         <p className="text-sm font-medium sm:w-48 sm:shrink-0">{titulo}</p>
         <div className="text-sm text-ink-muted">{detalle}</div>
@@ -139,7 +145,7 @@ function EstadoTexto({ estado, listo, falta }: { estado: Estado; listo: string; 
   return (
     <span className="inline-flex items-center gap-2">
       <span aria-hidden className={cx("size-1.5 rounded-full", color)} />
-      <span className={estado === "falta" ? "text-warning" : undefined}>{texto}</span>
+      <span className={estado === "falta" ? "text-warning" : estado === "listo" ? "text-success" : undefined}>{texto}</span>
     </span>
   );
 }
@@ -149,5 +155,50 @@ function Ir({ href, children }: { href: string; children: ReactNode }) {
     <Link href={href} className={buttonStyles({ variant: "secondary", size: "sm" })}>
       {children}
     </Link>
+  );
+}
+
+/**
+ * Bloque oscuro con lo próximo que conviene hacer, según lo que está cargado
+ * de verdad. Es lo que más resalta de la pantalla, a propósito: una sola
+ * acción clara. Si no pudimos leer el estado, no se muestra.
+ */
+function ProximoPaso({ perfil, reglas }: { perfil: Estado; reglas: Estado }) {
+  if (perfil === "desconocido" || reglas === "desconocido") return null;
+  const paso =
+    perfil === "falta"
+      ? {
+          titulo: "Completá el perfil de tu empresa",
+          texto: "El agente lo usa para presentarse cuando llama a los proveedores.",
+          href: "/agent/profile",
+          accion: "Completar perfil",
+        }
+      : reglas === "falta"
+        ? {
+            titulo: "Cargá tus reglas de pago",
+            texto: "Hasta cuánto puede pagar el agente solo y cuándo te pide aprobación.",
+            href: "/agent/rules",
+            accion: "Cargar reglas",
+          }
+        : {
+            titulo: "Todo listo para comprar",
+            texto: "Contale al agente qué necesitás y él pide cotización a los proveedores.",
+            href: "/purchases/new",
+            accion: "Nueva compra",
+          };
+  return (
+    <section className="flex flex-col gap-4 rounded-card bg-gray-900 px-6 py-5 text-white sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs text-gray-400">Próximo paso</p>
+        <h2 className="text-lg leading-snug font-semibold">{paso.titulo}</h2>
+        <p className="text-sm text-gray-300">{paso.texto}</p>
+      </div>
+      <Link
+        href={paso.href}
+        className={buttonStyles({ variant: "inverse", className: "shrink-0" })}
+      >
+        {paso.accion}
+      </Link>
+    </section>
   );
 }

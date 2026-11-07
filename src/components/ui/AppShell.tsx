@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Logo } from "./Logo";
 import { MobileNav, Sidebar } from "./Sidebar";
 
 /**
- * El "marco" de todas las pantallas internas: menú a la izquierda y el
- * contenido sobre fondo blanco.
+ * El "marco" de todas las pantallas internas: menú oscuro a la izquierda y el
+ * contenido sobre fondo gris claro, con tarjetas blancas.
  *
  * CÓMO USARLO en tu sección: creá un layout.tsx en tu carpeta de app y
  * envolvé a los hijos. Ejemplo para /agent (src/app/agent/layout.tsx):
@@ -18,7 +19,7 @@ import { MobileNav, Sidebar } from "./Sidebar";
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface md:flex">
+    <div className="min-h-screen bg-canvas md:flex">
       {/* Link invisible que aparece al usar Tab: permite saltar el menú e ir
           directo al contenido (ayuda a quien navega con teclado). */}
       <a
@@ -34,9 +35,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* En el celular no hay menú lateral: arriba va el nombre y abajo la barra. */}
-      <header className="flex items-center border-b border-line px-4 py-3 md:hidden">
-        <Link href="/" className="text-[17px] font-semibold tracking-[-0.01em]">
-          Tratunex
+      <header className="flex items-center border-b border-line bg-surface px-4 py-3 md:hidden">
+        <Link href="/">
+          <Logo />
         </Link>
       </header>
       <MobileNav />

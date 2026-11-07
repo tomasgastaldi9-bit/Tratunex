@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           {error === "unavailable" ? "El servicio de acceso no está disponible. Intentá más tarde." : "No pudimos iniciar sesión. Revisá tus datos."}
         </Alert>
       )}
-      <form action={signIn} className="flex flex-col gap-4">
+      <form action={signIn} className="flex flex-col gap-4 rounded-card border border-line bg-surface p-6">
         <Input label="Correo" name="email" type="email" autoComplete="email" required />
         <Input label="Contraseña" name="password" type="password" autoComplete="current-password" required />
         <button type="submit" className={buttonStyles({ className: "mt-2 min-h-10 w-full" })}>

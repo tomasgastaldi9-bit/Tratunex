@@ -19,9 +19,9 @@
      oscuro. Reemplazan a los grises de Tailwind: bg-gray-100, text-gray-600…
      Los nombres de abajo (canvas, surface, ink…) son atajos a esta escala. */
   --color-gray-50: #fafafa;
-  --color-gray-100: #f4f4f4;
-  --color-gray-200: #e8e8e8;
-  --color-gray-300: #d6d6d6;
+  --color-gray-100: #f1f1f1;
+  --color-gray-200: #e3e3e3;
+  --color-gray-300: #d1d1d1;
   --color-gray-400: #a8a8a8;
   --color-gray-500: #767676;
   --color-gray-600: #575757;
@@ -32,10 +32,10 @@
 
   /* ---------- Colores con nombre ---------- */
 
-  /* Fondo del menú y de las pantallas de acceso. */
-  --color-canvas: var(--color-gray-50);
+  /* Fondo de las pantallas: gris claro, para que las tarjetas blancas se despeguen. */
+  --color-canvas: var(--color-gray-100);
 
-  /* Fondo del contenido, tarjetas, campos y filas: blanco (con borde fino). */
+  /* Tarjetas, campos y filas: blanco (con borde fino). */
   --color-surface: #ffffff;
 
   /* Cuando pasás el mouse por una fila o un botón claro. */

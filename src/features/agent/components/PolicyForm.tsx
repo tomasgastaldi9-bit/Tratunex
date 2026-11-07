@@ -219,8 +219,8 @@ export function PolicyForm({ initialValues, suppliers, actionId, canEdit }: Poli
 
       {/* Ejemplos calculados en vivo con decidePurchasePolicy: la MISMA regla
           que usa el servidor antes de pagar (ver policy-form-data.ts). */}
-      {/* Fondo gris: es una vista previa calculada, no algo que se edita. */}
-      <Card className="flex flex-col gap-4 bg-canvas">
+      {/* Borde punteado y gris muy claro: es una vista previa calculada, no algo que se edita. */}
+      <Card className="flex flex-col gap-4 border-dashed border-gray-300 bg-gray-50">
         <h2 className="text-[15px] leading-none font-semibold">Así decide el agente</h2>
         {ejemplos.ok ? (
           <ul className="flex flex-col gap-4">

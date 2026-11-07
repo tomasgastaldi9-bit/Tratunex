@@ -12,6 +12,7 @@ import { cx } from "./cx";
  *  - "soft": gris claro, sin borde. Acciones frecuentes pero no principales
  *    ("Agregar otro", filtros).
  *  - "ghost": sin fondo. Acciones discretas dentro de listas o tarjetas.
+ *  - "inverse": blanco, para usar sobre un fondo oscuro.
  *  - "danger": rojo. Solo para acciones que borran o no tienen vuelta atrás.
  *    El texto tiene que decir qué pasa ("Borrar contacto", no "Aceptar").
  *
@@ -32,7 +33,7 @@ import { cx } from "./cx";
  *    Igual, en tu función de guardar, chequeá que no esté ya guardando: el
  *    navegador puede enviar un formulario apretando Enter en un campo.
  */
-export type ButtonVariant = "primary" | "secondary" | "soft" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "soft" | "ghost" | "danger" | "inverse";
 export type ButtonSize = "sm" | "md";
 
 const VARIANTES: Record<ButtonVariant, string> = {
@@ -44,6 +45,8 @@ const VARIANTES: Record<ButtonVariant, string> = {
   soft: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300",
   ghost: "border-transparent bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200",
   danger: "border-danger bg-danger text-white shadow-[0_1px_2px_rgb(0_0_0/0.15)] hover:bg-danger/90 active:bg-danger",
+  // Blanco sobre fondos oscuros (por ejemplo, el bloque "Próximo paso" del inicio).
+  inverse: "border-white bg-white text-gray-900 hover:border-gray-200 hover:bg-gray-200 active:bg-gray-300",
 };
 
 const TAMANIOS: Record<ButtonSize, string> = {
@@ -69,8 +72,9 @@ export function buttonStyles({
     "inline-flex items-center justify-center gap-2 rounded-control border leading-none font-medium whitespace-nowrap select-none",
     // Transición corta de color y el "hundido" de 1px al hacer clic (sin movimiento si la persona lo pidió).
     "transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0",
-    // Anillo visible cuando se navega con teclado (accesibilidad).
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900",
+    // Anillo visible cuando se navega con teclado (accesibilidad). Blanco si el botón va sobre fondo oscuro.
+    "focus-visible:outline-2 focus-visible:outline-offset-2",
+    variant === "inverse" ? "focus-visible:outline-white" : "focus-visible:outline-gray-900",
     // Deshabilitado: gris plano, sin sombra y sin clic.
     "disabled:pointer-events-none disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none",
     VARIANTES[variant],
