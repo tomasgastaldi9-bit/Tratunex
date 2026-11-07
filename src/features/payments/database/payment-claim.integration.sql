@@ -27,6 +27,16 @@ do $$ begin
 end $$;
 reset role;
 update public.purchase_policies set max_per_purchase_atomic = 10000000000000000000 where company_id = 'b0000000-0000-4000-8000-000000000001';
+update public.supplier_profiles set collection_address = '0x0000000000000000000000000000000000000003', wallet_version = 2 where company_id = 'b0000000-0000-4000-8000-000000000001';
+set local role service_role;
+do $$ begin
+  begin
+    perform public.claim_order_payment('b0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001','f0000000-0000-4000-8000-000000000001','stale-wallet',2,42161,'0x0000000000000000000000000000000000000001','0x59863989d080b22476db95656d0c3cc18be92214',7);
+    raise exception 'stale wallet was accepted';
+  exception when raise_exception then if sqlerrm not like 'CONFLICT: approved conditions changed%' then raise; end if; end;
+end $$;
+reset role;
+update public.supplier_profiles set collection_address = '0x0000000000000000000000000000000000000002', wallet_version = 1 where company_id = 'b0000000-0000-4000-8000-000000000001';
 set local role service_role;
 do $$ declare a jsonb; b jsonb; begin
   a := public.claim_order_payment('b0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001','f0000000-0000-4000-8000-000000000001','first',2,42161,'0x0000000000000000000000000000000000000001','0x59863989d080b22476db95656d0c3cc18be92214',7);
