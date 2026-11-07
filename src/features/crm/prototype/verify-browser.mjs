@@ -1,10 +1,10 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const { pathToFileURL } = require('node:url');
-const { chromium } = require('playwright');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { chromium } from 'playwright';
 (async () => {
-  const root = __dirname;
+  const root = import.meta.dirname;
   const data = JSON.parse(fs.readFileSync(path.join(root, '../mocks/fixtures.json'), 'utf8'));
   const first = data.companies[0].id;
   const second = data.companies[1].id;

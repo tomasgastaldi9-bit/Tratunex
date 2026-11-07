@@ -37,8 +37,9 @@ generado a partir de `../mocks/fixtures.json`. Las fechas se muestran en
   invoca APIs ni inicia llamadas. El botón Llamar está deshabilitado.
 - La separación visual por empresa no prueba aislamiento de datos ni RLS.
 - No define contratos de voz ni sustituye el webhook o el cron.
-- Al llegar el bootstrap, el recorrido se implementará en `/pipeline`,
-  `/contacts/[id]` y `/tasks`, consumiendo los servicios públicos del módulo CRM.
+- El bootstrap de TRA-24 ya está integrado. El siguiente paso es implementar
+  el recorrido en `/pipeline`, `/contacts/[id]` y `/tasks` y conectarlo con los
+  servicios públicos del CRM que quedan pendientes.
 - Los siete códigos de etapa son los de `docs/BRIEF.md`; `won` se reserva a un
   cierre manual. El boceto no permite mover tarjetas ni ejecutar tareas.
 - Una tarea ligada a una oportunidad se muestra solo en esa tarjeta. Las tareas
@@ -58,7 +59,7 @@ Después abrí `index.html` y recorré los pasos anteriores en escritorio y móv
 
 ## Verificación automatizada del boceto
 
-`verify-browser.cjs` recorre el CRM en Chrome headless, comprueba Tablero y Lista,
+`verify-browser.mjs` recorre el CRM en Chrome headless, comprueba Tablero y Lista,
 los filtros por empresa, las fechas desconocidas y la carga de Inter. También
 verifica los enlaces a la galería y su uso de los mismos tokens. Los layouts se
 revisan en anchos de 1440, 1024, 768, 390 y 320 píxeles.
@@ -68,17 +69,18 @@ errores de JavaScript. Las cuatro capturas de referencia reflejan ese recorrido.
 Con Playwright disponible y Chrome instalado, ejecutá:
 
 ```powershell
-node src/features/crm/prototype/verify-browser.cjs
+node src/features/crm/prototype/verify-browser.mjs
 ```
 
-Antes del bootstrap, para reproducirlo sin modificar dependencias del repo:
+La verificación del rediseño se ejecutó con Playwright 1.56.1 en una carpeta
+temporal. Estos comandos permiten reproducir ese entorno de comprobación:
 
 ```powershell
 $crmValidationRoot = Join-Path $env:TEMP 'tratunex-crm-preparacion-tra53'
 New-Item -ItemType Directory -Path $crmValidationRoot -Force | Out-Null
 npm install --prefix $crmValidationRoot --no-package-lock --no-audit --no-fund --ignore-scripts playwright@1.56.1
 Copy-Item -LiteralPath src -Destination $crmValidationRoot -Recurse -Force
-node (Join-Path $crmValidationRoot 'src/features/crm/prototype/verify-browser.cjs')
+node (Join-Path $crmValidationRoot 'src/features/crm/prototype/verify-browser.mjs')
 ```
 
 El script recorre el HTML local y genera las cuatro capturas en `previews/` de

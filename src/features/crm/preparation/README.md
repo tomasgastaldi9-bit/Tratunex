@@ -86,7 +86,8 @@ Este cambio no implementa estas reglas ni aplica migraciones.
 
 ## Verificación reproducible
 
-Con Node 24 y Zod disponible, la comprobación autónoma de esta preparación es:
+Con Node 24 y las dependencias del bootstrap instaladas mediante `npm ci`,
+la comprobación autónoma de esta preparación es:
 
 ```powershell
 node src/features/crm/preparation/verify.mjs
@@ -97,13 +98,10 @@ de escenarios, números ficticios, fechas, inputs sin identidad inyectada y que
 el bridge JS coincida con el JSON. No sustituye las pruebas de reglas con
 Vitest, el recorrido de Next.js con Playwright ni las pruebas reales de base.
 
-Antes del bootstrap puede copiarse `src/` a una carpeta temporal externa con
-Zod instalado únicamente allí y ejecutar el mismo archivo. No agregar
-dependencias al repo ni instalar paquetes globales para esta preparación.
-
-Comprobación efectuada el 2026-11-07 con Node 24.22.2, Zod 4.6.7 temporal y
-TypeScript 7.0.2 disponible en el equipo. La versión usada para verificar no
-fija las versiones del proyecto, que sigue a cargo de Tomás. Comandos:
+La primera comprobación se efectuó el 2026-11-07, antes de integrar TRA-24,
+con Node 24.22.2, Zod 4.6.7 en una copia temporal y TypeScript 7.0.2 disponible
+en el equipo. El registro siguiente conserva los comandos de esa ejecución.
+Las versiones de la aplicación están fijadas en el bootstrap de Tomás.
 
 ```powershell
 $crmValidationRoot = Join-Path $env:TEMP 'tratunex-crm-preparacion-tra53'
@@ -116,9 +114,23 @@ node --check src/features/crm/prototype/prototype.js
 git diff --check
 ```
 
-Resultado: 11 comprobaciones aprobadas; typecheck y comprobación de JavaScript
-sin errores. No se ejecutaron build de Next.js, Vitest, base de datos ni
-integraciones live: todavía no existe el scaffold.
+La ejecución inicial aprobó 11 comprobaciones, el typecheck y la comprobación
+de JavaScript. Esa evidencia cubre los contratos y datos de preparación.
+La verificación de la aplicación utiliza ahora los scripts del bootstrap.
+Después de integrar TRA-24 se ejecutaron los siguientes comandos en el repo.
+
+| Comando | Resultado |
+|---|---|
+| `npm ci` | Exit 0, avisos de peer dependencies y 10 alertas moderadas del audit sobre las dependencias del bootstrap |
+| `npm run lint` | Exit 0 |
+| `npm run typecheck` | Exit 0 |
+| `npm test` | 6 pruebas aprobadas en 2 archivos |
+| `npm run build` | Exit 0, scaffold con ruta estática `/404` |
+| `node src/features/crm/preparation/verify.mjs` | 11 comprobaciones aprobadas |
+
+El recorrido CRM se revisa con el HTML local y sus pruebas de navegador.
+Las pruebas de base de datos y las integraciones live corresponden al trabajo
+de servicios que queda pendiente.
 La versión visual 1 pasó 67 comprobaciones de navegador headless, incluyendo
 Tablero y Lista, navegación a la galería y cinco anchos entre 320 y 1440 px.
 El comando reproducible y las capturas están en `../prototype/README.md`.
