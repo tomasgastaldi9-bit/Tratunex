@@ -22,9 +22,10 @@ del servidor; los errores no se sustituyen por fixtures. Se valida que compra,
 cotizaciones y proveedores correspondan a la empresa activa, sin IDs repetidos.
 
 - `/orders/quotes?purchase_request_id=<UUID>` compara la compra guardada.
-- Sin compra seleccionada, la pantalla ofrece `/purchases/new` y el ejemplo.
-  El enlace desde el éxito de BUY-01 queda en el dominio de Vale: debe abrir
-  esa ruta con el UUID de la compra creada, sin pedirlo manualmente al usuario.
+- Sin compra seleccionada, la pantalla muestra el selector de compras guardadas
+  de ORD-04, con enlaces a solicitar/comparar cotizaciones, nueva compra y ejemplo.
+  No pide UUID manual. La lectura mínima del selector usa empresa y RLS;
+  la compra seleccionada se resuelve por el servicio público de BUY-01.
 - `/orders/quotes/example` es completamente ficticio y de solo lectura. Rotula
   todos los orígenes como datos de prueba, no enlaza proveedores/llamadas reales
   y no ejecuta IA, persistencia ni pagos.

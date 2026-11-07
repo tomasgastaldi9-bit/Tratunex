@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cx } from "./cx";
-import { NAV_ITEMS, type NavItem } from "./navigation";
+import { getActiveNavHref, NAV_ITEMS, type NavItem } from "./navigation";
 
 /**
  * Menú principal (el menú lateral negro del Figma), con ícono + nombre en cada
@@ -25,10 +25,7 @@ type SidebarProps = {
 
 export function Sidebar({ brand = "T", className }: SidebarProps) {
   const rutaActual = usePathname();
-
-  // Una sección está activa si estamos en su página o en una página "hija"
-  // (por ejemplo, /agent/test cuenta como dentro de /agent).
-  const estaActiva = (href: string) => rutaActual === href || rutaActual.startsWith(`${href}/`);
+  const activeHref = getActiveNavHref(rutaActual);
 
   return (
     <nav
@@ -54,10 +51,10 @@ export function Sidebar({ brand = "T", className }: SidebarProps) {
         <span className="sr-only">Tratunex</span>
       </p>
 
-      <ul className="flex flex-row md:w-full md:flex-col md:gap-2">
+      <ul className="grid grid-cols-4 md:flex md:w-full md:flex-col md:gap-2">
         {NAV_ITEMS.map((item) => (
-          <li key={item.href} className="flex-1 md:flex-none">
-            <SidebarLink item={item} activa={estaActiva(item.href)} />
+          <li key={item.href} className="min-w-0 md:flex-none">
+            <SidebarLink item={item} activa={activeHref === item.href} />
           </li>
         ))}
       </ul>
@@ -74,7 +71,7 @@ function SidebarLink({ item, activa }: { item: NavItem; activa: boolean }) {
       // aria-current="page": le avisa al lector de pantalla cuál es la página actual.
       aria-current={activa ? "page" : undefined}
       className={cx(
-        "flex flex-col items-center gap-1.5 rounded-control px-1 py-2 md:py-3",
+        "flex min-w-0 flex-col items-center gap-1.5 rounded-control px-0 py-2 md:px-1 md:py-3",
         "transition-colors duration-150",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
         // Activa: pastilla blanca con letra negra (se ve clarísimo dónde estás).
@@ -83,8 +80,8 @@ function SidebarLink({ item, activa }: { item: NavItem; activa: boolean }) {
       )}
     >
       <Icono size={22} aria-hidden />
-      {/* 11px es el mínimo legible; en celular hay poco lugar para 5 secciones. */}
-      <span className="text-[11px] leading-none font-bold md:text-xs">{item.label}</span>
+      {/* Dos líneas disponibles en celular, sin truncar las cuatro etiquetas. */}
+      <span className="min-h-7 w-full break-words text-center text-[11px] leading-[14px] font-bold md:min-h-0 md:text-xs md:leading-tight">{item.label}</span>
     </Link>
   );
 }

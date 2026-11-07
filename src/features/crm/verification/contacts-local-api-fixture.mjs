@@ -81,6 +81,11 @@ const server = http.createServer(async (request, response) => {
         ${quote(body.p_operation)},${quote(JSON.stringify(body.p_input))}::jsonb)::text`);
       return send(response, 200, JSON.parse(output));
     }
+    if (url.pathname === "/rest/v1/rpc/create_purchase_request" && request.method === "POST") {
+      const output = await asActor(actor, `select public.create_purchase_request(${quote(body.p_company_id)}::uuid,
+        ${quote(body.p_action_id)},${quote(JSON.stringify(body.p_request))}::jsonb)::text`);
+      return send(response, 200, JSON.parse(output));
+    }
     const table = url.pathname.replace("/rest/v1/", "");
     if (request.method === "GET" && tables.has(table)) {
       const columns = url.searchParams.get("select") || "*";

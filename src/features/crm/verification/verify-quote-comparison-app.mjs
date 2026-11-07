@@ -37,9 +37,9 @@ try {
   await page.getByRole("button", { name: account.company_name, exact: true }).click();
   await page.getByRole("button", { name: `${account.company_name} (seleccionada)`, exact: true }).waitFor();
   await page.goto(`${baseUrl}/orders/quotes`);
-  await page.getByText("Elegí una compra para comparar", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Compras de tu empresa", exact: true }).waitFor();
   check("entrada no expone un formulario de UUID", await page.locator('input[name="purchase_request_id"]').count() === 0);
-  await page.goto(comparisonUrl);
+  await page.locator(`a[href="/orders/quotes?purchase_request_id=${config.ord02.purchase_a_id}"]`).click();
   await page.getByRole("heading", { name: "Comparar cotizaciones", exact: true }).waitFor();
   const table = page.getByRole("table");
   await table.waitFor();
