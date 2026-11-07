@@ -1,14 +1,14 @@
 import "server-only";
 import { getCompanyContext } from "@/features/platform/server/public";
-import { getPurchaseRequest } from "@/features/agent/server/public";
+import { getPurchaseRequest, rankQuotes } from "@/features/agent/server/public";
+import { listSupplierQuotes } from "@/features/voice/server/public";
 import { createQuoteComparisonExample } from "../mocks/quote-comparison-example";
 import { loadCompany } from "./contacts-workspace";
 import { getSupplier } from "./public";
 import { createQuoteComparisonService } from "./quote-comparison-service";
 
-// QUO-02 y BUY-03 aún no publican los lectores acordados. No se consulta una
-// tabla supuesta ni se sustituye una recomendación de IA con un ranking local.
-const compare = createQuoteComparisonService({ getPurchaseRequest, getSupplier });
+// Only public module APIs: no direct quote table reads or duplicated ranking.
+const compare = createQuoteComparisonService({ getPurchaseRequest, getSupplier, listQuotes: listSupplierQuotes, rankQuotes });
 
 export async function loadQuoteComparisonWorkspace(input: { purchase_request_id?: string; example?: boolean }) {
   const context = await getCompanyContext(undefined, { readOnlyCookies: true });

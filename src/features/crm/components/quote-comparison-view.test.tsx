@@ -27,7 +27,9 @@ function comparison(overrides: Partial<QuoteComparison> = {}): QuoteComparison {
     needed_by: "2026-11-09", budget_atomic: "100000000000000000000", zone: "Zona ficticia", status: "open", created_at: "2026-11-07T15:00:00Z", created_by: null },
     rows: [{ quote: quote(), supplier: { id: supplierId, name: "Proveedor ficticio", organization: "Organización ficticia" } }],
     quotes_status: "ready", mode: "persisted", recommendation: { status: "ready", data: { recommended_quote_id: quoteId,
-      ranking: [{ quote_id: quoteId, reason: "Motivo entregado por el servicio" }], explanation: "Explicación entregada por el servicio" } }, ...overrides };
+      ranking: [{ quote_id: quoteId, supplier_contact_id: supplierId, supplier_name: "Proveedor ficticio", position: 1,
+        eligible: true, total_atomic: null, reasons: ["Motivo entregado por el servicio"], policy: null }],
+      explanation: "Explicación entregada por el servicio", explanation_source: "rules" } }, ...overrides };
 }
 const render = (value: QuoteComparison) => renderToStaticMarkup(<QuoteComparisonView company={company} comparison={value} />);
 
@@ -43,7 +45,25 @@ describe("ORD02: comparación presentada con fuentes y estados explícitos", () 
     expect(html).toContain("Plazo pendiente");
     expect(html).toContain("IVA sin confirmar");
     expect(html).toContain("Motivo entregado por el servicio");
+    expect(html).toContain("Califica en el ranking");
+    expect(html).toContain("Reglas");
     expect(html).not.toContain("<button");
+  });
+
+  it("muestra la procedencia real y admite ranking sin proveedor elegible", () => {
+    const value = comparison();
+    if (value.recommendation.status !== "ready") throw new Error("Falta ranking");
+    value.recommendation.data.explanation_source = "ai";
+    value.recommendation.data.recommended_quote_id = null;
+    value.recommendation.data.ranking[0].eligible = false;
+    value.recommendation.data.ranking[0].policy = { decision: "needs_approval", reason: "Revisión humana necesaria" };
+    const html = render(value);
+    expect(html).toContain(">IA<");
+    expect(html).toContain("Sin proveedor recomendado");
+    expect(html).toContain("No califica en el ranking");
+    expect(html).toContain("Requiere aprobación: Revisión humana necesaria");
+    expect(html).not.toContain("data-recommended");
+    expect(render({ ...value, mode: "example" })).not.toContain(">IA<");
   });
 
   it("resalta solo la recomendación ready y conserva la explicación recibida", () => {

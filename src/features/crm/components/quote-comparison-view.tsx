@@ -8,7 +8,7 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { ModeBadge } from "../../../components/ui/StatusBadges";
 import type { ErrorCode } from "../../../contracts/common";
-import type { SupplierQuote } from "../../../contracts/supplier-quotes";
+import type { QuoteRanking, SupplierQuote } from "../../../contracts/supplier-quotes";
 import { formatQuoteMoney, quoteTotal, type QuoteComparison, type QuoteComparisonRow } from "../quote-comparison";
 import { SuppliersFrame } from "./supplier-view";
 
@@ -81,19 +81,34 @@ function Recommendation({ comparison }: { comparison: QuoteComparison }) {
   if (recommendation.status === "error") return <Alert tone="warning" title="No pudimos obtener la recomendación">{recommendation.error.message}</Alert>;
   const supplier = comparison.rows.find(row => row.quote.id === recommendation.data.recommended_quote_id)?.supplier;
   return <Card className="space-y-3 border border-ink">
-    <div className="flex flex-wrap items-center gap-3"><Badge tone="strong" icon={Star}>{comparison.mode === "example" ? "Recomendación ilustrativa" : "Proveedor recomendado"}</Badge>
+    <div className="flex flex-wrap items-center gap-3"><Badge tone="strong" icon={Star}>{comparison.mode === "example" ? "Recomendación ilustrativa" : supplier ? "Proveedor recomendado" : "Sin proveedor recomendado"}</Badge>
+      {comparison.mode === "persisted" && <Badge>{recommendation.data.explanation_source === "ai" ? "IA" : "Reglas"}</Badge>}
       {supplier && <p className="min-w-0 break-words font-bold">{supplier.name}</p>}</div>
     <p className="break-words text-sm leading-relaxed">{recommendation.data.explanation}</p>
+    <p className="text-xs text-ink-muted">La evaluación compara las cotizaciones; la orden y su aprobación se revisan por separado.</p>
   </Card>;
+}
+
+function RankingEvaluation({ item, fallback }: { item?: QuoteRanking["ranking"][number]; fallback: string }) {
+  if (!item) return <p className="break-words leading-relaxed">{fallback}</p>;
+  const policy = item.policy;
+  const decisions = { auto_pay: "Dentro de la política", needs_approval: "Requiere aprobación", rejected: "Fuera de la política" };
+  return <div className="space-y-3">
+    <div className="flex flex-wrap gap-2"><Badge>Posición {item.position}</Badge>
+      <Badge tone={item.eligible ? "info" : "warning"}>{item.eligible ? "Califica en el ranking" : "No califica en el ranking"}</Badge></div>
+    {item.reasons.length > 0 ? <ul className="list-disc space-y-2 pl-4">{item.reasons.map((reason, index) => <li key={index} className="break-words leading-relaxed">{reason}</li>)}</ul>
+      : <p className="text-xs text-ink-muted">Sin motivos adicionales.</p>}
+    {policy && <p className="break-words text-xs text-ink-muted">{decisions[policy.decision]}: {policy.reason}</p>}
+  </div>;
 }
 
 export function QuoteComparisonView({ company, comparison }: { company: Company; comparison: QuoteComparison }) {
   const { purchase, recommendation, rows, mode } = comparison;
   const ready = recommendation.status === "ready";
   const recommendedId = ready ? recommendation.data.recommended_quote_id : null;
-  const reasons = new Map(ready ? recommendation.data.ranking.map(item => [item.quote_id, item.reason]) : []);
-  const reasonFor = (id: string) => reasons.get(id) ?? (recommendation.status === "pending" ? "Motivo pendiente de la recomendación."
-    : recommendation.status === "error" ? "La evaluación no está disponible." : "Sin motivo disponible para esta cotización.");
+  const rankings = new Map(ready ? recommendation.data.ranking.map(item => [item.quote_id, item]) : []);
+  const fallback = recommendation.status === "pending" ? "Motivo pendiente de la recomendación."
+    : recommendation.status === "error" ? "La evaluación no está disponible." : "Sin evaluación disponible para esta cotización.";
   return <SuppliersFrame company={company}>
     <PageHeader title="Comparar cotizaciones" description="Revisá precios, stock, plazos y condiciones para esta compra."
       actions={<Link href={mode === "example" ? "/orders/quotes" : "/suppliers"} className={buttonStyles({ variant: "ghost" })}>
@@ -114,7 +129,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
       description="Los precios, la disponibilidad y las condiciones aparecerán acá cuando se registren las cotizaciones." /> : <>
       <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-base font-bold">Cotizaciones disponibles</h2>
         <p className="text-xs text-ink-muted">{rows.length} {rows.length === 1 ? "cotización" : "cotizaciones"} · Totales para {number(purchase.quantity)} {purchase.unit || "unidades"}</p></div>
-      <p className="text-xs text-ink-muted">Cada precio conserva su moneda. El total corresponde a la cantidad solicitada; revisá IVA, entrega y mínimos de pedido.</p>
+      <p className="text-xs text-ink-muted">Cada precio conserva su moneda. El ranking usa la equivalencia nominal de 1 ARS = 1 ARGt; los precios en USD quedan sin conversión. Revisá IVA, entrega y mínimos de pedido.</p>
       <div role="region" aria-label="Tabla comparativa de cotizaciones" tabIndex={0}
         className="hidden min-w-0 overflow-x-auto rounded-card border border-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink xl:block">
         <table className="w-full min-w-[1120px] table-fixed text-left text-sm">
@@ -131,7 +146,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
               <td className="p-4 align-top"><QuoteDelivery quote={row.quote} /></td>
               <td className="p-4 align-top"><Badge tone={row.quote.accepts_argt === "unknown" ? "warning" : "neutral"} className="max-w-full"><span className="whitespace-normal">{answers[row.quote.accepts_argt]}</span></Badge></td>
               <td className="p-4 align-top"><QuoteSource quote={row.quote} mode={mode} /></td>
-              <td className="p-4 align-top"><p className="break-words leading-relaxed">{reasonFor(row.quote.id)}</p></td>
+              <td className="p-4 align-top"><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} /></td>
             </tr>;
           })}</tbody>
         </table>
@@ -148,7 +163,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
             <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Acepta ARGt</dt><dd>{answers[row.quote.accepts_argt]}</dd></div>
             <div className="min-w-0"><dt className="mb-2 text-xs font-bold">Origen</dt><dd><QuoteSource quote={row.quote} mode={mode} /></dd></div>
           </dl>
-          <div className="border-t border-line pt-4"><h3 className="text-xs font-bold">Evaluación</h3><p className="mt-2 break-words text-sm leading-relaxed">{reasonFor(row.quote.id)}</p></div>
+          <div className="space-y-3 border-t border-line pt-4"><h3 className="text-xs font-bold">Evaluación</h3><RankingEvaluation item={rankings.get(row.quote.id)} fallback={fallback} /></div>
         </Card>;
       })}</section>
     </>}

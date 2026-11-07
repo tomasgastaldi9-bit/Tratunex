@@ -4,6 +4,7 @@ import type { SupplierDTO } from "../../../contracts/crm";
 import type { QuoteRanking, SupplierQuoteList } from "../../../contracts/supplier-quotes";
 import { createQuoteComparisonExample } from "../mocks/quote-comparison-example";
 import { createQuoteComparisonService } from "./quote-comparison-service";
+import { prepareQuoteRankingInput } from "./quote-ranking-adapter";
 
 const ctx: Ctx = { company_id: "10000000-0000-4000-8000-000000000001", actor_id: "10000000-0000-4000-8000-000000000002", actor_type: "user" };
 const example = createQuoteComparisonExample(ctx.company_id);
@@ -56,7 +57,9 @@ describe("ORD-02 comparación autorizada y dependencias explícitas", () => {
     if (!result.ok) throw new Error("Falta comparación");
     expect(result.data.rows).toHaveLength(3);
     expect(result.data.rows[0].supplier.name).toBe(example.rows[0].supplier.name);
-    expect(ports.rankQuotes).toHaveBeenCalledWith(ctx, input);
+    const rankingInput = prepareQuoteRankingInput(example.purchase.id, example.rows);
+    if (!rankingInput.ok) throw new Error("Falta input fixture");
+    expect(ports.rankQuotes).toHaveBeenCalledWith(ctx, rankingInput.data);
     expect(ports.getSupplier).toHaveBeenCalledTimes(3);
   });
   it.each(["company", "purchase", "duplicate"])("rechaza cotizaciones fuera de scope o duplicadas: %s", async kind => {
@@ -78,17 +81,64 @@ describe("ORD-02 comparación autorizada y dependencias explícitas", () => {
     expect(await createQuoteComparisonService(ports)(ctx, input)).toMatchObject({ ok: false, error: { code: "PROVIDER_ERROR" } });
     expect(ports.rankQuotes).not.toHaveBeenCalled();
   });
-  it.each(["unknown", "duplicate", "incomplete"])("mantiene la tabla y rechaza ranking inválido: %s", async kind => {
+  it.each(["unknown", "duplicate", "incomplete", "supplier", "position", "total", "eligible"])("mantiene la tabla y rechaza ranking inválido: %s", async kind => {
     const ports = deps();
     if (example.recommendation.status !== "ready") throw new Error("Falta ranking fixture");
     const ranking = structuredClone(example.recommendation.data);
     if (kind === "unknown") ranking.recommended_quote_id = ctx.actor_id;
     if (kind === "duplicate") ranking.ranking[1].quote_id = ranking.ranking[0].quote_id;
     if (kind === "incomplete") ranking.ranking.pop();
+    if (kind === "supplier") ranking.ranking[0].supplier_contact_id = ctx.actor_id;
+    if (kind === "position") ranking.ranking[1].position = ranking.ranking[0].position;
+    if (kind === "total") ranking.ranking[0].total_atomic = "1";
+    if (kind === "eligible") ranking.ranking[0].eligible = false;
     ports.rankQuotes.mockResolvedValue({ ok: true, data: ranking });
     const result = await createQuoteComparisonService(ports)(ctx, input);
     expect(result).toMatchObject({ ok: true, data: { recommendation: { status: "error", error: { code: "PROVIDER_ERROR" } } } });
     if (result.ok) expect(result.data.rows).toHaveLength(3);
+  });
+  it("acepta recomendado null y conserva motivos y procedencia sin inventar IA", async () => {
+    const ports = deps();
+    if (example.recommendation.status !== "ready") throw new Error("Falta fixture");
+    const ranking = structuredClone(example.recommendation.data);
+    ranking.ranking.forEach(row => { row.eligible = false; });
+    ranking.recommended_quote_id = null;
+    ranking.explanation_source = "rules";
+    ports.rankQuotes.mockResolvedValue({ ok: true, data: ranking });
+    expect(await createQuoteComparisonService(ports)(ctx, input)).toMatchObject({ ok: true,
+      data: { recommendation: { status: "ready", data: ranking } } });
+  });
+  it("conserva las 21 cotizaciones sin mandar un subconjunto al ranking", async () => {
+    const ports = deps();
+    const items = Array.from({ length: 21 }, (_, index) => ({ ...structuredClone(example.rows[0].quote),
+      id: `60000000-0000-4000-8000-${String(index).padStart(12, "0")}` }));
+    ports.listQuotes.mockResolvedValue({ ok: true, data: { items } });
+    const result = await createQuoteComparisonService(ports)(ctx, input);
+    expect(result).toMatchObject({ ok: true, data: { recommendation: { status: "error", error: { code: "VALIDATION_ERROR" } } } });
+    if (result.ok) expect(result.data.rows).toHaveLength(21);
+    expect(ports.rankQuotes).not.toHaveBeenCalled();
+  });
+  it("rechaza el límite del lector cuando no se puede acreditar lista completa", async () => {
+    const ports = deps();
+    const items = Array.from({ length: 100 }, (_, index) => ({ ...structuredClone(example.rows[0].quote),
+      id: `60000000-0000-4000-8000-${String(index).padStart(12, "0")}` }));
+    ports.listQuotes.mockResolvedValue({ ok: true, data: { items } });
+    expect(await createQuoteComparisonService(ports)(ctx, input)).toMatchObject({ ok: false, error: { code: "PROVIDER_ERROR" } });
+    expect(ports.getSupplier).not.toHaveBeenCalled();
+    expect(ports.rankQuotes).not.toHaveBeenCalled();
+  });
+  it("ordena la presentación por las posiciones devueltas sin crear ranking local", async () => {
+    const ports = deps();
+    if (example.recommendation.status !== "ready") throw new Error("Falta fixture");
+    const ranking = structuredClone(example.recommendation.data);
+    ranking.ranking[0].position = 2;
+    ranking.ranking[1].position = 1;
+    ranking.recommended_quote_id = ranking.ranking[1].quote_id;
+    ranking.explanation_source = "ai";
+    ports.rankQuotes.mockResolvedValue({ ok: true, data: ranking });
+    const result = await createQuoteComparisonService(ports)(ctx, input);
+    expect(result).toMatchObject({ ok: true, data: { recommendation: { status: "ready", data: ranking } } });
+    if (result.ok) expect(result.data.rows.map(row => row.quote.id)).toEqual([ranking.ranking[1].quote_id, ranking.ranking[0].quote_id, ranking.ranking[2].quote_id]);
   });
   it("un error de IA conserva las cotizaciones y su error explícito", async () => {
     const ports = deps();

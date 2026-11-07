@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { Ctx, Result } from "./common";
+import { rankQuotesOutputSchema, type RankQuotes } from "./purchases";
 
-/** ORD-02: propuesta de lectura para QUO-02 y BUY-03; todavía no es un contrato integrado. */
+/** ORD-02: lectura de QUO-02 y adaptación al ranking público de BUY-03. */
 const id = z.uuid();
 const optionalText = z.string().trim().min(1).max(2000).nullable();
 export const QuoteAnswerSchema = z.enum(["yes", "no", "unknown"]);
@@ -48,13 +49,10 @@ export type SupplierQuote = z.infer<typeof SupplierQuoteSchema>;
 export const SupplierQuoteListSchema = z.object({ items: z.array(SupplierQuoteSchema).max(100) }).strict();
 export type SupplierQuoteList = z.infer<typeof SupplierQuoteListSchema>;
 
-export const QuoteRankingSchema = z.object({
-  ranking: z.array(z.object({ quote_id: id, reason: z.string().trim().min(1).max(2000) }).strict()).min(1).max(100),
-  recommended_quote_id: id,
-  explanation: z.string().trim().min(1).max(4000),
-}).strict();
+/** BUY-03 owns the ranking, eligibility, reasons and explanation provenance. */
+export const QuoteRankingSchema = rankQuotesOutputSchema;
 export type QuoteRanking = z.infer<typeof QuoteRankingSchema>;
 
-/** Puertos propuestos; los adaptadores se conectan después de la revisión de sus dueños. */
+/** Puertos de lectura; BUY-03 conserva la autoridad sobre el resultado del ranking. */
 export type ListSupplierQuotes = (ctx: Ctx, input: { purchase_request_id: string }) => Promise<Result<SupplierQuoteList>>;
-export type RankSupplierQuotes = (ctx: Ctx, input: { purchase_request_id: string }) => Promise<Result<QuoteRanking>>;
+export type RankSupplierQuotes = RankQuotes;

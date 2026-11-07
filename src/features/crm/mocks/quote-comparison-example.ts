@@ -34,8 +34,13 @@ export function createQuoteComparisonExample(company_id: string): QuoteCompariso
     purchase, rows, quotes_status: "ready", mode: "example",
     recommendation: { status: "ready", data: {
       recommended_quote_id: rows[0].quote.id,
-      explanation: "Ejemplo de explicación: Sur Envases tiene stock para las 500 unidades, entrega en 2 días y acepta ARGt. Los precios están expresados en ARS; no hay conversión ni autorización de pago. Esta explicación es texto ficticio, sin ejecutar IA.",
-      ranking: rows.map((row, index) => ({ quote_id: row.quote.id, reason: options[index].reason })),
+      explanation: "Ejemplo de explicación: Sur Envases tiene stock para las 500 unidades, entrega en 2 días y acepta ARGt. Los precios están expresados en ARS y el ranking usa su equivalencia nominal en ARGt; no hay autorización de pago. Esta explicación es texto ficticio, sin ejecutar IA.",
+      explanation_source: "rules",
+      ranking: rows.map((row, index) => ({ quote_id: row.quote.id, supplier_contact_id: row.supplier.id,
+        supplier_name: row.supplier.name, position: index + 1, eligible: index < 2,
+        total_atomic: (BigInt(options[index].price) * BigInt(10) ** BigInt(16) * BigInt(purchase.quantity)).toString(),
+        reasons: [options[index].reason], policy: null,
+      })),
     } },
   };
 }
