@@ -83,7 +83,7 @@ describe("rankQuotesByRules", () => {
     ]);
     expect(r.recommended_quote_id).toBeNull();
     expect(r.ranking.map((q) => [q.quote_id, q.position, q.eligible, q.total_atomic, q.reasons, q.policy])).toEqual([
-      ["sin-precio", 1, false, null, ["No dio precio"], null],
+      ["sin-precio", 1, false, null, ["No dio precio en pesos"], null],
       ["cara", 2, false, pesosToAtomic(120000), ["$ 120.000 supera el presupuesto de $ 100.000"], null],
       [
         "todo-mal",
