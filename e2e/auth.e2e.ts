@@ -43,7 +43,7 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await page.getByLabel("Correo").fill(emailA);
   await page.getByLabel("Contraseña").fill("incorrecta");
   await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page.getByRole("alert")).toContainText("No pudimos iniciar sesión");
+  await expect(page.getByRole("alert").filter({ hasText: "No pudimos iniciar sesión" })).toBeVisible();
   await page.getByLabel("Correo").fill(emailA);
   await page.getByLabel("Contraseña").fill(password);
   const [loginResponse] = await Promise.all([
@@ -56,7 +56,7 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await expect(page.getByRole("button", { name: "Empresa E2E B" })).toHaveCount(0);
   await page.locator('input[name="company_id"]').evaluate((element, value) => { (element as HTMLInputElement).value = value; }, companyB);
   await page.getByRole("button", { name: "Empresa E2E A" }).click();
-  await expect(page.getByRole("alert")).toContainText("No tenés acceso");
+  await expect(page.getByRole("alert").filter({ hasText: "No tenés acceso" })).toBeVisible();
   await page.getByRole("button", { name: "Empresa E2E A" }).click();
   await expect(page.getByRole("button", { name: "Empresa E2E A (seleccionada)" })).toBeVisible();
   await page.getByRole("link", { name: "Ir a prospección" }).click();
@@ -66,6 +66,10 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await expect(page.getByText("Datos de ejemplo (mock)")).toBeVisible();
   await expect(page.getByText("Sin teléfono disponible")).toBeVisible();
   await expect(page.getByRole("link", { name: "Ver fuente" })).toHaveAttribute("href", "https://example.com/");
+  await page.getByLabel("Archivo CSV").setInputFiles({ name: "demo.csv", mimeType: "text/csv", buffer: Buffer.from("nombre,telefono,web\nDemo,+12025550123,https://demo.example\nSin código,0351 123 4567,") });
+  await expect(page.getByText(/2 filas/)).toBeVisible();
+  await expect(page.getByText("Indicá el teléfono con código de país, por ejemplo +54.")).toBeVisible();
+  await expect(page.getByText(/esta vista no crea contactos/)).toBeVisible();
   await page.goto("/login/companies");
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
   await expect(page).toHaveURL(/\/login$/);
