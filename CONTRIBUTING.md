@@ -1,6 +1,6 @@
 # Contribuir a Tratunex
 
-El alcance, el stack y los contratos están en [`docs/brief/00_GENERAL.md`](docs/brief/00_GENERAL.md). El proceso completo de coordinación está en [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md).
+El alcance, el stack, los contratos y el reparto de tareas están en [`docs/BRIEF.md`](docs/BRIEF.md). El proceso completo de coordinación está en [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md).
 
 ## Flujo corto
 
