@@ -506,6 +506,18 @@ describe("rankSupplierQuotes (puerto del comparador)", () => {
     });
   });
 
+  it("una explicación de más de 4000 caracteres se corta a 4000 (con \"…\") y no frena la comparación", async () => {
+    const larga = "x".repeat(5000);
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: larga }] })));
+    const { service } = quotesService({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r = await service.rankSupplierQuotes(ctx, { purchase_request_id: requestId });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.explanation).toBe(`${"x".repeat(3999)}…`);
+    expect(r.data.explanation).toHaveLength(4000);
+    expect(comparatorRankingSchema.safeParse(r.data).success).toBe(true);
+  });
+
   it("si ninguna sirve → NOT_FOUND con la explicación como mensaje", async () => {
     const items = [storedQuote({ can_supply: "no" })];
     const { service } = quotesService({ list: async () => ({ ok: true, data: { items } }) });

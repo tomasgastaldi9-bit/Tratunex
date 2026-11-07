@@ -60,6 +60,18 @@ describe("toQuoteForRanking", () => {
     expect(toQuoteForRanking(comparatorQuote({ can_supply: "partial", available_quantity: 200 }), "X").available_quantity).toBe(200);
   });
 
+  it("el nombre sale sin espacios sobrantes, cortado a 120 caracteres con \"…\" y nunca vacío", () => {
+    expect(toQuoteForRanking(comparatorQuote(), "  Descartables Sur  ").supplier_name).toBe("Descartables Sur");
+    expect(toQuoteForRanking(comparatorQuote(), "   ").supplier_name).toBe("Proveedor sin nombre");
+    // Justo 120: queda igual, sin "…".
+    expect(toQuoteForRanking(comparatorQuote(), "a".repeat(120)).supplier_name).toBe("a".repeat(120));
+    // Más largo: se corta y termina en "…", con 120 en total, y sigue siendo válida para el ranking.
+    const larga = toQuoteForRanking(comparatorQuote(), "b".repeat(300));
+    expect(larga.supplier_name).toBe(`${"b".repeat(119)}…`);
+    expect(larga.supplier_name).toHaveLength(120);
+    expect(quoteForRankingSchema.safeParse(larga).success).toBe(true);
+  });
+
   it("el origen sale de source.kind (llamada, web o ejemplo)", () => {
     expect(toQuoteForRanking(comparatorQuote({ source: { kind: "web", url: "https://proveedor.com.ar" } }), "X").origin).toBe("web");
     expect(toQuoteForRanking(comparatorQuote({ source: { kind: "example", label: "Datos de prueba" } }), "X").origin).toBe("example");

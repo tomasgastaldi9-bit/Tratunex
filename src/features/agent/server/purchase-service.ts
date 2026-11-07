@@ -32,7 +32,7 @@ import type {
 // Solo el TIPO de la cotización de Voz: la función real llega por deps (desde public.ts).
 import type { ComparatorQuote } from "../../voice/server/quote-import";
 import { buildRankingSummary, explainRanking } from "./explain";
-import { toQuoteForRanking } from "./quotes-source";
+import { PROVEEDOR_SIN_NOMBRE, toQuoteForRanking } from "./quotes-source";
 import { rankQuotesByRules, todayInArgentina } from "./ranking";
 import { fail, logError, translateSaveError } from "./save-errors";
 
@@ -44,8 +44,13 @@ import { fail, logError, translateSaveError } from "./save-errors";
  */
 
 const LECTURA_NO_DISPONIBLE = "No pudimos leer los datos de compras. Probá de nuevo en un rato.";
-/** Si el CRM no nos da el nombre del proveedor, igual comparamos (con este nombre). */
-const PROVEEDOR_SIN_NOMBRE = "Proveedor sin nombre";
+/** El comparador acepta explicaciones de hasta 4000 caracteres (comparatorRankingSchema). */
+const EXPLICACION_MAX = 4000;
+
+/** Corta la explicación a 4000 caracteres (terminando en "…") para que un texto largo no frene la comparación. */
+function recortarExplicacion(texto: string): string {
+  return texto.length <= EXPLICACION_MAX ? texto : `${texto.slice(0, EXPLICACION_MAX - 1)}…`;
+}
 const GUARDADO_NO_DISPONIBLE = "No pudimos guardar. Revisá tu conexión y probá de nuevo.";
 
 /**
@@ -112,8 +117,8 @@ export type PurchaseServiceDeps = {
 
 /**
  * Pasa las cotizaciones de Voz a la forma del ranking y las revisa con el
- * contrato. Devuelve null si algo vino raro (un precio que no es un número
- * entero, un nombre demasiado largo, etc.): con plata no adivinamos.
+ * contrato. Devuelve null si algo vino raro (por ejemplo, un precio que no es
+ * un número entero): con plata no adivinamos.
  */
 function toRankingQuotes(items: ComparatorQuote[], names: Map<string, string>): QuoteForRanking[] | null {
   try {
@@ -471,7 +476,8 @@ export function createPurchaseService(getClient: () => Promise<SupabaseClient>, 
       })),
       recommended_quote_id,
       // No hacemos pasar una explicación de reglas por una de IA: la rotulamos.
-      explanation: explanation_source === "ai" ? explanation : RULES_EXPLANATION_PREFIX + explanation,
+      // Se corta DESPUÉS de agregar el rótulo, así el total nunca pasa de 4000.
+      explanation: recortarExplicacion(explanation_source === "ai" ? explanation : RULES_EXPLANATION_PREFIX + explanation),
     });
     if (!output.success) return fail("PROVIDER_ERROR", "No pudimos armar la comparación de cotizaciones.", false);
     return { ok: true, data: output.data };
