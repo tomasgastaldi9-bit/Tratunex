@@ -34,10 +34,8 @@ function totalFor(quote: SupplierQuote, quantity: number) {
 
 function QuoteSource({ quote, mode }: { quote: SupplierQuote; mode: QuoteComparison["mode"] }) {
   const source = quote.source;
-  if (source.kind === "example" || mode === "example") return <div className="space-y-2">
-    <Badge icon={FlaskConical}>Ejemplo<span className="sr-only"> (datos de prueba)</span></Badge>
-    <p className="break-words text-xs text-ink-muted">{source.kind === "example" ? source.label : "Origen ilustrativo"}</p>
-  </div>;
+  // La pantalla ya avisa una sola vez que es un ejemplo: acá no se repite.
+  if (source.kind === "example" || mode === "example") return <span className="text-ink-subtle">—<span className="sr-only">Sin registro de origen (datos de prueba)</span></span>;
   if (source.kind === "web") return <div className="space-y-2"><Badge icon={Globe}>Web</Badge>
     <a href={source.url} target="_blank" rel="noreferrer" className="block break-all text-xs font-semibold underline underline-offset-4">Consultar fuente web</a></div>;
   const modeBadge = source.transport === "phone" ? "live" : source.transport;
@@ -95,7 +93,7 @@ function Recommendation({ comparison }: { comparison: QuoteComparison }) {
   // Bloque oscuro: es lo primero que hay que ver. Quién conviene, cuánto sale, cuándo llega y si cobra en ARGt.
   return <section aria-label="Recomendación" className="space-y-4 rounded-card bg-gray-900 p-5 text-white sm:p-6">
     <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-white/10 px-2 py-1 text-xs font-medium"><Star size={14} aria-hidden />{comparison.mode === "example" ? "Recomendación ilustrativa" : supplier ? "Proveedor recomendado" : "Sin proveedor recomendado"}</span>
+      <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-white/10 px-2 py-1 text-xs font-medium"><Star size={14} aria-hidden />{comparison.mode === "example" || supplier ? "Recomendación" : "Sin proveedor recomendado"}</span>
       {comparison.mode === "persisted" && <span className="rounded-[5px] border border-white/20 px-2 py-1 text-xs font-medium">{recommendation.data.explanation_source === "ai" ? "IA" : "Reglas"}</span>}
     </div>
     {supplier && <p className="break-words text-2xl leading-tight font-semibold tracking-tight">{supplier.name}</p>}
@@ -141,7 +139,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
       actions={<Link href={mode === "example" ? "/orders/quotes" : "/suppliers"} className={buttonStyles({ variant: "ghost" })}>
         {mode === "example" ? "Comparar una compra" : "Ver proveedores"}<ArrowRight size={16} aria-hidden /></Link>} />
     {mode === "example" && <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
-      <FlaskConical size={12} aria-hidden /> Ejemplo: comparación ilustrativa con datos ficticios, sin IA ejecutada.<span className="sr-only"> (datos de prueba)</span></p>}
+      <FlaskConical size={12} aria-hidden /> Ejemplo: comparación con datos de muestra.<span className="sr-only"> (datos de prueba)</span></p>}
     <Card className="space-y-4"><h2 className="break-words text-lg font-semibold">{purchase.product}</h2>
       <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
         <div><dt className="text-xs text-ink-muted">Cantidad solicitada</dt><dd className="mt-1 break-words font-semibold">{number(purchase.quantity)} {purchase.unit || "unidades"}</dd></div>
@@ -167,7 +165,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
             const selected = row.quote.id === recommendedId;
             return <tr key={row.quote.id} data-recommended={selected ? "true" : undefined} className={`border-t border-line ${selected ? "bg-gray-50 shadow-[inset_3px_0_0_var(--color-gray-900)]" : ""}`}>
               <th scope="row" className="p-4 align-top font-normal"><SupplierName row={row} mode={mode} />
-                {selected && <Badge tone="strong" icon={Star} className="mt-3">{mode === "example" ? "Ejemplo recomendado" : "Recomendado"}</Badge>}</th>
+                {selected && <Badge tone="strong" icon={Star} className="mt-3">Recomendado</Badge>}</th>
               <td className="p-4 align-top"><QuotePrice quote={row.quote} quantity={purchase.quantity} unit={purchase.unit} /></td>
               <td className="p-4 align-top"><QuoteStock quote={row.quote} /></td>
               <td className="p-4 align-top"><QuoteDelivery quote={row.quote} /></td>
@@ -183,7 +181,7 @@ export function QuoteComparisonView({ company, comparison }: { company: Company;
         const selected = row.quote.id === recommendedId;
         return <Card key={row.quote.id} data-recommended={selected ? "true" : undefined} className={`min-w-0 space-y-5 border ${selected ? "border-gray-900 ring-1 ring-gray-900" : "border-line"}`}>
           <SupplierName row={row} mode={mode} />
-          {selected && <Badge tone="strong" icon={Star}>{mode === "example" ? "Ejemplo recomendado" : "Recomendado"}</Badge>}
+          {selected && <Badge tone="strong" icon={Star}>Recomendado</Badge>}
           <dl className="grid min-w-0 gap-5 sm:grid-cols-2">
             <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Precio y total</dt><dd><QuotePrice quote={row.quote} quantity={purchase.quantity} unit={purchase.unit} /></dd></div>
             <div className="min-w-0"><dt className="mb-2 text-xs font-semibold">Stock</dt><dd><QuoteStock quote={row.quote} /></dd></div>
@@ -238,7 +236,6 @@ export function QuoteComparisonStart({ company, purchases }: { company: Company;
       {purchases.has_next && <Link href={`/orders/quotes?page=${purchases.page + 1}`} className={buttonStyles({ variant: "secondary" })}>Más compras<ArrowRight size={16} aria-hidden /></Link>}
     </nav>}
     {purchases?.limit_reached && <Alert tone="info">Mostramos el máximo de compras de esta lista. Las anteriores siguen guardadas.</Alert>}
-    <div><Link href="/orders/quotes/example" className={buttonStyles({ variant: "ghost" })}><FlaskConical size={16} aria-hidden />Ver comparación de ejemplo</Link></div>
-    <p className="text-xs text-ink-muted">El ejemplo usa datos de prueba y una explicación ilustrativa.</p>
+    <div><Link href="/orders/quotes/example" className={buttonStyles({ variant: "ghost" })}>Ver una comparación</Link></div>
   </SuppliersFrame>;
 }

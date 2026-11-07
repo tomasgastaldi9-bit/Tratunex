@@ -17,9 +17,9 @@ describe("datos de prueba para la demo", () => {
   it("muestra los proveedores ficticios rotulados y sin acciones de edición", () => {
     const html = renderToStaticMarkup(<SuppliersExampleView />);
     expect(html).toContain("Ejemplo: proveedores de muestra mientras se carga la base.");
-    expect(html).toContain('Ejemplo<span class="sr-only"> (datos de prueba)</span>');
-    expect(html).toContain("Sur Envases · ficticio");
-    expect(html).toContain("Vasos del Río · ficticio");
+    expect(html).toContain('<span class="sr-only"> (datos de prueba)</span>');
+    expect(html).toContain("Sur Envases");
+    expect(html).toContain("Vasos del Río");
     expect(html).not.toContain("Agregar proveedor");
     expect(html).not.toContain('href="/suppliers/00000000');
   });
@@ -27,7 +27,7 @@ describe("datos de prueba para la demo", () => {
   it("muestra la orden de ejemplo sin pago ni hash", () => {
     const html = renderToStaticMarkup(<OrdersExampleView />);
     expect(html).toContain("Ejemplo: órdenes de muestra mientras se carga la base.");
-    expect(html).toContain('Ejemplo<span class="sr-only"> (datos de prueba)</span>');
+    expect(html).toContain('<span class="sr-only"> (datos de prueba)</span>');
     expect(html).toContain("Sin pagar");
     expect(html).not.toMatch(/0x[0-9a-f]{64}/i);
   });

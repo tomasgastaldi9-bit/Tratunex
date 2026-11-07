@@ -21,15 +21,6 @@ function DemoNotice({ what }: { what: string }) {
   );
 }
 
-/** Etiqueta chica y gris para cada elemento de muestra. */
-function ExampleBadge() {
-  return (
-    <Badge icon={FlaskConical}>
-      Ejemplo<span className="sr-only"> (datos de prueba)</span>
-    </Badge>
-  );
-}
-
 /** Proveedores de ejemplo (solo lectura), cuando falta la tabla de proveedores. */
 export function SuppliersExampleView() {
   return (
@@ -66,7 +57,7 @@ export function SuppliersExampleView() {
                           Billetera pendiente
                         </Badge>
                       )}
-                      <ExampleBadge />
+                      
                     </div>
                     <p className="text-xs text-ink-muted">Acepta ARGt: {supplier.accepts_argt}</p>
                     {supplier.wallet && (
@@ -102,7 +93,7 @@ export function OrdersExampleView() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge tone="warning">{order.status}</Badge>
-                  <ExampleBadge />
+                  
                 </div>
               </div>
               <dl className="grid grid-cols-1 gap-4 border-y border-line py-3 text-sm sm:grid-cols-3">

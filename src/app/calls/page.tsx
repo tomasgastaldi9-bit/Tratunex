@@ -27,7 +27,7 @@ function CallBadges({ call }: { call: CallListItem }) {
           Volver a llamar: {formatArgentina(result.next_action.due_at)}
         </Badge>
       )}
-      <ModeBadge mode={transportMode(call.transport)} />
+      {transportMode(call.transport) !== "mock" && <ModeBadge mode={transportMode(call.transport)} />}
     </>
   );
 }
