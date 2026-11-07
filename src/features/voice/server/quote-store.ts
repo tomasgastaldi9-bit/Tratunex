@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Ctx, Result } from "../../../contracts/common";
 import { SupplierQuoteDTOSchema, type SupplierQuoteDTO } from "../../../contracts/voice";
 import { toComparatorQuote, type ComparatorQuote, type QuoteStore } from "./quote-import";
+import type { DialStore } from "./quote-dial";
 
 // supplier_quotes en Supabase. Escribir necesita la clave secreta (los miembros
 // solo leen); leer usa la sesión del usuario y RLS.
@@ -141,4 +142,51 @@ export async function listComparatorQuotes(
     if (item) items.push(item);
   }
   return { ok: true, data: { items } };
+}
+
+// Llamadas del cotizador iniciadas desde la app (QUO-03), con la clave secreta.
+export function createSupabaseDialStore(db: SupabaseClient): DialStore {
+  return {
+    async reserveCall(input) {
+      const insert = await db.from("calls").upsert(
+        {
+          company_id: input.company_id,
+          contact_id: input.supplier_contact_id,
+          action_id: input.action_id,
+          provider: "vapi",
+          transport: "phone",
+          status: "queued",
+          objective: "Cotización de proveedor",
+        },
+        { onConflict: "company_id,action_id", ignoreDuplicates: true },
+      ).select("id");
+      if (insert.error) return writeError(insert.error);
+      const created = (insert.data?.length ?? 0) > 0;
+      const call = await db
+        .from("calls")
+        .select("id, contact_id, provider_call_id")
+        .eq("company_id", input.company_id)
+        .eq("action_id", input.action_id)
+        .maybeSingle();
+      if (call.error || !call.data) return unavailable();
+      if (call.data.contact_id !== input.supplier_contact_id) {
+        return { ok: false, error: { code: "CONFLICT", message: "Ese pedido de llamada era para otro proveedor", retryable: false } };
+      }
+      return { ok: true, data: { call_id: call.data.id, provider_call_id: call.data.provider_call_id, created } };
+    },
+    async markDialed(input) {
+      const { error } = await db
+        .from("calls")
+        .update({ provider_call_id: input.provider_call_id, status: "ringing", updated_at: new Date().toISOString() })
+        .eq("id", input.call_id);
+      return error ? unavailable() : { ok: true, data: null };
+    },
+    async markNotDialed(input) {
+      const { error } = await db
+        .from("calls")
+        .update({ status: input.status, ended_reason: input.reason.slice(0, 300), updated_at: new Date().toISOString() })
+        .eq("id", input.call_id);
+      return error ? unavailable() : { ok: true, data: null };
+    },
+  };
 }
