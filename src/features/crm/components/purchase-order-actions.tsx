@@ -95,7 +95,7 @@ export function PurchaseOrderActions({ order, payment, paymentAvailable }: {
       Hay un intento registrado para esta orden. La consulta de estado conserva su identidad y sus datos.
     </Alert>}
     <div className="flex flex-wrap gap-2.5">
-      <Button variant="secondary" icon={RefreshCw} disabled={pending !== null} onClick={() => router.refresh()}>Consultar estado</Button>
+      <Button variant="secondary" icon={RefreshCw} disabled={pending !== null} onClick={() => router.refresh()}>Consultar último estado guardado</Button>
       {shownOrder.status === "awaiting_approval" && !shownPayment && !paymentAttempted && <Button variant="ghost" loading={pending === "refresh"}
         disabled={pending === "pay"} onClick={() => void updateSnapshot()}>{refreshUncertain ? "Confirmar actualización" : "Actualizar datos de la orden"}</Button>}
     </div>

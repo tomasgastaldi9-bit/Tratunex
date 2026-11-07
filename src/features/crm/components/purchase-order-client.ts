@@ -43,7 +43,9 @@ export function orderPaymentPresentation(payment: OrderPayment | null | undefine
   if (valid.status === "failed" || valid.status === "reverted") return { label: "Falló", tone: "danger" as const,
     description: "El intento no se confirmó. Consultá su estado antes de decidir otra acción." };
   if (valid.status === "unknown") return { label: "Verificación pendiente", tone: "warning" as const,
-    description: "El resultado del intento todavía no está confirmado. Consultá su estado." };
+    description: "El último estado guardado es incierto. Un hash preparado no demuestra que la transacción haya sido enviada." };
+  if (valid.status === "prepared") return { label: "Transacción preparada", tone: "warning" as const,
+    description: "El hash corresponde a una transacción preparada; todavía no demuestra que haya sido enviada." };
   return { label: "Pago en proceso", tone: "info" as const,
     description: "Hay un intento registrado y su confirmación está pendiente." };
 }
