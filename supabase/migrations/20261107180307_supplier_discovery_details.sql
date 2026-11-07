@@ -1,3 +1,5 @@
+begin;
+
 alter table public.prospect_candidates
   add column products jsonb not null default '[]'::jsonb check (jsonb_typeof(products) = 'array'),
   add column prices jsonb not null default '[]'::jsonb check (jsonb_typeof(prices) = 'array');
@@ -57,7 +59,17 @@ begin
       or coalesce(v_candidate->>'source_url', '') !~ '^https?://'
       or coalesce(v_candidate->>'website', '') !~ '^https?://'
       or jsonb_typeof(coalesce(v_candidate->'products', '[]'::jsonb)) <> 'array'
-      or jsonb_typeof(coalesce(v_candidate->'prices', '[]'::jsonb)) <> 'array' then
+      or jsonb_typeof(coalesce(v_candidate->'prices', '[]'::jsonb)) <> 'array'
+      or jsonb_array_length(coalesce(v_candidate->'products', '[]'::jsonb)) > 10
+      or jsonb_array_length(coalesce(v_candidate->'prices', '[]'::jsonb)) > 10
+      or exists (
+        select 1 from jsonb_array_elements(coalesce(v_candidate->'products', '[]'::jsonb)) as p(value)
+        where jsonb_typeof(p.value) <> 'string' or length(btrim(p.value #>> '{}')) not between 1 and 240
+      )
+      or exists (
+        select 1 from jsonb_array_elements(coalesce(v_candidate->'prices', '[]'::jsonb)) as p(value)
+        where jsonb_typeof(p.value) <> 'string' or length(btrim(p.value #>> '{}')) not between 1 and 240
+      ) then
       raise exception using errcode = '22023', message = 'VALIDATION_ERROR';
     end if;
     insert into public.prospect_candidates(
@@ -91,3 +103,5 @@ revoke all on function public.finish_verified_prospect_search(uuid, uuid, text, 
   from public, anon, authenticated;
 grant execute on function public.finish_verified_prospect_search(uuid, uuid, text, text, text, integer, text, jsonb)
   to service_role;
+
+commit;
