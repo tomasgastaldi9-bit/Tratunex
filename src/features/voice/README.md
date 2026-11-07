@@ -22,6 +22,17 @@ Llamadas del agente: iniciar, recibir el resultado de Vapi, normalizarlo y entre
 - `company_id`, actor y `action_id` llegan en el contexto del servidor, nunca en el input.
 - `NormalizedCallResultV1Schema`: sin conversación con una persona (buzón, desconocido o fallo técnico) el resultado es `not_assessed`, sin score, sin calificación y sin pedido de no contacto.
 
+## Análisis de fin de llamada (TRA-47)
+
+`server/call-analysis.ts` convierte el `end-of-call-report` de Vapi en un `CallResultV1` normalizado.
+
+- **Qué extrae Vapi:** `callAnalysisJsonSchema` y `callAnalysisPrompt`. Configurarlo como *structured output* con el nombre `tratunex_call_result` (recomendado por Vapi) o en el `analysisPlan` (deprecado, sigue funcionando). El normalizador lee los dos lugares.
+- **Qué decide el código, no el modelo:**
+  - Quién atendió, según `endedReason`: `voicemail` → buzón; `customer-did-not-answer` o `customer-busy` → nadie; errores de Twilio, SIP o pipeline → `failed`. En esos casos el resultado es siempre `not_assessed`.
+  - La fecha del callback: el modelo copia lo que dijo la persona (día y hora) y `resolveCallbackDueAt` calcula la fecha en hora de Argentina (UTC-3). Sin hora se agenda a las 10:00; sin día, con una fecha pasada o con una fecha inválida, va a `human_review`.
+  - `wants_to_buy` → `human_review` para que una persona cierre. Sin análisis usable → `human_review`.
+  - Empresa, contacto y llamada salen de la llamada guardada (`KnownCall`), nunca del aviso.
+
 ## Contrato compartido con el CRM
 
 `CallResultV1Schema` y `NextActionSchema` vienen de `src/contracts/crm.ts` (Nano); `voice.ts` los reexporta y agrega `NormalizedCallResultV1Schema`.
