@@ -17,6 +17,27 @@ insert into public.purchase_policies(company_id,max_per_purchase_atomic,auto_pay
 insert into public.supplier_quotes(id,company_id,purchase_request_id,supplier_contact_id,source,source_url,can_supply,unit_price,currency,accepts_argt,summary) values ('e0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','d0000000-0000-4000-8000-000000000001','c0000000-0000-4000-8000-000000000001','web','https://example.test/quote','yes',1,'ARS','yes','Prueba');
 insert into public.purchase_orders(id,company_id,purchase_request_id,supplier_quote_id,supplier_contact_id,product,quantity,unit,supplier_name,quote_source,quoted_unit_price,quoted_total,quoted_currency,amount_atomic,pricing_status,status,version,wallet_chain,wallet_address,wallet_version,quote_snapshot,request_snapshot,supplier_snapshot,policy_snapshot,created_by,approved_by,approved_at)
 select 'f0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','d0000000-0000-4000-8000-000000000001','e0000000-0000-4000-8000-000000000001','c0000000-0000-4000-8000-000000000001','Insumo',1,'','Proveedor de prueba','web',1,1,'ARS',1000000000000000000,'ready','approved',2,'arbitrum','0x0000000000000000000000000000000000000002',1,c->'quote',c->'request',c->'supplier',c->'policy','a0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001',now() from (select app_private.purchase_order_context('b0000000-0000-4000-8000-000000000001','e0000000-0000-4000-8000-000000000001') c) snapshot;
+insert into public.calls(id,company_id,contact_id,action_id,provider,transport,status) values ('a1000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','c0000000-0000-4000-8000-000000000001','fixture-call','mock','mock','completed');
+update public.supplier_quotes set source='call',source_url=null,call_id='a1000000-0000-4000-8000-000000000001' where id='e0000000-0000-4000-8000-000000000001';
+update public.purchase_orders set quote_source='call',quote_snapshot=(select to_jsonb(q) from public.supplier_quotes q where id='e0000000-0000-4000-8000-000000000001') where id='f0000000-0000-4000-8000-000000000001';
+set local role service_role;
+do $$ begin
+  begin
+    perform public.claim_order_payment('b0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001','f0000000-0000-4000-8000-000000000001','mock-call',2,42161,'0x0000000000000000000000000000000000000001','0x59863989d080b22476db95656d0c3cc18be92214',7);
+    raise exception 'mock call was accepted';
+  exception when raise_exception then if sqlerrm not like 'FORBIDDEN: call is not a completed real phone call%' then raise; end if; end;
+end $$;
+reset role;
+update public.calls set provider='vapi',transport='phone',provider_call_id='fixture-real-phone' where id='a1000000-0000-4000-8000-000000000001';
+savepoint before_phone_claim;
+set local role service_role;
+do $$ declare claimed jsonb; begin
+  claimed := public.claim_order_payment('b0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001','f0000000-0000-4000-8000-000000000001','real-phone',2,42161,'0x0000000000000000000000000000000000000008','0x59863989d080b22476db95656d0c3cc18be92214',7);
+  if claimed->>'state' is distinct from 'reserved' then raise exception 'real phone fixture was not reserved'; end if;
+end $$;
+rollback to savepoint before_phone_claim;
+update public.supplier_quotes set source='web',source_url='https://example.test/quote',call_id=null where id='e0000000-0000-4000-8000-000000000001';
+update public.purchase_orders set quote_source='web',quote_snapshot=(select to_jsonb(q) from public.supplier_quotes q where id='e0000000-0000-4000-8000-000000000001') where id='f0000000-0000-4000-8000-000000000001';
 update public.purchase_policies set max_per_purchase_atomic = 20000000000000000000 where company_id = 'b0000000-0000-4000-8000-000000000001';
 set local role service_role;
 do $$ begin

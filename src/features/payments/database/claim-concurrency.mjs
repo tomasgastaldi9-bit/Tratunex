@@ -26,7 +26,7 @@ assert.equal(await sql("select count(*) from app_private.payment_reservations;")
 assert.equal(await sql("select count(*) from app_private.payment_claim_actions;"), "2");
 console.log("Dos claims simultáneos recuperaron una reserva y un nonce; no hubo firma ni transmisión.");
 for (const suffix of ["2", "3"]) {
-  const next = setup.replaceAll("000000000001", `00000000000${suffix}`).replace("claim-a@example.test", `claim-${suffix}@example.test`);
+  const next = setup.replaceAll("000000000001", `00000000000${suffix}`).replace("claim-a@example.test", `claim-${suffix}@example.test`).replaceAll("fixture-real-phone", `fixture-real-phone-${suffix}`);
   await sql(`${next}\ncommit;`);
 }
 const acrossCompanies = await Promise.all(["2", "3"].map(suffix => sql(`set role service_role; select public.claim_order_payment(${args(`company-${suffix}`, suffix)});`)));

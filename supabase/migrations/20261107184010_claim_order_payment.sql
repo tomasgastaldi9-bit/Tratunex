@@ -53,6 +53,14 @@ begin
     raise exception 'CONFLICT: approved conditions changed';
   end if;
   v_quote := v_context->'quote'; v_policy := nullif(v_context->'policy','null'::jsonb);
+  if v_quote->>'source' = 'call' then
+    -- A call label alone is not proof of a real phone call. Preserve provenance
+    -- under lock and reject mock, browser voice, unfinished or unrelated calls.
+    perform 1 from public.calls where company_id = p_company and id = (v_quote->>'call_id')::uuid
+      and contact_id = v_order.supplier_contact_id and provider = 'vapi' and transport = 'phone'
+      and status = 'completed' and provider_call_id is not null for share;
+    if not found then raise exception 'FORBIDDEN: call is not a completed real phone call'; end if;
+  end if;
   if v_order.pricing_status <> 'ready' or v_order.amount_atomic is null or v_order.wallet_chain is distinct from 'arbitrum'
     or v_order.wallet_address is null or lower(v_order.wallet_address) = v_sender or v_order.wallet_version < 1
     or v_quote->>'source' = 'example' or v_quote->>'accepts_argt' is distinct from 'yes'
