@@ -38,7 +38,7 @@ Quedan sin usar en la demo: pipeline de clientes, tareas de seguimiento, base de
 | Track | Cierre | Qué exige | Cómo lo cumplimos |
 |---|---|---|---|
 | **Twin · Stablecoins** | **18:00** | Usar una Twin Stablecoin y mostrar **al menos una transacción onchain real** con hash en el explorer. Repo público con README que indique token, red y contratos. | El pago al proveedor es una transferencia real de **ARGt**. |
-| **Belo** (consigna 4: "un agente que maneja tu plata") | **17:30** | Agente de IA que paga con reglas del usuario y **explica cada movimiento**. Pesa: problema real 30%, funciona de punta a punta 25%, llevable a producto 25%, uso de IA 20%. | Reglas del dueño en el servidor + explicación de cada decisión. Cotización ARS/USDT con la API pública de Belo. |
+| **Belo** (consigna 4: "un agente que maneja tu plata") | **17:30** | Agente de IA que paga con reglas del usuario y **explica cada movimiento**. Pesa: problema real 30%, funciona de punta a punta 25%, llevable a producto 25%, uso de IA 20%. | Reglas del dueño en el servidor + explicación de cada decisión. Cotización ARS/USDT con la API pública de Belo (la única pública; la de pagos se pide a ventas). |
 | Avalanche (opcional) | — | Contrato propio verificado en Avalanche, interfaz web, "por qué Avalanche". | Solo si sobra tiempo: contrato de política de pagos que transfiere ARGt. |
 
 Confirmar con la organización si un proyecto puede competir en más de un track.
@@ -52,7 +52,7 @@ Confirmar con la organización si un proyecto puede competir en más de un track
 | 3. Cotizaciones | Una llamada real a un compañero que hace de proveedor + 2 cotizaciones de ejemplo rotuladas | Llamada real (Vapi) |
 | 4. Elección | Ranking y explicación en lenguaje natural | Real (IA) |
 | 5. Pago | Aprobar y pagar en ARGt; hash con link al explorer; equivalente en ARS/USDT según Belo | **Real (Twin)** |
-| 6. Lo que viene | Proveedor cobra en Belo y pasa a pesos; verificación del proveedor (KYB); compras recurrentes | Solo en el pitch |
+| 6. Lo que viene | Proveedor cobra en Belo y pasa a pesos a su CVU; **seguimiento de proveedores**: el agente confirma entrega y factura, avisa atrasos y prevé los próximos pagos; verificación del proveedor (KYB); compras recurrentes | Solo en el pitch |
 
 Los datos de ejemplo se rotulan siempre como "Datos de prueba". Nunca presentamos un mock como integración real.
 
@@ -75,7 +75,7 @@ Dependencias clave:
 | Tomás · PAY-02 | reglas del dueño (`checkPurchasePolicy`) | Vale · BUY-02 |
 | Nano · ORD-02 comparador | cotizaciones de la llamada | Bautista · QUO-02 |
 | Nano · ORD-02 | ranking y explicación | Vale · BUY-03 |
-| Todos | ARGt de prueba en la billetera del agente | Tomás · PAY-01 |
+| Todos | ARGt en la billetera del agente | Tomás · PAY-01 |
 
 Revisión de PR: el equipo revisa y mergea sin esperar a un revisor fijo; la CI tiene que estar en verde.
 
@@ -86,11 +86,16 @@ Lo del v2 más:
 | Capa | Elección |
 |---|---|
 | Pagos | **ARGt (Twin)**, ERC-20 de 18 decimales, transferencia con **viem** desde la billetera del agente |
-| Red | Arbitrum (recomendada: barata, con pools de Curve) o Avalanche si vamos por ese track. Usar siempre dirección **+** red |
+| Red | **Base** (recomendada): pool ARGt/USDC en Uniswap para conseguir ARGt, feed ARS/USD de Chainlink y explorer basescan. Alternativa: Arbitrum, si los mentores dan ARGt ahí. Usar siempre dirección **+** red |
 | Cotización ARS/USDT | API pública de Belo: `GET https://api.belo.app/public/price` (bid, ask, mid por par) |
 | Cotización por teléfono | Vapi + Twilio (asistente "cotizador") |
 
-Contratos ARGt (doc del track de Twin): Arbitrum `0x59863989d080B22476DB95656d0C3CC18be92214` · Base `0xf016413834E6D1A14F3D628B11D6Ef725a6bdbDD`. La misma dirección puede ser otro token en otra red. Los ARGt de prueba se piden a los mentores de Twin (venue o Discord `discord.gg/whU99xqnZ`).
+Contratos ARGt (docs de Twin): Base `0xf016413834E6D1A14F3D628B11D6Ef725a6bdbDD` · Arbitrum `0x59863989d080B22476DB95656d0C3CC18be92214` · Polygon `0x50464bE58912745447E24EB3bbDedcee10D3E056`. La misma dirección puede ser otro token en otra red.
+
+- **No existe ARGt en testnets.** Los "ARGt" de Sepolia y Base Sepolia son imitaciones que Twin no emitió: no se usan. La demo paga en la red principal con montos mínimos.
+- **Cómo conseguir ARGt:** pedirlos a los mentores de Twin (venue o Discord `discord.gg/whU99xqnZ`) o, si el equipo decide poner plata, cambiar unos US$3 de USDC por ARGt en app.twin.finance (Base) y sumar un poco de ETH para el gas.
+- **Pasar pesos a ARGt:** feed ARS/USD de Chainlink en Base, `0xaf992a6ad37b4878cF9c31f082B178860e268cE3` (lectura gratis).
+- **Belo:** no publica API de pagos (el acceso se pide a ventas) y hoy no recibe ARGt desde billeteras externas. Usamos solo su API de precios; el cobro del proveedor en Belo va en el pitch.
 
 ## 7. Pagos: reglas que no se negocian
 
@@ -99,7 +104,7 @@ Contratos ARGt (doc del track de Twin): Arbitrum `0x59863989d080B22476DB95656d0C
 - **Un pago por orden:** `payInvoice` es idempotente por `order_id`; un doble clic o un reintento nunca paga dos veces.
 - **El agente nunca cambia la billetera del proveedor:** la carga una persona en el CRM.
 - **Cada pago guarda su hash** y se muestra con link al explorer.
-- Los ARGt de prueba no tienen valor; en el pitch se aclara que es una demo.
+- **Los ARGt son plata real** (1 ARGt ≈ 1 peso): la billetera del agente tiene solo lo justo para la demo.
 
 ## 8. Datos nuevos
 
@@ -135,7 +140,7 @@ getBeloPrice(pair): Result<{ bid, ask, mid, fetched_at }>
 ## 10. Variables de entorno nuevas
 
 ```dotenv
-PAYMENT_CHAIN=arbitrum
+PAYMENT_CHAIN=base
 ARGT_TOKEN_ADDRESS=
 PAYMENT_RPC_URL=
 AGENT_WALLET_PRIVATE_KEY=
@@ -148,7 +153,7 @@ Se suman a las del v2 (Supabase, Firecrawl, Vapi). Valores por un canal privado.
 
 | Hora | Qué |
 |---|---|
-| 14:00–14:15 | Alinear al equipo; pedir ARGt a Twin |
+| 14:00–14:15 | Alinear al equipo; conseguir ARGt (mentores de Twin o cambio en app.twin.finance) |
 | 14:15–16:30 | Construir en paralelo |
 | 16:30–17:10 | Integrar en el deploy, README de Twin con hash, video de respaldo |
 | 17:10–17:25 | Ensayo y entrega (Belo 17:30, Twin 18:00) |
