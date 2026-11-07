@@ -46,7 +46,7 @@ function claimsFor(request) {
   if (claims.exp < Date.now() / 1000) throw new Error("Expired fixture token");
   return claims;
 }
-const tables = new Set(["companies", "company_members", "contacts"]);
+const tables = new Set(["companies", "company_members", "contacts", "deals", "activity_log"]);
 const identifier = value => {
   if (!/^[a-z_][a-z_0-9]*$/.test(value)) throw new Error("Invalid fixture query identifier");
   return `"${value}"`;
@@ -75,8 +75,9 @@ const server = http.createServer(async (request, response) => {
     }
     if (url.pathname === "/auth/v1/.well-known/jwks.json") return send(response, 200, { keys: [] });
     const actor = { role: claims.role, id: claims.sub };
-    if (url.pathname === "/rest/v1/rpc/contacts_execute" && request.method === "POST") {
-      const output = await asActor(actor, `select public.contacts_execute(${quote(JSON.stringify(body.p_ctx))}::jsonb,
+    const rpc = new Map([["/rest/v1/rpc/contacts_execute", "contacts_execute"], ["/rest/v1/rpc/pipeline_execute", "pipeline_execute"]]).get(url.pathname);
+    if (rpc && request.method === "POST") {
+      const output = await asActor(actor, `select public.${rpc}(${quote(JSON.stringify(body.p_ctx))}::jsonb,
         ${quote(body.p_operation)},${quote(JSON.stringify(body.p_input))}::jsonb)::text`);
       return send(response, 200, JSON.parse(output));
     }

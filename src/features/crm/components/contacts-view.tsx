@@ -125,5 +125,7 @@ export function ContactDetailView({ company, contact }: { company: Company; cont
       {contact.source.url && <a href={contact.source.url} target="_blank" rel="noreferrer" className="inline-block text-sm font-bold underline underline-offset-4">Consultar fuente del contacto</a>}
     </Card>
     <ContactEditor companyId={company.id} contact={contact} />
+    <div><Link href={`/pipeline?contact_id=${contact.id}`} className={buttonStyles({ variant: "secondary" })}>
+      Ver oportunidades de este contacto<ArrowRight size={16} aria-hidden /></Link></div>
   </ContactsFrame>;
 }

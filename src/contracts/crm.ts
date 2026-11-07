@@ -217,3 +217,29 @@ export const ContactPageSchema = z.object({
 export type UpdateContactInput = z.infer<typeof UpdateContactInputSchema>;
 export type ContactListInput = z.infer<typeof ContactListInputSchema>;
 export type ContactPage = z.infer<typeof ContactPageSchema>;
+
+// CRM-04: operaciones aditivas para oportunidades y movimiento manual.
+export const CreateDealInputSchema = z.object({ contact_id: IdSchema, title: TextSchema.max(200) }).strict();
+export const SetDealStageInputSchema = z.object({
+  deal_id: IdSchema, stage: PipelineStageSchema, expected_stage: PipelineStageSchema.optional(),
+}).strict();
+export const DealDataSchema = z.object({ deal: DealDTOSchema });
+export const DealListInputSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: IdSchema.optional(), contact_id: IdSchema.optional(), stage: PipelineStageSchema.optional(),
+}).strict();
+export const DealPageSchema = z.object({ items: z.array(DealDTOSchema), next_cursor: IdSchema.nullable() });
+export const ActivityDTOSchema = z.object({
+  id: IdSchema, company_id: IdSchema, contact_id: IdSchema, deal_id: IdSchema.nullable(),
+  kind: TextSchema, occurred_at: UtcSchema, summary: TextSchema,
+  actor_type: z.enum(["user", "voice", "system"]), actor_id: IdSchema,
+});
+export const ActivityListInputSchema = DealListInputSchema.omit({ stage: true });
+export const ActivityPageSchema = z.object({ items: z.array(ActivityDTOSchema), next_cursor: IdSchema.nullable() });
+export type CreateDealInput = z.infer<typeof CreateDealInputSchema>;
+export type SetDealStageInput = z.infer<typeof SetDealStageInputSchema>;
+export type DealData = z.infer<typeof DealDataSchema>;
+export type DealListInput = z.infer<typeof DealListInputSchema>;
+export type DealPage = z.infer<typeof DealPageSchema>;
+export type ActivityDTO = z.infer<typeof ActivityDTOSchema>;
+export type ActivityListInput = z.infer<typeof ActivityListInputSchema>;

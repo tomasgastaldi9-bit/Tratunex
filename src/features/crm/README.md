@@ -24,6 +24,8 @@ Cada intención de mutación conserva su `action_id` en los reintentos.
 - `getContact`, `upsertContact`, `updateContact` y `listContacts`: persistencia
   Supabase mediante `contacts_execute`. Una RPC ausente devuelve
   `PROVIDER_UNAVAILABLE`; no se reemplaza por fixtures.
+- `createDeal`, `setDealStage`, `listDeals` y `listActivities`: persistencia
+  mediante `pipeline_execute`, agregada en CRM-04.
 - `recordCallResult` y las cuatro funciones de seguimientos: **mock en memoria**
   hasta sus tickets de implementación. Admiten solo las dos empresas ficticias
   publicadas y no representan resultados reales de Voz.
@@ -53,8 +55,33 @@ revalida autoridad antes de devolver recibos. Contacto y recibo idempotente se
 guardan en una misma transacción.
 
 La propuesta está en `database/contacts.sql`. **Tomás debe versionarla y
-aplicarla al Supabase compartido**. Esta entrega no aplica migraciones remotas,
+aplicarla al Supabase compartido**. CRM-03 no aplica migraciones remotas,
 no crea deals/tareas ni procesa llamadas reales.
+
+## Pipeline · CRM-04
+
+`/pipeline` muestra las siete etapas del brief con el kit de Vale. Desde el
+tablero se busca un contacto de toda la empresa y se crea una oportunidad. La
+ficha de contacto enlaza sus oportunidades. Crear contacto o reimportarlo no
+crea oportunidades adicionales automáticamente: cada nueva oportunidad es una
+intención explícita y puede haber varias para el mismo contacto.
+
+Cada tarjeta ofrece un selector y guardado manual de etapa. El navegador envía
+`expected_stage`; si otra persona cambió la etapa, el servidor devuelve
+`CONFLICT` en lugar de sobrescribirla. Repetir una acción devuelve su resultado
+original y no duplica oportunidades ni actividades. Guardar la misma etapa no
+agrega actividad. Los cierres manuales pertenecen a una persona; las reglas
+automáticas sobre etapas terminales corresponden a CRM-05.
+
+El tablero pagina de a 50 y sus contadores describen la página visible. Los
+filtros de etapa/contacto se aplican en la base antes de paginar; las métricas
+globales se entregan en CRM-08. La búsqueda del selector consulta el servidor
+y permite recorrer páginas de contactos.
+
+`database/pipeline.sql` es una propuesta incremental: requiere contactos y
+recibos existentes, crea `deals` y `activity_log`, y no modifica migraciones
+aplicadas. Tomás coordina su versión y aplicación compartida. Las actividades
+se leen en orden cronológico descendente con cursor estable.
 
 ## API del navegador
 
@@ -63,9 +90,13 @@ no crea deals/tareas ni procesa llamadas reales.
 - `POST /api/crm/contacts`: upsert.
 - `GET /api/crm/contacts/[id]`: contacto de la empresa activa.
 - `PATCH /api/crm/contacts/[id]`: edición del ID de la ruta.
+- `GET/POST /api/crm/deals`: lista filtrada / creación explícita.
+- `POST /api/crm/deals/[id]/stage`: `input: {stage, expected_stage?}`.
+- `GET /api/crm/activities`: lista privada, filtro opcional `contact_id`.
 
-POST/PATCH reciben `{action_id, input}`. `input` usa `UpsertContactInput` y no
-acepta identidad ni empresa. El header `Idempotency-Key`, si está, debe coincidir
+Las mutaciones reciben `{action_id, input}`. En contactos, `input` usa
+`UpsertContactInput`. Ninguna ruta acepta identidad ni empresa. El header
+`Idempotency-Key`, si está, debe coincidir
 con `action_id`. Se exigen JSON y `Origin` del mismo sitio. Respuestas privadas
 y no cacheables. La UI bloquea el doble envío y conserva la acción ambigua.
 
