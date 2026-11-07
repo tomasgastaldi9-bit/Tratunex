@@ -114,6 +114,55 @@ export const DispatchDueCallsDataSchema = z.object({
   failed: z.number().int().nonnegative(),
 });
 
+// ---------------------------------------------------------------------------
+// Cotizaciones de proveedores (QUO-02, BRIEF §8): una fila de supplier_quotes.
+// Las de llamadas las escribe Voz; las de la web y las de ejemplo, el CRM. Las
+// leen el comparador (ORD-02) y el ranking (BUY-03). Un dato que el proveedor
+// no dijo es null: nunca 0 ni texto vacío.
+// ---------------------------------------------------------------------------
+// call: llamada real con el cotizador · web: precio publicado · example: dato de prueba rotulado.
+export const QuoteSourceSchema = z.enum(["call", "web", "example"]);
+export const QuoteCanSupplySchema = z.enum(["yes", "partial", "no", "unknown"]);
+export const QuoteCurrencySchema = z.enum(["ARS", "USD", "unknown"]);
+export const YesNoUnknownSchema = z.enum(["yes", "no", "unknown"]);
+
+export const SupplierQuoteDTOSchema = z.object({
+  id: IdSchema,
+  company_id: IdSchema,
+  // La compra que se cotiza (BUY-01). null solo en datos sueltos de prueba.
+  purchase_request_id: IdSchema.nullable(),
+  supplier_contact_id: IdSchema,
+  // Solo las cotizaciones de llamadas tienen llamada.
+  call_id: IdSchema.nullable(),
+  source: QuoteSourceSchema,
+  // Página donde estaba el precio: solo en las cotizaciones web, y todas la tienen.
+  source_url: WebUrlSchema.max(2048).nullable(),
+  can_supply: QuoteCanSupplySchema,
+  // Precio por unidad en `currency`, con hasta 2 decimales.
+  unit_price: z.number().positive().nullable(),
+  currency: QuoteCurrencySchema.nullable(),
+  price_includes_vat: YesNoUnknownSchema.nullable(),
+  available_quantity: z.number().int().nonnegative().nullable(),
+  minimum_order_quantity: z.number().int().nonnegative().nullable(),
+  lead_time_days: z.number().int().min(0).max(365).nullable(),
+  // El plazo tal como lo dijo el proveedor ("el martes").
+  lead_time_text: TextSchema.max(200).nullable(),
+  delivery_included: YesNoUnknownSchema.nullable(),
+  accepts_argt: YesNoUnknownSchema,
+  payment_terms: TextSchema.max(300).nullable(),
+  notes: TextSchema.max(1000).nullable(),
+  summary: TextSchema.max(2000),
+  created_at: UtcSchema,
+  updated_at: UtcSchema,
+}).superRefine((quote, ctx) => {
+  if ((quote.source === "call") !== (quote.call_id !== null)) {
+    ctx.addIssue({ code: "custom", path: ["call_id"], message: "Solo las cotizaciones de llamadas tienen call_id, y todas lo tienen" });
+  }
+  if ((quote.source === "web") !== (quote.source_url !== null)) {
+    ctx.addIssue({ code: "custom", path: ["source_url"], message: "Solo las cotizaciones web tienen source_url, y todas la tienen" });
+  }
+});
+
 // Catálogo de payloads de las operaciones de src/features/voice/server/public.ts.
 export const voiceOperationSchemas = {
   startCall: { input: StartCallInputSchema, data: StartCallDataSchema },
@@ -137,3 +186,8 @@ export type ListCallsInput = z.infer<typeof ListCallsInputSchema>;
 export type GetCallInput = z.infer<typeof GetCallInputSchema>;
 export type ListCallsData = z.infer<typeof ListCallsDataSchema>;
 export type GetCallData = z.infer<typeof GetCallDataSchema>;
+export type QuoteSource = z.infer<typeof QuoteSourceSchema>;
+export type QuoteCanSupply = z.infer<typeof QuoteCanSupplySchema>;
+export type QuoteCurrency = z.infer<typeof QuoteCurrencySchema>;
+export type YesNoUnknown = z.infer<typeof YesNoUnknownSchema>;
+export type SupplierQuoteDTO = z.infer<typeof SupplierQuoteDTOSchema>;
