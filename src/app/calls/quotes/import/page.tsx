@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download, PhoneOutgoing } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Alert } from "@/components/ui/Alert";
@@ -17,7 +17,7 @@ import type { BeloPrice } from "@/contracts/voice";
 import { beloEquivalent } from "@/features/voice/server/belo-price";
 import { getBeloPrice, listSupplierQuotes } from "@/features/voice/server/public";
 import type { ComparatorQuote } from "@/features/voice/server/quote-import";
-import { importQuoteAction } from "./actions";
+import { importQuoteAction, requestQuoteCallAction } from "./actions";
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -32,6 +32,16 @@ const ERRORS: Record<string, string> = {
   FORBIDDEN: "Esa llamada es de otra empresa o tu sesión venció.",
   PROVIDER_ERROR: "Vapi rechazó la consulta. Revisá VAPI_PRIVATE_KEY en el servidor.",
   PROVIDER_UNAVAILABLE: "Vapi o la base no respondieron, o falta configuración del servidor. Probá de nuevo.",
+  RATE_LIMITED: "Vapi pidió esperar un momento. Probá de nuevo en unos segundos.",
+};
+
+const CALL_ERRORS: Record<string, string> = {
+  VALIDATION_ERROR: "Elegí un proveedor y abrí esta página desde una compra.",
+  NOT_FOUND: "No encontramos el proveedor, la compra o el asistente de Vapi configurado.",
+  FORBIDDEN: "El proveedor pidió que no lo llamen, o tu sesión venció.",
+  CONFLICT: "Ese pedido de llamada ya se intentó: recargá la página y revisá en Vapi antes de volver a llamar.",
+  PROVIDER_ERROR: "Vapi rechazó la llamada. Revisá el teléfono del proveedor, el crédito y la configuración del servidor.",
+  PROVIDER_UNAVAILABLE: "Vapi no respondió o falta configuración del servidor (VAPI_ASSISTANT_ID, VAPI_PHONE_NUMBER_ID). Revisá en Vapi si la llamada salió antes de reintentar.",
   RATE_LIMITED: "Vapi pidió esperar un momento. Probá de nuevo en unos segundos.",
 };
 
@@ -103,6 +113,11 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
     : [];
   const supplierName = new Map(supplierOptions.map((option) => [option.value, option.label]));
   const errorCode = first(params.error);
+  const callError = first(params.call_error);
+  const calledParam = first(params.called);
+  const called = calledParam && UUID.test(calledParam) ? calledParam : null;
+  const supplierParam = first(params.supplier);
+  const calledSupplier = supplierParam && UUID.test(supplierParam) ? supplierParam : undefined;
   const imported = first(params.imported);
 
   return (
@@ -115,6 +130,16 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
       {errorCode && (
         <Alert tone="danger" title="No se pudo traer la cotización">
           {ERRORS[errorCode] ?? "Algo salió mal. Probá de nuevo."}
+        </Alert>
+      )}
+      {callError && (
+        <Alert tone="danger" title="No se pudo hacer la llamada">
+          {CALL_ERRORS[callError] ?? "Algo salió mal. Revisá en Vapi si la llamada salió antes de reintentar."}
+        </Alert>
+      )}
+      {called && !imported && (
+        <Alert tone="success" title="Llamando al proveedor">
+          El cotizador está llamando. Cuando corte, tocá <strong>Traer cotización</strong>: el formulario ya tiene la llamada y el proveedor.
         </Alert>
       )}
       {imported && (
@@ -134,6 +159,24 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
           </Alert>
         )}
 
+        {purchase?.ok && (
+          <form action={requestQuoteCallAction}>
+            <input type="hidden" name="purchase_request_id" value={purchase.data.purchase_request.id} />
+            {/* Uno por carga de la página: un doble clic no llama dos veces. */}
+            <input type="hidden" name="click_id" value={crypto.randomUUID()} />
+            <Select
+              label="Llamar a un proveedor para pedirle cotización"
+              name="supplier_contact_id"
+              required
+              placeholder={supplierOptions.length ? "Elegí un proveedor" : "No hay proveedores cargados"}
+              options={supplierOptions}
+            />
+            <Button type="submit" variant="secondary" icon={PhoneOutgoing}>
+              Llamar ahora
+            </Button>
+          </form>
+        )}
+
         <form action={importQuoteAction}>
           {purchase?.ok ? (
             <input type="hidden" name="purchase_request_id" value={purchase.data.purchase_request.id} />
@@ -144,6 +187,7 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
             label="Proveedor al que llamó el cotizador"
             name="supplier_contact_id"
             required
+            defaultValue={calledSupplier}
             placeholder={supplierOptions.length ? "Elegí un proveedor" : "No hay proveedores cargados"}
             options={supplierOptions}
           />
@@ -153,6 +197,7 @@ export default async function ImportQuotePage({ searchParams }: PageProps) {
             required
             hint="En Vapi: Logs → Calls → la llamada. Es un código como 01a1b71c-99fc-7001-…"
             autoComplete="off"
+            defaultValue={called ?? undefined}
           />
           <Button type="submit" variant="primary" icon={Download}>
             Traer cotización
