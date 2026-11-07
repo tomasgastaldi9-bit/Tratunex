@@ -26,3 +26,16 @@ export function csvRecordToContact(record: import("./csv").CsvProspect): Result<
   if (!input.success) return { ok: false, error: { code: "VALIDATION_ERROR", message: "El registro no cumple el contrato de contacto.", retryable: false } };
   return { ok: true, data: input.data };
 }
+
+export function mapPersistedCandidates(ids: string[], rows: (ProspectCandidate & { id: string; prospect_searches: { mode: "live" | "mock" } })[]): Result<UpsertContactInput[]> {
+  if (rows.length !== ids.length || new Set(ids).size !== ids.length) return { ok: false, error: { code: "NOT_FOUND", message: "No se pudieron consultar los prospectos de esta empresa.", retryable: false } };
+  const inputs: UpsertContactInput[] = [];
+  for (const id of ids) {
+    const row = rows.find(item => item.id === id);
+    if (!row) return { ok: false, error: { code: "NOT_FOUND", message: "No se pudieron consultar los prospectos de esta empresa.", retryable: false } };
+    const mapped = toContactInput(row, row.prospect_searches.mode);
+    if (!mapped.ok) return mapped;
+    inputs.push(mapped.data);
+  }
+  return { ok: true, data: inputs };
+}

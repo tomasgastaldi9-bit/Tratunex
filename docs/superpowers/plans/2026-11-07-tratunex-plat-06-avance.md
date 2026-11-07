@@ -7,4 +7,6 @@ Objetivo: preparar la importación de prospectos y CSV sin crear contactos simul
 - Probar la deduplicación y la conservación de `do_not_contact` con el simulador de CRM-02, indicando que su estado es temporal.
 - Pendiente de CRM-03: conectar `upsertContact` persistente, conservar un `action_id` de lote y por contacto en reintentos, rechazar reutilización con otros datos y verificar atomicidad, aislamiento y resultados parciales en base real antes de habilitar importación.
 
-El avance es una vista previa; no guarda archivos ni crea contactos. No habilitar la importación real hasta resolver las garantías anteriores con el contrato del CRM.
+## Implementación posterior a CRM-03
+
+El CSV se vuelve a validar en servidor y los candidatos se leen de la búsqueda persistida de la empresa; solo se importan búsquedas `live`. Un recibo liga la acción del lote a su contenido y cada contacto utiliza una acción estable; el CRM confirma cada contacto por separado y el resultado informa errores parciales. En un reintento se conserva la misma acción. No se guarda el archivo CSV.

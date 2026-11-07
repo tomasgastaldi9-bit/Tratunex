@@ -33,7 +33,10 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  sql(`delete from public.companies where id in ('${companyA}','${companyB}');`);
+  sql(`delete from public.contacts where company_id in ('${companyA}','${companyB}');
+       delete from app_private.action_receipts where company_id in ('${companyA}','${companyB}');
+       delete from app_private.prospect_attempts where company_id in ('${companyA}','${companyB}');
+       delete from public.companies where id in ('${companyA}','${companyB}');`);
   await Promise.all(userIds.map((id) => admin.auth.admin.deleteUser(id)));
 });
 
@@ -69,7 +72,18 @@ test("sesión, selección de empresa y rechazo de ID de otra empresa", async ({ 
   await page.getByLabel("Archivo CSV").setInputFiles({ name: "demo.csv", mimeType: "text/csv", buffer: Buffer.from("nombre,telefono,web\nDemo,+12025550123,https://demo.example\nSin código,0351 123 4567,") });
   await expect(page.getByText(/2 filas/)).toBeVisible();
   await expect(page.getByText("Indicá el teléfono con código de país, por ejemplo +54.")).toBeVisible();
-  await expect(page.getByText(/esta vista no crea contactos/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Importar contactos" })).toHaveCount(0);
+  const csv = { name: "demo.csv", mimeType: "text/csv", buffer: Buffer.from("nombre,telefono,web\nDemo,+12025550123,https://demo.example") };
+  await page.getByLabel("Archivo CSV").setInputFiles(csv);
+  await page.getByRole("button", { name: "Importar contactos" }).click();
+  await expect(page.getByText("1 nuevos · 0 existentes · 0 con error.")).toBeVisible();
+  await page.getByLabel("Archivo CSV").setInputFiles(csv);
+  await page.getByRole("button", { name: "Importar contactos" }).click();
+  await expect(page.getByText("0 nuevos · 1 existentes · 0 con error.")).toBeVisible();
+  const { data: contacts, error: contactError } = await admin.from("contacts").select("id,company_id,phone_e164").eq("company_id", companyA);
+  expect(contactError).toBeNull();
+  expect(contacts).toHaveLength(1);
+  expect(contacts?.[0].phone_e164).toBe("+12025550123");
   await page.goto("/login/companies");
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
   await expect(page).toHaveURL(/\/login$/);

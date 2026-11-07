@@ -4,6 +4,7 @@ import type { Ctx, Result } from "@/contracts/common";
 import { getPublicEnv, getServerEnv } from "@/lib/env";
 import { searchProvider } from "./provider";
 import { parseSearchInput, type Candidate } from "./search";
+export { importProspects } from "./import";
 
 type SearchResult = { search_id: string; candidates: (Candidate & { id: string })[]; mode: "mock" | "live" };
 export async function searchProspects(ctx: Ctx, raw: unknown, actionId: string = crypto.randomUUID()): Promise<Result<SearchResult> | { ok: false; error: { code: "PROVIDER_ERROR" | "PROVIDER_UNAVAILABLE" | "RATE_LIMITED"; message: string; retryable: boolean }; safe_to_restart: true }> {
