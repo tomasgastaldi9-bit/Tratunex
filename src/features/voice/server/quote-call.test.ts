@@ -80,10 +80,18 @@ describe("lo que dice el asistente", () => {
     expect(prompt1500).toContain("- Cantidad: 1.500 unidades");
   });
 
-  it("pide los datos de la cotización y si cobra en ARGt", () => {
-    for (const ask of ["precio por unidad", "si incluye IVA", "unidades tiene disponibles", "En cuántos días", "compra mínima", "acepta cobrar en ARGt"]) {
+  it("pide los datos de la cotización y si cobra en ARGt, sin afirmar lo que no le dijeron", () => {
+    for (const ask of ["precio por unidad", "si incluye IVA", "unidades tiene disponibles", "En cuántos días", "¿El envío está incluido?", "compra mínima", "acepta cobrar en A R G T"]) {
       expect(prompt).toContain(ask);
     }
+    expect(prompt).toContain("no afirmes datos que no te dio el proveedor");
+  });
+
+  it("confirma la cotización antes de despedirse, y la despedida es la frase que corta", () => {
+    const confirm = prompt.indexOf("Repetí precio, cantidad disponible y plazo");
+    const goodbye = prompt.indexOf(`"${QUOTE_END_CALL_MESSAGE}"`);
+    expect(confirm).toBeGreaterThan(-1);
+    expect(goodbye).toBeGreaterThan(confirm);
   });
 
   it("se despide con una frase que corta la llamada, de varias palabras", () => {

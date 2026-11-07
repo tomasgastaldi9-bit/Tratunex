@@ -59,18 +59,23 @@ export function quoteAssistantPrompt(brief: QuoteRequestBrief): string {
     "",
     "Al saludar ya dijiste que sos un asistente virtual y que la llamada se graba. Si la persona no quiere seguir, agradecé y cortá.",
     "",
-    "Preguntá en este orden, sin repetir lo que ya te dijeron:",
+    "Preguntá en este orden, sin repetir lo que ya te dijeron. Todo es una pregunta: no afirmes datos que no te dio el proveedor.",
     "1. Si vende ese producto y puede entregar esa cantidad.",
     "2. El precio por unidad, en qué moneda y si incluye IVA.",
     "3. Cuántas unidades tiene disponibles.",
-    `4. En cuántos días puede entregar en ${brief.delivery_zone} y si el envío está incluido.`,
-    "5. Si hay una compra mínima.",
-    '6. Si acepta cobrar en ARGt. Si no lo conoce, explicá: "Es un peso digital de Twin: vale lo mismo que un peso y llega al instante a una billetera digital." Si acepta, decile que una persona del equipo le va a pedir los datos de cobro por escrito.',
-    "7. Si no acepta ARGt, cómo prefiere cobrar: transferencia, contado o a plazo.",
+    `4. En cuántos días puede entregar en ${brief.delivery_zone}.`,
+    '5. Si el envío está incluido en el precio. Preguntalo así: "¿El envío está incluido?"',
+    "6. Si hay una compra mínima.",
+    '7. Si acepta cobrar en A R G T. Si no lo conoce, explicá: "Es un peso digital de Twin: vale lo mismo que un peso y llega al instante a una billetera digital." Si acepta, decile que una persona del equipo le va a pedir los datos de cobro por escrito.',
+    "8. Si no acepta A R G T, cómo prefiere cobrar: transferencia, contado o a plazo.",
     "",
-    `Antes de cortar, repetí precio, cantidad disponible y plazo para confirmarlos. Después agradecé, decí que ${brief.buyer_name} compara cotizaciones y le avisa si la elige, y cortá.`,
+    "Para cerrar, en este orden:",
+    "1. Repetí precio, cantidad disponible y plazo, y preguntá si está bien.",
+    `2. Decí que ${brief.buyer_name} compara cotizaciones y le avisa si la elige.`,
+    `3. Recién ahí despedite con esta frase exacta: "${QUOTE_END_CALL_MESSAGE}". Esa frase corta la llamada: no la digas antes ni para otra cosa.`,
     "",
     "Reglas:",
+    '- ARGt se pronuncia letra por letra: escribilo siempre "A R G T".',
     "- Solo pedís información: no confirmes la compra, no reserves stock y no aceptes condiciones. Si te apuran, decí que el dueño confirma por escrito.",
     `- No digas cuánto quiere gastar ${brief.buyer_name} ni precios de otros proveedores. Si te preguntan, pedí su mejor precio.`,
     "- No pidas ni anotes por teléfono direcciones de billetera, CBU, alias, claves ni códigos.",
@@ -236,22 +241,72 @@ function validationError(message: string): Extract<Result<never>, { ok: false }>
   return { ok: false, error: { code: "VALIDATION_ERROR", message, retryable: false } };
 }
 
+type StructuredOutputs = z.infer<typeof StructuredOutputsSchema>;
+
+// Busca la cotización por nombre. null si Vapi todavía no la generó.
+function pickQuote(outputs: StructuredOutputs): Result<QuoteCallExtraction | null> {
+  const named = Object.values(outputs).find((output) => output.name === QUOTE_OUTPUT_NAME);
+  if (!named || named.result === null || named.result === undefined) {
+    return { ok: true, data: null };
+  }
+  const extraction = QuoteCallExtractionSchema.safeParse(named.result);
+  return extraction.success
+    ? { ok: true, data: extraction.data }
+    : validationError(`La cotización extraída por Vapi no cumple ${QUOTE_OUTPUT_NAME}`);
+}
+
 export function extractQuoteFromReport(payload: unknown): Result<QuoteReport> {
   const parsed = QuoteReportSchema.safeParse(payload);
   if (!parsed.success) {
     return validationError("El aviso no es un end-of-call-report válido");
   }
   const message = parsed.data.message;
-  const outputs = { ...message.call.artifact?.structuredOutputs, ...message.artifact?.structuredOutputs };
-  const named = Object.values(outputs).find((output) => output.name === QUOTE_OUTPUT_NAME);
-  const base = { provider_call_id: message.call.id, ended_reason: message.endedReason ?? message.call.endedReason ?? null };
+  const quote = pickQuote({ ...message.call.artifact?.structuredOutputs, ...message.artifact?.structuredOutputs });
+  if (!quote.ok) return quote;
+  return {
+    ok: true,
+    data: {
+      provider_call_id: message.call.id,
+      ended_reason: message.endedReason ?? message.call.endedReason ?? null,
+      extraction: quote.data,
+    },
+  };
+}
 
-  if (!named || named.result === null || named.result === undefined) {
-    return { ok: true, data: { ...base, extraction: null } };
+// ---------------------------------------------------------------------------
+// 5. Llamada leída de la API de Vapi (GET /call/:id) → cotización.
+// ---------------------------------------------------------------------------
+const VapiCallSchema = z.object({
+  id: z.string().min(1),
+  type: z.string().optional(),
+  status: z.string().optional(),
+  endedReason: z.string().optional(),
+  artifact: z.object({ structuredOutputs: StructuredOutputsSchema.optional() }).optional(),
+});
+
+export type VapiQuoteCall = QuoteReport & {
+  // Solo una llamada terminada puede tener cotización.
+  ended: boolean;
+  // webCall = botón Talk del dashboard; el resto son llamadas telefónicas.
+  transport: "phone" | "web";
+};
+
+export function extractQuoteFromVapiCall(payload: unknown): Result<VapiQuoteCall> {
+  const parsed = VapiCallSchema.safeParse(payload);
+  if (!parsed.success) {
+    return validationError("La respuesta de Vapi no es una llamada válida");
   }
-  const extraction = QuoteCallExtractionSchema.safeParse(named.result);
-  if (!extraction.success) {
-    return validationError(`La cotización extraída por Vapi no cumple ${QUOTE_OUTPUT_NAME}`);
-  }
-  return { ok: true, data: { ...base, extraction: extraction.data } };
+  const call = parsed.data;
+  const quote = pickQuote(call.artifact?.structuredOutputs ?? {});
+  if (!quote.ok) return quote;
+  return {
+    ok: true,
+    data: {
+      provider_call_id: call.id,
+      ended_reason: call.endedReason ?? null,
+      extraction: quote.data,
+      ended: call.status === "ended",
+      transport: call.type === "webCall" ? "web" : "phone",
+    },
+  };
 }
