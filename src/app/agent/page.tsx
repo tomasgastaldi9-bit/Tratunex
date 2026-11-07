@@ -1,6 +1,7 @@
-import { CircleCheck, Clock, TriangleAlert } from "lucide-react";
+import { CircleCheck, TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { buttonStyles } from "@/components/ui/Button";
@@ -8,7 +9,7 @@ import { ListItem } from "@/components/ui/ListItem";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProgressCard } from "@/components/ui/ProgressCard";
 import { AccessAlert } from "@/features/agent/components/AccessAlert";
-import { getAgentProfile } from "@/features/agent/server/public";
+import { getAgentProfile, getPurchasePolicy } from "@/features/agent/server/public";
 import { getCompanyContext } from "@/features/platform/server/public";
 
 /**
@@ -24,7 +25,16 @@ export const metadata: Metadata = {
 
 export default async function AgentPage() {
   const encabezado = (
-    <PageHeader title="Agente" description="Lo que tu agente sabe de tu empresa y cómo habla en cada llamada." />
+    <PageHeader
+      title="Agente"
+      description="Lo que tu agente sabe de tu empresa y cómo habla en cada llamada."
+      actions={
+        // Cualquier miembro puede crear una compra: el botón va siempre.
+        <Link href="/purchases/new" className={buttonStyles()}>
+          Nueva compra
+        </Link>
+      }
+    />
   );
 
   // 1. ¿Quién es y de qué empresa? readOnlyCookies: una página no puede
@@ -39,8 +49,10 @@ export default async function AgentPage() {
     );
   }
 
-  // 2. La versión vigente del agente. Si falla, lo decimos: nunca inventamos datos.
-  const perfil = await getAgentProfile(contexto.data);
+  // 2. La versión vigente del agente y las reglas de pago (las dos lecturas a
+  //    la vez). Si alguna falla, lo decimos: nunca inventamos datos (no
+  //    marcamos un paso como "falta" sin saberlo).
+  const [perfil, reglas] = await Promise.all([getAgentProfile(contexto.data), getPurchasePolicy(contexto.data)]);
   if (!perfil.ok) {
     return (
       <>
@@ -49,15 +61,51 @@ export default async function AgentPage() {
       </>
     );
   }
+  if (!reglas.ok) {
+    return (
+      <>
+        {encabezado}
+        <Alert tone="danger" title={reglas.error.message} />
+      </>
+    );
+  }
 
   // null = la empresa todavía no guardó nada (estado "vacío").
   const version = perfil.data.current?.version ?? null;
   const tienePerfil = version !== null;
-  // El conocimiento está "hecho" si la versión vigente tiene al menos un ítem.
-  // (null = nunca se cargó; una lista vacía = se sacó todo: en los dos casos, falta.)
-  const tieneConocimiento = (perfil.data.current?.knowledge?.length ?? 0) > 0;
-  // Solo los admin pueden cambiar el perfil (lo decide la base, en getAgentProfile).
-  const puedeEditar = perfil.data.can_edit;
+  // null = la empresa todavía no cargó reglas de pago.
+  const tieneReglas = reglas.data.policy !== null;
+
+  // El botón de la tarjeta lleva al PRÓXIMO paso que falta, y solo si la
+  // persona lo puede hacer (perfil y reglas los cambian solo los admin; lo
+  // decide la base). Si no puede, no ponemos botón: invitarla a algo que no
+  // va a poder guardar confunde, y un botón gris sobre esta tarjeta gris no
+  // se distinguiría (regla "nada gris sobre gris" de docs/DESIGN.md).
+  let accion: ReactNode = undefined;
+  if (!tienePerfil) {
+    if (perfil.data.can_edit) {
+      accion = (
+        <Link href="/agent/profile" className={buttonStyles()}>
+          Completar perfil
+        </Link>
+      );
+    }
+  } else if (!tieneReglas) {
+    if (reglas.data.can_edit) {
+      accion = (
+        <Link href="/agent/rules" className={buttonStyles()}>
+          Cargar reglas
+        </Link>
+      );
+    }
+  } else if (perfil.data.can_edit) {
+    // Todo listo: como antes, la invitamos a mantener el perfil al día.
+    accion = (
+      <Link href="/agent/profile" className={buttonStyles()}>
+        Editar perfil
+      </Link>
+    );
+  }
 
   return (
     <>
@@ -78,26 +126,13 @@ export default async function AgentPage() {
         title="Configuración del agente"
         steps={[
           { label: "Perfil de empresa", done: tienePerfil },
-          // Estas dos secciones todavía no existen: por ahora nunca están hechas.
-          { label: "Instrucciones del vendedor", done: false },
-          { label: "Criterios de cliente potencial", done: false },
-          { label: "Base de conocimiento", done: tieneConocimiento },
+          { label: "Reglas de pago", done: tieneReglas },
         ]}
-        action={
-          // Si no puede editar, no la invitamos a "completar" ni a "editar"
-          // algo que después no va a poder guardar. Tampoco ponemos un botón
-          // gris: sobre esta tarjeta gris no se distinguiría (regla "nada gris
-          // sobre gris" de docs/DESIGN.md). Para mirar el perfil ya tiene el
-          // botón "Abrir" en la lista de abajo.
-          puedeEditar ? (
-            <Link href="/agent/profile" className={buttonStyles()}>
-              {tienePerfil ? "Editar perfil" : "Completar perfil"}
-            </Link>
-          ) : undefined
-        }
+        action={accion}
       />
 
-      {/* aria-label: el lector de pantalla anuncia "Secciones del agente, lista, 4 elementos". */}
+      {/* aria-label: el lector de pantalla anuncia "Secciones del agente, lista, 2 elementos".
+          Instrucciones, criterios y conocimiento no se muestran: el brief v3 los esconde. */}
       <ul aria-label="Secciones del agente" className="flex flex-col gap-2.5">
         <li>
           <ListItem
@@ -112,21 +147,14 @@ export default async function AgentPage() {
             }
           />
         </li>
-        {/* Estas dos secciones llegan en los próximos tickets (AGT-03 y 04). */}
-        {["Instrucciones del vendedor", "Criterios de cliente potencial"].map((seccion) => (
-          <li key={seccion}>
-            <ListItem title={seccion} meta={<Badge icon={Clock}>Próximamente</Badge>} />
-          </li>
-        ))}
         <li>
           <ListItem
-            title="Base de conocimiento"
+            title="Reglas de pago"
             actions={
-              <Link href="/agent/knowledge" className={buttonStyles({ size: "sm" })}>
+              <Link href="/agent/rules" className={buttonStyles({ size: "sm" })}>
                 Abrir
-                {/* Texto invisible: para el lector de pantalla el link dice
-                    "Abrir base de conocimiento" y no un "Abrir" suelto. */}
-                <span className="sr-only"> base de conocimiento</span>
+                {/* Texto invisible: el link dice "Abrir reglas de pago". */}
+                <span className="sr-only"> reglas de pago</span>
               </Link>
             }
           />
