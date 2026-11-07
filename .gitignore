@@ -2,6 +2,22 @@
 .DS_Store
 Thumbs.db
 
+# Node.js / Next.js
+node_modules/
+.next/
+/out/
+/dist/
+/coverage/
+/playwright-report/
+/test-results/
+/.vercel/
+/supabase/.temp/
+*.log
+
+# Entorno local: compartir solo el ejemplo sin valores
+.env*
+!.env.example
+
 # Editores
 .vscode/
 .idea/
