@@ -6,7 +6,7 @@ Estado: preparación; no habilita pagos ni contiene un firmador conectado.
 
 - Nano: contrato público de servidor que resuelva una orden persistida por `company_id` y `order_id` con proveedor, importe entero en unidades atómicas, versión o huella de la orden y aprobación verificable. La billetera del proveedor debe provenir de su contacto persistido; no aceptar destino ni monto del navegador.
 - ORD-01 ya expone `getSupplier` con `collection_wallet` y `wallet_version` en `src/features/crm/server/public.ts`. La aprobación debe fijar y verificar esa versión; un cambio de billetera posterior invalida la aprobación.
-- Vale: `checkPurchasePolicy(ctx, { amount_atomic, supplier_contact_id })`, con reglas persistidas y decisión `auto_pay | needs_approval | rejected`; definir cómo se prueba una aprobación vigente y cómo se invalida cuando cambian la orden o las reglas.
+- BUY-02 ya expone `checkPurchasePolicy(ctx, { amount_atomic, supplier_contact_id })` con decisión `auto_pay | needs_approval | rejected`. Un control preliminar de pagos lo consume y falla cerrado ante errores o necesidad de aprobación; no habilita firmas. Falta definir cómo probar una aprobación vigente e invalidarla cuando cambian la orden o las reglas.
 - Las reglas, el proveedor, el destino, la orden y su aprobación tienen que seguir vigentes al reclamar el pago. Si no hay contrato confiable para ello, fallar cerrado.
 
 ## Invariantes
