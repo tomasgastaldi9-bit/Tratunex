@@ -11,8 +11,11 @@ create table app_private.payment_reservations (
   token text not null,
   destination text not null,
   amount_atomic text not null,
-  state text not null default 'reserved' check (state = 'reserved'),
+  state text not null default 'reserved' check (state in ('reserved','prepared')),
+  tx_hash text,
+  signed_envelope jsonb,
   created_at timestamptz not null default now(),
+  check ((state = 'reserved' and tx_hash is null and signed_envelope is null) or (state = 'prepared' and tx_hash is not null and signed_envelope is not null)),
   unique (company_id, order_id),
   unique (company_id, action_id),
   unique (chain_id, sender, nonce)
@@ -57,3 +60,42 @@ begin
 end; $$;
 revoke all on function public.reserve_payment_attempt(uuid,uuid,text,integer,text,bigint,text,text,text) from public, anon, authenticated, service_role;
 grant execute on function public.reserve_payment_attempt(uuid,uuid,text,integer,text,bigint,text,text,text) to service_role;
+
+-- Only the verified server adapter may call these RPCs. PostgreSQL cannot
+-- verify the Ethereum signature or the encryption; the adapter must verify
+-- transaction fields, hash and envelope before storage and before any send.
+create function public.store_prepared_payment(p_company uuid,p_order uuid,p_action text,p_hash text,p_envelope jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_row app_private.payment_reservations; v_hash text := lower(p_hash);
+begin
+  if pg_catalog.current_setting('role', true) is distinct from 'service_role' then raise exception 'FORBIDDEN: server role required'; end if;
+  if p_company is null or p_order is null or p_action is null or v_hash is null or v_hash !~ '^0x[0-9a-f]{64}$' or
+     p_envelope is null or jsonb_typeof(p_envelope) is distinct from 'object' or octet_length(p_envelope::text) > 180500 or
+     p_envelope -> 'version' is distinct from '1'::jsonb or
+     jsonb_typeof(p_envelope -> 'iv') is distinct from 'string' or jsonb_typeof(p_envelope -> 'tag') is distinct from 'string' or jsonb_typeof(p_envelope -> 'ciphertext') is distinct from 'string' or
+     (select count(*) from jsonb_object_keys(p_envelope)) <> 4 then
+    raise exception 'VALIDATION_ERROR: invalid encrypted payment envelope';
+  end if;
+  select * into v_row from app_private.payment_reservations where company_id = p_company and order_id = p_order for update;
+  if not found or v_row.action_id is distinct from p_action then raise exception 'NOT_FOUND: payment reservation'; end if;
+  if v_row.state = 'prepared' then
+    if v_row.tx_hash is distinct from v_hash or v_row.signed_envelope is distinct from p_envelope then raise exception 'CONFLICT: prepared transaction differs'; end if;
+    return jsonb_build_object('id',v_row.id,'state',v_row.state,'tx_hash',v_row.tx_hash);
+  end if;
+  update app_private.payment_reservations set state = 'prepared', tx_hash = v_hash, signed_envelope = p_envelope where id = v_row.id returning * into v_row;
+  return jsonb_build_object('id',v_row.id,'state',v_row.state,'tx_hash',v_row.tx_hash);
+end; $$;
+revoke all on function public.store_prepared_payment(uuid,uuid,text,text,jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.store_prepared_payment(uuid,uuid,text,text,jsonb) to service_role;
+
+create function public.get_prepared_payment(p_company uuid,p_order uuid,p_action text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_row app_private.payment_reservations;
+begin
+  if pg_catalog.current_setting('role', true) is distinct from 'service_role' then raise exception 'FORBIDDEN: server role required'; end if;
+  select * into v_row from app_private.payment_reservations where company_id = p_company and order_id = p_order and action_id = p_action;
+  if not found or v_row.state <> 'prepared' then raise exception 'NOT_FOUND: prepared payment'; end if;
+  return jsonb_build_object('id',v_row.id,'state',v_row.state,'tx_hash',v_row.tx_hash,'envelope',v_row.signed_envelope,'chain_id',v_row.chain_id,'sender',v_row.sender,'nonce',v_row.nonce,'token',v_row.token,'destination',v_row.destination,'amount_atomic',v_row.amount_atomic);
+end; $$;
+revoke all on function public.get_prepared_payment(uuid,uuid,text) from public, anon, authenticated, service_role;
+grant execute on function public.get_prepared_payment(uuid,uuid,text) to service_role;

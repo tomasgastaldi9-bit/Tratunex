@@ -1,5 +1,5 @@
 begin;
-select plan(9);
+select plan(14);
 insert into public.companies(id,name) values ('a1000000-0000-4000-8000-000000000001','Empresa pago A'),('a1000000-0000-4000-8000-000000000002','Empresa pago B');
 set local role service_role;
 select is(public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a',42161,'0x0000000000000000000000000000000000000001',7,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100') ->> 'state','reserved','first reservation');
@@ -9,8 +9,13 @@ select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-800
 select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000003','action-a',42161,'0x0000000000000000000000000000000000000001',8,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100')$$,'P0001','CONFLICT: action already reserved','action id cannot identify another order');
 select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000003','x',8453,'0x0000000000000000000000000000000000000001',8,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','100')$$,'P0001','VALIDATION_ERROR: invalid payment reservation','wrong chain rejected');
 select throws_ok($$select public.reserve_payment_attempt('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000003','x',42161,'0x0000000000000000000000000000000000000001',8,'0x59863989d080b22476db95656d0c3cc18be92214','0x0000000000000000000000000000000000000002','0')$$,'P0001','VALIDATION_ERROR: invalid payment reservation','zero amount rejected');
+select is(public.store_prepared_payment('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a','0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','{"version":1,"iv":"dummy","ciphertext":"encrypted","tag":"dummy"}') ->> 'state','prepared','stores encrypted envelope after reservation');
+select is(public.store_prepared_payment('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a','0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','{"version":1,"iv":"dummy","ciphertext":"encrypted","tag":"dummy"}') ->> 'state','prepared','same envelope safely replays');
+select throws_ok($$select public.store_prepared_payment('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a','0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','{"version":1,"iv":"dummy","ciphertext":"encrypted","tag":"dummy"}')$$,'P0001','CONFLICT: prepared transaction differs','different transaction cannot replace prepared one');
+select is(public.get_prepared_payment('a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001','action-a') #>> '{envelope,ciphertext}','encrypted','server can recover encrypted envelope');
 reset role;
 select is(has_function_privilege('authenticated','public.reserve_payment_attempt(uuid,uuid,text,integer,text,bigint,text,text,text)','EXECUTE'),false,'authenticated cannot reserve directly');
 select is(has_function_privilege('anon','public.reserve_payment_attempt(uuid,uuid,text,integer,text,bigint,text,text,text)','EXECUTE'),false,'anonymous cannot reserve');
+select is(has_function_privilege('authenticated','public.get_prepared_payment(uuid,uuid,text)','EXECUTE'),false,'authenticated cannot read encrypted transaction directly');
 select * from finish();
 rollback;
