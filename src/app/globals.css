@@ -99,13 +99,24 @@
 }
 
 /*
- * La fuente la carga Next en layout.tsx y la deja en la variable
- * --font-hanken. "inline" hace que Tailwind use esa variable tal cual
+ * La fuente (Inter) la carga Next en layout.tsx y la deja en la variable
+ * --font-inter. "inline" hace que Tailwind use esa variable tal cual
  * (si no, no la encontraría, porque se define en el <html> y no acá).
  * Clase: font-sans (y es la fuente por defecto de toda la página).
  */
 @theme inline {
-  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Color de acento de la marca: verde "Señal", el trato cerrado (kit de marca 1.0).
+ * Se usa poco: solo para lo importante, como máximo un 10 % de la pantalla.
+ * - bg-signal / text-signal: sobre fondos oscuros (el menú, tinta).
+ * - text-signal-ink: el mismo acento como texto sobre fondos claros (contraste AA).
+ */
+@theme {
+  --color-signal: #c5f03a;
+  --color-signal-ink: #3f6a00;
 }
 
 @layer base {
