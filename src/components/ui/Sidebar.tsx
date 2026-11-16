@@ -47,7 +47,7 @@ function SidebarLink({ item, activa }: { item: NavItem; activa: boolean }) {
         "focus-visible:outline-2 focus-visible:outline-white",
         // Activa: fondo gris más claro, letra blanca y una rayita blanca a la izquierda.
         activa
-          ? "bg-white/10 font-medium text-white before:absolute before:inset-y-2 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-white"
+          ? "bg-white/10 font-medium text-white before:absolute before:inset-y-2 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-signal"
           : "text-gray-400 hover:bg-white/5 hover:text-gray-100",
       )}
     >

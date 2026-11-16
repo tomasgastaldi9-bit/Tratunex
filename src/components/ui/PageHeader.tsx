@@ -25,7 +25,7 @@ export function PageHeader({ title, description, actions, as: Titulo = "h1", cla
     // En celular el título y los botones van uno abajo del otro; desde tablet, en la misma fila.
     <header className={cx("flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="flex flex-col gap-1.5">
-        <Titulo className="text-2xl leading-tight font-semibold tracking-[-0.01em]">{title}</Titulo>
+        <Titulo className="text-2xl leading-tight font-semibold tracking-[-0.035em]">{title}</Titulo>
         {description && <p className="max-w-2xl text-sm leading-snug text-ink-muted">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2.5">{actions}</div>}
