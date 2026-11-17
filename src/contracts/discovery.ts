@@ -11,6 +11,8 @@ export const prospectCandidateSchema = z.object({
   website: z.url(),
   source_url: z.url(),
   evidence: z.string().nullable(),
+  products: z.array(z.string().trim().min(1).max(240)).max(10).optional(),
+  prices: z.array(z.string().trim().min(1).max(240)).max(10).optional(),
 });
 export type ProspectSearchInput = z.infer<typeof prospectSearchInputSchema>;
 export type ProspectCandidate = z.infer<typeof prospectCandidateSchema>;
